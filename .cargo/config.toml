@@ -1,0 +1,16 @@
+[build]
+target = ["./target.json"]
+
+[unstable]
+build-std = ["core"]
+
+[target.riscv32]
+runner = "qemu-system-riscv32 -machine virt -serial mon:stdio -semihosting-config enable=on,target=native -nographic -bios "
+
+[target.riscv64gc-unknown-none-elf]
+runner = "qemu-system-riscv64 -machine virt -serial mon:stdio -semihosting-config enable=on,target=native -nographic -bios "
+rustflags = [
+  "-C", "link-arg=-Tmemory.x",
+  "-C", "link-arg=-Tlink.x",
+]
+

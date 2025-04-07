@@ -1,0 +1,15 @@
+[package]
+name = "ftl_ssd_os"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["staticlib"]
+
+[profile.small]
+inherits = "release"
+opt-level = "z"   # Optimize for size
+lto = true        # Enable Link-Time Optimization
+strip = true # Strip debug symbols
+panic = "abort"   # Reduce binary size by removing panic unwinding
+codegen-units = 1
