@@ -48,7 +48,7 @@ pub struct connector {
 
 unsafe extern "C" {
     pub fn ssd_os_sleep(sec: ::core::ffi::c_int);
-    pub fn ssd_os_this_cpu(name: *mut ::core::ffi::c_char) -> ::core::ffi::c_int;
+    pub fn ssd_os_this_cpu(name: *const ::core::ffi::c_char) -> ::core::ffi::c_int;
     pub fn ssd_os_print_i(x: ::core::ffi::c_ulong);
     pub fn ssd_os_get_connection(
         connector_name: *mut ::core::ffi::c_char,
@@ -58,4 +58,5 @@ unsafe extern "C" {
     pub fn ssd_os_print_lock();
     pub fn ssd_os_print_unlock();
     pub fn ssd_os_print_ss(s1: *const ::core::ffi::c_char, s2: *const ::core::ffi::c_char);
+    pub fn ssd_os_mem_get(key: ::core::ffi::c_int) -> *mut ::core::ffi::c_void;
 }
