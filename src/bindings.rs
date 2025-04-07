@@ -13,10 +13,6 @@ pub struct lring_entry {
     pub ctx: *mut ::core::ffi::c_void,
 }
 
-unsafe extern "C" {
-    pub fn ssd_os_print_s(s: *const ::core::ffi::c_char);
-}
-
 pub type ssd_os_conn_fn =
     ::core::option::Option<unsafe extern "C" fn(entry: *mut lring_entry) -> *mut pipeline>;
 pub type ssd_os_conn_ring_fn =
@@ -30,18 +26,6 @@ pub struct stage {
     pub init_fn: ssd_os_ctrl_fn,
     pub exit_fn: ssd_os_ctrl_fn,
     pub stage_fn: ssd_os_stage_fn,
-}
-
-unsafe extern "C" {
-    pub fn ssd_os_print_lock();
-}
-
-unsafe extern "C" {
-    pub fn ssd_os_print_unlock();
-}
-
-unsafe extern "C" {
-    pub fn ssd_os_print_ss(s1: *const ::core::ffi::c_char, s2: *const ::core::ffi::c_char);
 }
 
 #[repr(C)]
@@ -64,14 +48,14 @@ pub struct connector {
 
 unsafe extern "C" {
     pub fn ssd_os_sleep(sec: ::core::ffi::c_int);
-}
-
-unsafe extern "C" {
+    pub fn ssd_os_this_cpu(name: *mut ::core::ffi::c_char) -> ::core::ffi::c_int;
+    pub fn ssd_os_print_i(x: ::core::ffi::c_ulong);
     pub fn ssd_os_get_connection(
         connector_name: *mut ::core::ffi::c_char,
         pipe_name: *mut ::core::ffi::c_char,
     ) -> *mut pipeline;
-}
-unsafe extern "C" {
-    pub fn ssd_os_print_i(x: ::core::ffi::c_ulong);
+    pub fn ssd_os_print_s(s: *const ::core::ffi::c_char);
+    pub fn ssd_os_print_lock();
+    pub fn ssd_os_print_unlock();
+    pub fn ssd_os_print_ss(s1: *const ::core::ffi::c_char, s2: *const ::core::ffi::c_char);
 }
