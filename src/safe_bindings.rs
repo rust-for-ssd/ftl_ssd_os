@@ -12,8 +12,12 @@ pub fn ssd_os_get_connection(
     unsafe { bindings::ssd_os_get_connection(connector_name, pipe_name) }
 }
 
-pub fn ssd_os_this_cpu(name: *mut ::core::ffi::c_char) -> ::core::ffi::c_int {
-    unsafe { bindings::ssd_os_this_cpu(name) }
+pub fn ssd_os_this_cpu(name: &CStr) -> ::core::ffi::c_int {
+    unsafe { bindings::ssd_os_this_cpu(name.as_ptr()) }
+}
+
+pub fn ssd_os_mem_get(key: ::core::ffi::c_int) -> *mut ::core::ffi::c_void {
+    unsafe { bindings::ssd_os_mem_get(key) }
 }
 
 pub fn ssd_os_print_lock() {

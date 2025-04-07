@@ -19,8 +19,8 @@ use bindings::{
 };
 
 use safe_bindings::{
-    ssd_os_get_connection, ssd_os_print_lock, ssd_os_print_s, ssd_os_print_ss, ssd_os_print_unlock,
-    ssd_os_sleep,
+    ssd_os_get_connection, ssd_os_mem_get, ssd_os_print_i, ssd_os_print_lock, ssd_os_print_s,
+    ssd_os_print_ss, ssd_os_print_unlock, ssd_os_sleep, ssd_os_this_cpu,
 };
 
 mod bindings;
@@ -55,7 +55,8 @@ impl stage {
 }
 
 #[unsafe(no_mangle)]
-pub static mut stage1: stage = stage::new(b"stage1", Some(s1_init), Some(s1_init), Some(my_stage1));
+pub static mut bbt_stage: stage =
+    stage::new(b"bbt_stage", Some(s1_init), Some(s1_init), Some(bbt_stage_fn));
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn s1_init() -> ::core::ffi::c_int {
@@ -68,23 +69,22 @@ pub unsafe extern "C" fn s1_exit() -> ::core::ffi::c_int {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn my_stage1(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    // print!("{}", context as *const u8);
-    // safe_print("I'M PRINTED");
-
-    // safe_print("IM PRINTEED");
+pub unsafe extern "C" fn bbt_stage_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     ssd_os_print_lock();
-    ssd_os_print_ss(unsafe { CStr::from_ptr(context as *const u8) }, c"1\n");
+    ssd_os_print_ss(
+        unsafe { CStr::from_ptr(context as *const u8) },
+        c"BBT_STAGE\n",
+    );
     ssd_os_print_unlock();
     context
 }
 
 #[unsafe(no_mangle)]
-pub static mut bbt: connector = connector {
+pub static mut bbt_conn: connector = connector {
     magic: *MAGIC_CONNECTOR,
     name: {
         let mut buf = [0u8; 32];
-        let s = *b"btt";
+        let s = *b"bbt_conn";
         let mut i = 0;
         while i < s.len() {
             buf[i] = s[i];
@@ -94,13 +94,37 @@ pub static mut bbt: connector = connector {
     },
     init_fn: Some(bbt_init),
     exit_fn: Some(bbt_exit),
-    conn_fn: Some(bbt_conn),
+    conn_fn: Some(bbt_conn_fn),
     ring_fn: Some(bbt_ring),
 };
 
+impl connector {
+    fn get_name(&self) -> &CStr {
+        let Ok(s) = CStr::from_bytes_until_nul(&self.name) else {
+            ssd_os_print_lock();
+            ssd_os_print_s(c"here: ");
+            ssd_os_print_unlock();
+            return c"";
+        };
+        s
+    }
+}
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
-    
+    // let cpu_id = ssd_os_this_cpu(unsafe { bbt_conn }.get_name());
+    let cpu_id = ssd_os_this_cpu(c"bbt_conn");
+    let memory_region = ssd_os_mem_get(cpu_id);
+    ssd_os_print_lock();
+    ssd_os_print_s(c"bbt memory region: ");
+    ssd_os_print_i(memory_region as u32);
+    ssd_os_print_s(c"\nbbt cpu_id: ");
+    ssd_os_print_i(cpu_id as u32);
+    ssd_os_print_s(c"\nhelloo\n ");   
+    ssd_os_print_i(42);
+
+    ssd_os_print_unlock();
+
     ssd_os_print_lock();
     ssd_os_print_s(c"Connector Initialized: bbt\n");
     ssd_os_print_unlock();
@@ -127,9 +151,12 @@ pub unsafe extern "C" fn bbt_ring(ring: *mut lring_entry) -> ::core::ffi::c_int 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn bbt_conn(entry: *mut lring_entry) -> *mut pipeline {
+pub unsafe extern "C" fn bbt_conn_fn(entry: *mut lring_entry) -> *mut pipeline {
     ssd_os_sleep(1);
-    let pipe = ssd_os_get_connection(c"bbt".as_ptr().cast_mut(), c"pipe1".as_ptr().cast_mut());
+    let pipe = ssd_os_get_connection(
+        c"bbt_conn".as_ptr().cast_mut(),
+        c"bbt_pipe".as_ptr().cast_mut(),
+    );
     if !pipe.is_null() {
         unsafe { entry.as_mut().unwrap() }.ctx = hello.as_ptr() as *mut ::core::ffi::c_void;
         ssd_os_print_ss(
