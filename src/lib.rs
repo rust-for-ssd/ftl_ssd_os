@@ -11,7 +11,7 @@ pub fn panic(_info: &core::panic::PanicInfo) -> ! {
     // safe_print("PANICING\n");
     loop {}
 }
-use core::ffi::CStr;
+use core::ffi::{CStr, c_void};
 
 use bindings::{
     MAGIC_CONNECTOR, MAGIC_STAGE, connector, lring_entry, pipeline, ssd_os_ctrl_fn,
@@ -19,8 +19,7 @@ use bindings::{
 };
 
 use safe_bindings::{
-    ssd_os_get_connection, ssd_os_mem_get, ssd_os_print_i, ssd_os_print_lock, ssd_os_print_s,
-    ssd_os_print_ss, ssd_os_print_unlock, ssd_os_sleep, ssd_os_this_cpu,
+    ssd_os_get_connection, ssd_os_mem_cpy, ssd_os_mem_get, ssd_os_print_i, ssd_os_print_lock, ssd_os_print_s, ssd_os_print_ss, ssd_os_print_unlock, ssd_os_sleep, ssd_os_this_cpu
 };
 
 mod bindings;
@@ -55,8 +54,12 @@ impl stage {
 }
 
 #[unsafe(no_mangle)]
-pub static mut bbt_stage: stage =
-    stage::new(b"bbt_stage", Some(s1_init), Some(s1_init), Some(bbt_stage_fn));
+pub static mut bbt_stage: stage = stage::new(
+    b"bbt_stage",
+    Some(s1_init),
+    Some(s1_init),
+    Some(bbt_stage_fn),
+);
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn s1_init() -> ::core::ffi::c_int {
@@ -69,7 +72,9 @@ pub unsafe extern "C" fn s1_exit() -> ::core::ffi::c_int {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn bbt_stage_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
+pub unsafe extern "C" fn bbt_stage_fn(
+    context: *mut ::core::ffi::c_void,
+) -> *mut ::core::ffi::c_void {
     ssd_os_print_lock();
     ssd_os_print_ss(
         unsafe { CStr::from_ptr(context as *const u8) },
@@ -110,23 +115,36 @@ impl connector {
     }
 }
 
+#[allow(static_mut_refs)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
-    // let cpu_id = ssd_os_this_cpu(unsafe { bbt_conn }.get_name());
-    let cpu_id = ssd_os_this_cpu(c"bbt_conn");
+    let cpu_id = ssd_os_this_cpu(unsafe { bbt_conn.get_name() });
     let memory_region = ssd_os_mem_get(cpu_id);
+    let test = 90;
+    let s = b"MEMORY REGION STR!\0";
+    unsafe {
+        // core::ptr::copy(s, memory_region as *mut [u8; 19], s.len());
+        // core::ptr::write_volatile(memory_region as *mut u8, b"MEMORY REGION STR! \0"); // Writes 90 to the address [2][5]
+    }
+
     ssd_os_print_lock();
+    ssd_os_print_s(CStr::from_ptr(memory_region as *mut u8));
     ssd_os_print_s(c"bbt memory region: ");
     ssd_os_print_i(memory_region as u32);
     ssd_os_print_s(c"\nbbt cpu_id: ");
     ssd_os_print_i(cpu_id as u32);
-    ssd_os_print_s(c"\nhelloo\n ");   
+    ssd_os_print_s(c"\nhelloo\n ");
     ssd_os_print_i(42);
 
     ssd_os_print_unlock();
+    
+    
 
     ssd_os_print_lock();
-    ssd_os_print_s(c"Connector Initialized: bbt\n");
+    ssd_os_mem_cpy(memory_region, s.as_ptr() as *const c_void, 19);
+    ssd_os_print_s(c"Printing from mem region\n");
+    ssd_os_print_s(unsafe { CStr::from_ptr(memory_region as *const u8) });
+
     ssd_os_print_unlock();
     unsafe {
         my_int = 0x0fffffffffffffff;

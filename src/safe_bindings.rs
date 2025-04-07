@@ -66,6 +66,12 @@ pub fn safe_print(s: &str) {
     // let _ = ssd_os_printer.write_fmt(format_args!("{}", s));
 }
 
+pub fn ssd_os_mem_cpy(dest: *mut ::core::ffi::c_void, src: *const ::core::ffi::c_void, n: u32) {
+    unsafe {
+        bindings::ssd_os_mem_cpy(dest, src, n);
+    }
+}
+
 pub struct ssd_os_printer;
 
 impl Write for ssd_os_printer {

@@ -59,4 +59,9 @@ unsafe extern "C" {
     pub fn ssd_os_print_unlock();
     pub fn ssd_os_print_ss(s1: *const ::core::ffi::c_char, s2: *const ::core::ffi::c_char);
     pub fn ssd_os_mem_get(key: ::core::ffi::c_int) -> *mut ::core::ffi::c_void;
+    pub fn ssd_os_mem_cpy(
+        dest: *mut ::core::ffi::c_void,
+        src: *const ::core::ffi::c_void,
+        n: u32,
+    ) -> *mut ::core::ffi::c_void;
 }
