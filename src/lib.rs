@@ -11,11 +11,10 @@ pub fn panic(_info: &core::panic::PanicInfo) -> ! {
     // safe_print("PANICING\n");
     loop {}
 }
-use core::ffi::{CStr, c_void};
+use core::{ffi::{c_void, CStr}, mem::MaybeUninit};
 
 use bindings::{
-    MAGIC_CONNECTOR, MAGIC_STAGE, connector, lring_entry, pipeline, ssd_os_ctrl_fn,
-    ssd_os_stage_fn, stage,
+    connector, lring_entry, nvm_mmgr_geometry, pipeline, ssd_os_ctrl_fn, ssd_os_stage_fn, stage, volt_get_geometry, MAGIC_CONNECTOR, MAGIC_STAGE
 };
 
 use safe_bindings::{
@@ -115,6 +114,40 @@ impl connector {
     }
 }
 
+static mut geo : nvm_mmgr_geometry = nvm_mmgr_geometry {
+    n_of_ch: 0,
+    lun_per_ch: 0,
+    blk_per_lun: 0,
+    pg_per_blk: 0,
+    sec_per_pg: 0,
+    n_of_planes: 0,
+    pg_size: 0,
+    sec_oob_sz: 0,
+    sec_per_pl_pg: 0,
+    sec_per_blk: 0,
+    sec_per_lun: 0,
+    sec_per_ch: 0,
+    pg_per_lun: 0,
+    pg_per_ch: 0,
+    blk_per_ch: 0,
+    tot_sec: 0,
+    tot_pg: 0, 
+    tot_blk: 0,
+    tot_lun: 0,
+    sec_size: 0,
+    pl_pg_size: 0,
+    blk_size: 0,
+    lun_size: 0,
+    ch_size: 0,
+    tot_size: 0,
+    pg_oob_sz: 0,
+    pl_pg_oob_sz: 0,
+    blk_oob_sz: 0,
+    lun_oob_sz: 0,
+    ch_oob_sz: 0,
+    tot_oob_sz: 0
+};
+
 #[allow(static_mut_refs)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
@@ -122,12 +155,43 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     let memory_region = ssd_os_mem_get(cpu_id);
     let test = 90;
     let s = b"MEMORY REGION STR!\0";
+    // let mut geo = MaybeUninit::<nvm_mmgr_geometry>::uninit();
+    
+    
+    
     unsafe {
         // core::ptr::copy(s, memory_region as *mut [u8; 19], s.len());
         // core::ptr::write_volatile(memory_region as *mut u8, b"MEMORY REGION STR! \0"); // Writes 90 to the address [2][5]
+        
+    
+        // ssd_os_print_i(geo.pg_size as u32);
+        // let geo = unsafe { geo.assume_init() };
+        
+        // ssd_os_print_lock();        
+        // ssd_os_print_i(geo.pg_size as u32);
+        ssd_os_print_s(c"IN UNSAFE BLOCK \n");
+
+        ssd_os_print_i(geo.pg_size as u32);
+
+        
+        ssd_os_print_unlock();
+        volt_get_geometry(&mut geo as *mut nvm_mmgr_geometry);
     }
+    
+    
+    
+    
+    ssd_os_print_lock();
+    ssd_os_print_s(c"PAGE SIZE!!!: \n");
+    ssd_os_print_unlock();
 
     ssd_os_print_lock();
+
+    ssd_os_print_i(unsafe { geo.pg_size } as u32);
+    ssd_os_print_unlock();
+
+    ssd_os_print_s(c"-------!!!: ");
+
     ssd_os_print_s(CStr::from_ptr(memory_region as *mut u8));
     ssd_os_print_s(c"bbt memory region: ");
     ssd_os_print_i(memory_region as u32);
