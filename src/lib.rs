@@ -4,6 +4,8 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
+extern crate alloc;
+
 // include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 #[panic_handler]
@@ -11,8 +13,10 @@ pub fn panic(_info: &core::panic::PanicInfo) -> ! {
     // safe_print("PANICING\n");
     loop {}
 }
-use core::{ffi::{c_void, CStr}, mem::MaybeUninit};
+use core::{alloc::GlobalAlloc, cmp::Ordering, ffi::{c_void, CStr}, mem::MaybeUninit, sync::atomic::AtomicPtr};
 
+use alloc::{boxed::Box, vec::Vec};
+use my_alloc::SimpleAllocator;
 use bindings::{
     connector, lring_entry, nvm_mmgr_geometry, pipeline, ssd_os_ctrl_fn, ssd_os_stage_fn, stage, volt_get_geometry, MAGIC_CONNECTOR, MAGIC_STAGE
 };
@@ -23,6 +27,7 @@ use safe_bindings::{
 
 mod bindings;
 mod safe_bindings;
+mod my_alloc;
 
 static mut my_int: u64 = 0;
 const hello: [u8; 32] = *b"hello world\0....................";
@@ -53,7 +58,7 @@ impl stage {
 }
 
 #[unsafe(no_mangle)]
-pub static mut bbt_stage: stage = stage::new(
+pub static bbt_stage: stage = stage::new(
     b"bbt_stage",
     Some(s1_init),
     Some(s1_init),
@@ -84,7 +89,18 @@ pub unsafe extern "C" fn bbt_stage_fn(
 }
 
 #[unsafe(no_mangle)]
-pub static mut bbt_conn: connector = connector {
+pub extern "C" fn memcpy(
+    dest: *mut ::core::ffi::c_void,
+    src: *const ::core::ffi::c_void,
+    n: usize,
+) -> *mut ::core::ffi::c_void {
+    // Be careful: this will panic on oversized values in debug, or wrap silently in release
+    ssd_os_mem_cpy(dest, src, n as u32);
+    dest
+}
+
+#[unsafe(no_mangle)]
+pub static bbt_conn: connector = connector {
     magic: *MAGIC_CONNECTOR,
     name: {
         let mut buf = [0u8; 32];
@@ -114,50 +130,72 @@ impl connector {
     }
 }
 
-static mut geo : nvm_mmgr_geometry = nvm_mmgr_geometry {
-    n_of_ch: 0,
-    lun_per_ch: 0,
-    blk_per_lun: 0,
-    pg_per_blk: 0,
-    sec_per_pg: 0,
-    n_of_planes: 0,
-    pg_size: 0,
-    sec_oob_sz: 0,
-    sec_per_pl_pg: 0,
-    sec_per_blk: 0,
-    sec_per_lun: 0,
-    sec_per_ch: 0,
-    pg_per_lun: 0,
-    pg_per_ch: 0,
-    blk_per_ch: 0,
-    tot_sec: 0,
-    tot_pg: 0, 
-    tot_blk: 0,
-    tot_lun: 0,
-    sec_size: 0,
-    pl_pg_size: 0,
-    blk_size: 0,
-    lun_size: 0,
-    ch_size: 0,
-    tot_size: 0,
-    pg_oob_sz: 0,
-    pl_pg_oob_sz: 0,
-    blk_oob_sz: 0,
-    lun_oob_sz: 0,
-    ch_oob_sz: 0,
-    tot_oob_sz: 0
+#[global_allocator]
+static ALLOCATOR: SimpleAllocator = unsafe {
+    // Define your memory region here
+    SimpleAllocator::new(0xA3835000, 0xA3835000+200000)
 };
 
 #[allow(static_mut_refs)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
-    // let cpu_id = ssd_os_this_cpu(unsafe { bbt_conn.get_name() });
-    // let memory_region = ssd_os_mem_get(cpu_id);
+    let cpu_id = ssd_os_this_cpu(unsafe { bbt_conn.get_name() });
+    let memory_region = ssd_os_mem_get(cpu_id) as usize;
     // let test = 90;
     // let s = b"MEMORY REGION STR!\0";
-    // let mut geo = MaybeUninit::<nvm_mmgr_geometry>::uninit();
+    let mut geo = MaybeUninit::<nvm_mmgr_geometry>::uninit();
+    
+    ssd_os_print_lock();        
+    ssd_os_print_s(c"SE HER1 ! \n");
+    ssd_os_print_unlock();
+    
+    ssd_os_print_lock();        
+    ssd_os_print_i(memory_region as u32);
+    ssd_os_print_unlock(); 
+    
+    ssd_os_print_lock();        
+    ssd_os_print_s(c"SE HER2 ! \n");
+    ssd_os_print_unlock();
+     
+    let heap_val1 = Box::new(42);
+    let heap_val2 = Box::new(43);
+    let heap_val3 = Box::new(44);
+
+    
+    ssd_os_print_lock();     
+    ssd_os_print_s(c"heap_val1;\n");
+    ssd_os_print_i(*heap_val1 as u32);
+    ssd_os_print_s(c"\n");
+    ssd_os_print_s(c"heap_val2;\n");
+    ssd_os_print_i(*heap_val2 as u32);
+    ssd_os_print_s(c"\n");
+    ssd_os_print_s(c"heap_val3;\n");
+    ssd_os_print_i(*heap_val3 as u32);
+    ssd_os_print_s(c"\n");
+
+    
+    ssd_os_print_s(c"heap_val1_pointer;\n");
+    ssd_os_print_i(&*heap_val1 as *const _ as u32);
+    ssd_os_print_s(c"\n");
+    ssd_os_print_s(c"heap_val2_pointer;\n");
+    ssd_os_print_i(&*heap_val2 as *const _ as u32);
+    ssd_os_print_s(c"\n");
+    ssd_os_print_s(c"heap_val3_pointer;\n");
+    ssd_os_print_i(&*heap_val3 as *const _ as u32);
+    ssd_os_print_s(c"\n");
     
     
+    let mut vec = Vec::with_capacity(10);
+    vec.push(1);
+    vec.push(1);
+    vec.push(1);
+    
+    ssd_os_print_s(c"vec0;\n");
+    ssd_os_print_i(vec[0]);
+    ssd_os_print_s(c"\n");
+
+
+    ssd_os_print_unlock();
     
     unsafe {
         // core::ptr::copy(s, memory_region as *mut [u8; 19], s.len());
@@ -165,26 +203,25 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
         
     
         // ssd_os_print_i(geo.pg_size as u32);
-        // let geo = unsafe { geo.assume_init() };
         
         // ssd_os_print_lock();        
         // ssd_os_print_i(geo.pg_size as u32);
         //     ssd_os_print_lock();
 
-        ssd_os_print_lock();        
-        ssd_os_print_s(c"SE HER ! \n");
-        ssd_os_print_unlock();
+        // ssd_os_print_lock();        
+        // ssd_os_print_s(c"SE HER ! \n");
+        // ssd_os_print_unlock();
 
 
         // ssd_os_print_lock();        
         // ssd_os_print_i(geo.sec_per_pg as u32);
         // ssd_os_print_unlock();
 
-        let res = volt_get_geometry(&mut geo as *mut nvm_mmgr_geometry);
+        // let res = volt_get_geometry(&mut geo.assume_init() as *mut nvm_mmgr_geometry);
         
-        ssd_os_print_lock();
-        ssd_os_print_i(res as u32);
-        ssd_os_print_unlock();
+        // ssd_os_print_lock();
+        // ssd_os_print_i(res as u32);
+        // ssd_os_print_unlock();
         
         
         // ssd_os_print_lock();
@@ -225,10 +262,10 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     // ssd_os_print_s(c"Printing from mem region\n");
     // ssd_os_print_s(unsafe { CStr::from_ptr(memory_region as *const u8) });
 
-    ssd_os_print_unlock();
-    unsafe {
-        my_int = 0x0fffffffffffffff;
-    }
+    // ssd_os_print_unlock();
+    // unsafe {
+    //     my_int = 0x0fffffffffffffff;
+    // }
     0
 }
 

@@ -2,7 +2,7 @@
 target = ["./target.json"]
 
 [unstable]
-build-std = ["core"]
+build-std = ["core", "alloc"]
 
 [target.riscv32]
 runner = "qemu-system-riscv32 -machine virt -serial mon:stdio -semihosting-config enable=on,target=native -nographic -bios "
