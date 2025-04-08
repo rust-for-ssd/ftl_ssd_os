@@ -151,10 +151,10 @@ static mut geo : nvm_mmgr_geometry = nvm_mmgr_geometry {
 #[allow(static_mut_refs)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
-    let cpu_id = ssd_os_this_cpu(unsafe { bbt_conn.get_name() });
-    let memory_region = ssd_os_mem_get(cpu_id);
-    let test = 90;
-    let s = b"MEMORY REGION STR!\0";
+    // let cpu_id = ssd_os_this_cpu(unsafe { bbt_conn.get_name() });
+    // let memory_region = ssd_os_mem_get(cpu_id);
+    // let test = 90;
+    // let s = b"MEMORY REGION STR!\0";
     // let mut geo = MaybeUninit::<nvm_mmgr_geometry>::uninit();
     
     
@@ -169,45 +169,61 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
         
         // ssd_os_print_lock();        
         // ssd_os_print_i(geo.pg_size as u32);
-        ssd_os_print_s(c"IN UNSAFE BLOCK \n");
+        //     ssd_os_print_lock();
 
-        ssd_os_print_i(geo.pg_size as u32);
-
-        
+        ssd_os_print_lock();        
+        ssd_os_print_s(c"SE HER ! \n");
         ssd_os_print_unlock();
-        volt_get_geometry(&mut geo as *mut nvm_mmgr_geometry);
+
+
+        // ssd_os_print_lock();        
+        // ssd_os_print_i(geo.sec_per_pg as u32);
+        // ssd_os_print_unlock();
+
+        let res = volt_get_geometry(&mut geo as *mut nvm_mmgr_geometry);
+        
+        ssd_os_print_lock();
+        ssd_os_print_i(res as u32);
+        ssd_os_print_unlock();
+        
+        
+        // ssd_os_print_lock();
+        // ssd_os_print_i(geo.sec_per_pg as u32);
+        // ssd_os_print_unlock();
+
+
     }
     
     
     
     
-    ssd_os_print_lock();
-    ssd_os_print_s(c"PAGE SIZE!!!: \n");
-    ssd_os_print_unlock();
+    // ssd_os_print_lock();
+    // ssd_os_print_s(c"PAGE SIZE!!!: \n");
+    // ssd_os_print_unlock();
 
-    ssd_os_print_lock();
+    // ssd_os_print_lock();
 
-    ssd_os_print_i(unsafe { geo.pg_size } as u32);
-    ssd_os_print_unlock();
+    // ssd_os_print_i(unsafe { geo.pg_size } as u32);
+    // ssd_os_print_unlock();
 
-    ssd_os_print_s(c"-------!!!: ");
+    // ssd_os_print_s(c"-------!!!: ");
 
-    ssd_os_print_s(CStr::from_ptr(memory_region as *mut u8));
-    ssd_os_print_s(c"bbt memory region: ");
-    ssd_os_print_i(memory_region as u32);
-    ssd_os_print_s(c"\nbbt cpu_id: ");
-    ssd_os_print_i(cpu_id as u32);
-    ssd_os_print_s(c"\nhelloo\n ");
-    ssd_os_print_i(42);
+    // ssd_os_print_s(CStr::from_ptr(memory_region as *mut u8));
+    // ssd_os_print_s(c"bbt memory region: ");
+    // ssd_os_print_i(memory_region as u32);
+    // ssd_os_print_s(c"\nbbt cpu_id: ");
+    // ssd_os_print_i(cpu_id as u32);
+    // ssd_os_print_s(c"\nhelloo\n ");
+    // ssd_os_print_i(42);
 
-    ssd_os_print_unlock();
+    // ssd_os_print_unlock();
     
     
 
-    ssd_os_print_lock();
-    ssd_os_mem_cpy(memory_region, s.as_ptr() as *const c_void, 19);
-    ssd_os_print_s(c"Printing from mem region\n");
-    ssd_os_print_s(unsafe { CStr::from_ptr(memory_region as *const u8) });
+    // ssd_os_print_lock();
+    // ssd_os_mem_cpy(memory_region, s.as_ptr() as *const c_void, 19);
+    // ssd_os_print_s(c"Printing from mem region\n");
+    // ssd_os_print_s(unsafe { CStr::from_ptr(memory_region as *const u8) });
 
     ssd_os_print_unlock();
     unsafe {
