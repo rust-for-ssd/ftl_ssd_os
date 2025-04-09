@@ -1,14 +1,21 @@
 use core::alloc::{GlobalAlloc, Layout};
+use core::cell::{Cell};
 use core::mem;
-use core::ptr::NonNull;
-use core::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
+
+use crate::safe_bindings::{ssd_os_print_i, ssd_os_print_lock, ssd_os_print_s, ssd_os_print_ss, ssd_os_print_unlock};
+// use core::panicking::panic;
+
+
+
+// ISSUES: Dealloc does not work.
+// Dynamic allocator
 
 /// A simple memory allocator for embedded systems with a single memory region.
 pub struct SimpleAllocator {
-    start: usize,
-    end: usize,
-    initialized: AtomicBool,
-    free_list_head: AtomicPtr<FreeBlock>,
+    start: Cell<usize>,
+    end: Cell<usize>,
+    initialized: Cell<bool>,
+    free_list_head: Cell<*mut FreeBlock>,
 }
 
 /// Represents a free block of memory.
@@ -22,55 +29,98 @@ unsafe impl Send for SimpleAllocator {}
 unsafe impl Sync for SimpleAllocator {}
 
 impl SimpleAllocator {
-    /// Creates a new allocator with the given memory region.
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure that the provided memory region is valid and available for use.
-    pub const unsafe fn new(start: usize, end: usize) -> Self {
-        Self {
-            start,
-            end,
-            initialized: AtomicBool::new(false),
-            free_list_head: AtomicPtr::new(core::ptr::null_mut()),
-        }
+    pub const unsafe fn new() -> Self {
+        let test = Self {
+            start: Cell::new(0),
+            end: Cell::new(0),
+            initialized: Cell::new(false),
+            free_list_head: Cell::new(core::ptr::null_mut()),
+        };
+        test
     }
 
     /// Initializes the allocator by setting up the initial free block.
-    fn initialize(&self) {
-        if self.initialized.load(Ordering::Relaxed) {
+    pub fn initialize(&self, start: usize, end: usize) {
+        ssd_os_print_lock();
+        ssd_os_print_s(c"YOOO\n");
+        ssd_os_print_unlock();
+        
+        
+        ssd_os_print_lock();
+        ssd_os_print_s(c"START ADDR: \n");
+        ssd_os_print_unlock();
+        
+        ssd_os_print_lock();
+        crate::safe_bindings::ssd_os_print_i(start as u32);
+        ssd_os_print_unlock();
+        
+        ssd_os_print_lock();
+        ssd_os_print_s(c"\n");
+        ssd_os_print_unlock();
+
+        ssd_os_print_lock();
+        ssd_os_print_s(c"END ADDR: \n");
+        ssd_os_print_unlock();
+        
+        ssd_os_print_lock();
+        crate::safe_bindings::ssd_os_print_i(end as u32);
+        ssd_os_print_unlock();
+        
+        let is_init : bool = self.initialized.get();
+        assert!(is_init as u32 == 1);
+        // assert!(is_init as u32 == 111);
+
+                
+        if is_init {
+                    ssd_os_print_lock();
+            ssd_os_print_s(c"WTF??????\n");
+            ssd_os_print_i(self.initialized.get() as u32);
+            ssd_os_print_s(c"WTF??????\n");
+               ssd_os_print_unlock();
+
             return;
         }
+        
+                ssd_os_print_s(c"LOL: \n");
+        
+        
+        self.start.set(start);
+        self.end.set(end);
+        
+        crate::safe_bindings::ssd_os_print_i(self.start.get() as u32);
+        crate::safe_bindings::ssd_os_print_i(self.end.get() as u32);
 
-        let size = self.end - self.start;
+        
+
+        let size = self.end.get() - self.start.get();
 
         // Only initialize if the region has enough space for a block
         if size >= mem::size_of::<FreeBlock>() {
-            let block_ptr = self.start as *mut FreeBlock;
+            let block_ptr = self.start.get() as *mut FreeBlock;
 
             // Safety: We're writing to memory we own
             unsafe {
                 (*block_ptr).size = size;
                 (*block_ptr).next = core::ptr::null_mut();
-                self.free_list_head.store(block_ptr, Ordering::Relaxed);
+                self.free_list_head.set(block_ptr);
             }
         }
-
-        self.initialized.store(true, Ordering::Relaxed);
+        
+        self.initialized.set(true); 
     }
 }
 
 unsafe impl GlobalAlloc for SimpleAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         // Ensure the allocator is initialized
-        if !self.initialized.load(Ordering::Relaxed) {
-            self.initialize();
-        }
+        // if !self.initialized.get() {
+        //     panic!("Allocator not initialized!")
+        // }
 
         let size = layout.size().max(mem::size_of::<FreeBlock>());
         let align = layout.align().max(mem::align_of::<FreeBlock>());
 
-        let mut current_ptr = self.free_list_head.load(Ordering::Acquire);
+        let mut current_ptr = self.free_list_head.get();
         let mut prev_ptr: *mut FreeBlock = core::ptr::null_mut();
 
         while !current_ptr.is_null() {
@@ -93,14 +143,14 @@ unsafe impl GlobalAlloc for SimpleAllocator {
                     (*new_block_ptr).next = current_block.next;
 
                     if prev_ptr.is_null() {
-                        self.free_list_head.store(new_block_ptr, Ordering::Release);
+                        self.free_list_head.set(new_block_ptr);
                     } else {
                         (*prev_ptr).next = new_block_ptr;
                     }
                 } else {
                     // Use the entire block
                     if prev_ptr.is_null() {
-                        self.free_list_head.store(current_block.next, Ordering::Release);
+                        self.free_list_head.set(current_block.next);
                     } else {
                         (*prev_ptr).next = current_block.next;
                     }
@@ -116,38 +166,57 @@ unsafe impl GlobalAlloc for SimpleAllocator {
         // No suitable block found
         core::ptr::null_mut()
     }
+    
+
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         return;
         let ptr_addr = ptr as usize;
 
         // Ensure the pointer is within our memory region
-        if ptr_addr < self.start || ptr_addr >= self.end {
+        if ptr_addr < self.start.get() || ptr_addr >= self.end.get() {
             #[cfg(debug_assertions)]
             panic!("Attempted to free memory not managed by this allocator");
             return;
         }
 
         let size = layout.size().max(mem::size_of::<FreeBlock>());
+        
+        let adjusted_ptr = if layout.align() > mem::align_of::<FreeBlock>() {
+            // Ensure pointer is aligned for both the layout and FreeBlock
+            align_up(ptr as usize, layout.align()) as *mut u8
+        } else {
+            ptr
+        };
+        let block_ptr = adjusted_ptr as *mut FreeBlock;
+        
         let block_ptr = ptr as *mut FreeBlock;
 
         (*block_ptr).size = size;
 
         // Insert the block at the beginning of the free list
         loop {
-            let head = self.free_list_head.load(Ordering::Acquire);
+            let head = self.free_list_head.get();
             (*block_ptr).next = head;
 
-            if self
-                .free_list_head
-                .compare_exchange(head, block_ptr, Ordering::Release, Ordering::Relaxed)
-                .is_ok()
-            {
-                break;
-            }
+            // if self
+            //     .free_list_head
+            //     .compare_exchange(head, block_ptr, Ordering::Release, Ordering::Relaxed)
+            //     .is_ok()
+            // {
+            //     break;
+            // }
         }
 
         // Note: A production allocator would merge adjacent free blocks here
     }
 }
 
+pub fn align_up(addr: usize, align: usize) -> usize {
+    // Check if align is a power of 2
+    debug_assert!(align.is_power_of_two());
+    // Calculate the alignment mask
+    let mask = align - 1;
+    // Align the address upward
+    (addr + mask) & !mask
+}
