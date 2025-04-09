@@ -59,6 +59,7 @@ unsafe extern "C" {
     pub fn ssd_os_print_unlock();
     pub fn ssd_os_print_ss(s1: *const ::core::ffi::c_char, s2: *const ::core::ffi::c_char);
     pub fn ssd_os_mem_get(key: ::core::ffi::c_int) -> *mut ::core::ffi::c_void;
+    pub fn ssd_os_mem_size(key: ::core::ffi::c_int) -> ::core::ffi::c_int;
     pub fn ssd_os_mem_cpy(
         dest: *mut ::core::ffi::c_void,
         src: *const ::core::ffi::c_void,
@@ -72,7 +73,6 @@ unsafe extern "C" {
     pub fn volt_get_ch_info(ch_info: *mut volt_info) -> ::core::ffi::c_int;
     pub fn volt_get_last_address(ptr: *mut ::core::ffi::c_void) -> ::core::ffi::c_int;
 }
-
 
 // -- Structs etc from volt.h
 #[repr(C)]
@@ -261,4 +261,3 @@ pub type nvm_mmgr_set_ch_info = ::core::option::Option<
     unsafe extern "C" fn(arg1: *mut nvm_channel, arg2: u16) -> ::core::ffi::c_int,
 >;
 pub type nvm_mmgr_exit = ::core::option::Option<unsafe extern "C" fn(arg1: *mut nvm_mmgr)>;
-

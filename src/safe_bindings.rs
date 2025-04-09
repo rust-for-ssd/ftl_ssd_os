@@ -3,12 +3,28 @@ use core::{
     fmt::{Error, Result, Write},
 };
 
-use crate::bindings::{self, pipeline};
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn memcpy(
+    dest: *mut ::core::ffi::c_void,
+    src: *const ::core::ffi::c_void,
+    n: u32,
+) -> *mut ::core::ffi::c_void {
+    // We'll assume that the "word-sized" copy in ssd_os_mem_cpy requires the pointers to be aligned to usize.
+    let alignment = ::core::mem::size_of::<usize>();
+
+    assert!(dest as usize % alignment == 0);
+    assert!(src as usize % alignment == 0);
+
+    // Now that we know the pointers are properly aligned, call the underlying implementation.
+    unsafe { bindings::ssd_os_mem_cpy(dest, src, n) }
+}
+
+use crate::bindings::{self};
 
 pub fn ssd_os_get_connection(
     connector_name: *mut ::core::ffi::c_char,
     pipe_name: *mut ::core::ffi::c_char,
-) -> *mut pipeline {
+) -> *mut bindings::pipeline {
     unsafe { bindings::ssd_os_get_connection(connector_name, pipe_name) }
 }
 
@@ -56,6 +72,10 @@ pub fn ssd_os_print_s(s: &CStr) {
     }
 }
 
+pub fn ssd_os_mem_size(key: i32) -> ::core::ffi::c_int {
+    unsafe { bindings::ssd_os_mem_size(key) }
+}
+
 pub fn safe_print(s: &str) {
     let Ok(()) = ssd_os_printer.write_str(s) else {
         ssd_os_print_lock();
@@ -63,13 +83,7 @@ pub fn safe_print(s: &str) {
         ssd_os_print_unlock();
         return ();
     };
-    // let _ = ssd_os_printer.write_fmt(format_args!("{}", s));
-}
-
-pub fn ssd_os_mem_cpy(dest: *mut ::core::ffi::c_void, src: *const ::core::ffi::c_void, n: u32) {
-    unsafe {
-        bindings::ssd_os_mem_cpy(dest, src, n);
-    }
+    let _ = ssd_os_printer.write_fmt(format_args!("{}", s));
 }
 
 pub struct ssd_os_printer;
@@ -107,35 +121,21 @@ impl Write for ssd_os_printer {
 }
 
 #[macro_export]
-macro_rules! println {
+macro_rules! println_s {
     ($msg:expr) => {{
-        $crate::ssd_os_print_lock();
-        $crate::ssd_os_print_s($msg);
-        $crate::ssd_os_print_unlock();
+        $crate::safe_bindings::ssd_os_print_lock();
+        $crate::safe_bindings::ssd_os_print_s($msg);
+        $crate::safe_bindings::ssd_os_print_s(c"\n");
+        $crate::safe_bindings::ssd_os_print_unlock();
     }};
 }
 
 #[macro_export]
-macro_rules! println_ {
-    ($($arg:tt)*) => {{
-        use core::fmt::Write;
-        let _= $crate::safe_bindings::ssd_os_printer.write_fmt(format_args!("{}\n", format_args!($($arg)*)));
-    }};
-}
-
-#[macro_export]
-macro_rules! print {
-    // Match case with just a string literal
+macro_rules! println_i {
     ($msg:expr) => {{
-        $crate::ssd_os_print_lock();
-        $crate::ssd_os_print_s($msg);
-        $crate::ssd_os_print_unlock();
-    }};
-
-    // Match case with a string literal and a single argument
-    ($msg:expr, $arg:expr) => {{
-        $crate::ssd_os_print_lock();
-        $crate::ssd_os_print_ss($msg.as_ptr(), $arg);
-        $crate::ssd_os_print_unlock();
+        $crate::safe_bindings::ssd_os_print_lock();
+        $crate::safe_bindings::ssd_os_print_i($msg);
+        $crate::safe_bindings::ssd_os_print_s(c"\n");
+        $crate::safe_bindings::ssd_os_print_unlock();
     }};
 }
