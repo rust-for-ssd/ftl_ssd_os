@@ -3,6 +3,7 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
+#![feature(panic_internals)]
 
 extern crate alloc;
 
@@ -10,7 +11,10 @@ extern crate alloc;
 
 #[panic_handler]
 pub fn panic(_info: &core::panic::PanicInfo) -> ! {
-    // safe_print("PANICING\n");
+    ssd_os_print_lock();
+    ssd_os_print_s(c"PANICING\n");
+    ssd_os_print_unlock();
+
     loop {}
 }
 use core::{alloc::GlobalAlloc, cmp::Ordering, ffi::{c_void, CStr}, mem::MaybeUninit, sync::atomic::AtomicPtr};
@@ -92,7 +96,7 @@ pub unsafe extern "C" fn bbt_stage_fn(
 pub extern "C" fn memcpy(
     dest: *mut ::core::ffi::c_void,
     src: *const ::core::ffi::c_void,
-    n: usize,
+    n: u32,
 ) -> *mut ::core::ffi::c_void {
     // Be careful: this will panic on oversized values in debug, or wrap silently in release
     ssd_os_mem_cpy(dest, src, n as u32);
@@ -133,7 +137,7 @@ impl connector {
 #[global_allocator]
 static ALLOCATOR: SimpleAllocator = unsafe {
     // Define your memory region here
-    SimpleAllocator::new(0xA3835000, 0xA3835000+200000)
+    SimpleAllocator::new()
 };
 
 #[allow(static_mut_refs)]
@@ -145,17 +149,21 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     // let s = b"MEMORY REGION STR!\0";
     let mut geo = MaybeUninit::<nvm_mmgr_geometry>::uninit();
     
-    ssd_os_print_lock();        
-    ssd_os_print_s(c"SE HER1 ! \n");
-    ssd_os_print_unlock();
+    ALLOCATOR.initialize(memory_region, memory_region + 0x10000);
+
     
-    ssd_os_print_lock();        
-    ssd_os_print_i(memory_region as u32);
-    ssd_os_print_unlock(); 
+    ssd_os_sleep(5);
+    // ssd_os_print_lock();        
+    // ssd_os_print_s(c"SE HER1 ! \n");
+    // ssd_os_print_unlock();
     
-    ssd_os_print_lock();        
-    ssd_os_print_s(c"SE HER2 ! \n");
-    ssd_os_print_unlock();
+    // ssd_os_print_lock();        
+    // ssd_os_print_i(memory_region as u32);
+    // ssd_os_print_unlock(); 
+    
+    // ssd_os_print_lock();        
+    // ssd_os_print_s(c"SE HER2 ! \n");
+    // ssd_os_print_unlock();
      
     let heap_val1 = Box::new(42);
     let heap_val2 = Box::new(43);
