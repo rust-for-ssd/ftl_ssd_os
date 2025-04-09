@@ -9,25 +9,33 @@ extern crate alloc;
 // include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 #[panic_handler]
-pub fn panic(_info: &core::panic::PanicInfo) -> ! {
+pub fn panic(_info: &::core::panic::PanicInfo) -> ! {
     // safe_print("PANICING\n");
     loop {}
 }
-use core::{alloc::GlobalAlloc, cmp::Ordering, ffi::{c_void, CStr}, mem::MaybeUninit, sync::atomic::AtomicPtr};
+use ::core::alloc::GlobalAlloc;
+use ::core::cmp::Ordering;
+use ::core::ffi::{CStr, c_void};
+use ::core::mem::MaybeUninit;
+use ::core::sync::atomic::AtomicPtr;
 
 use alloc::{boxed::Box, vec::Vec};
-use my_alloc::SimpleAllocator;
 use bindings::{
-    connector, lring_entry, nvm_mmgr_geometry, pipeline, ssd_os_ctrl_fn, ssd_os_stage_fn, stage, volt_get_geometry, MAGIC_CONNECTOR, MAGIC_STAGE
+    MAGIC_CONNECTOR, MAGIC_STAGE, connector, lring_entry, nvm_mmgr_geometry, pipeline,
+    ssd_os_ctrl_fn, ssd_os_stage_fn, stage, volt_get_geometry,
 };
+use my_alloc::SimpleAllocator;
 
 use safe_bindings::{
-    ssd_os_get_connection, ssd_os_mem_cpy, ssd_os_mem_get, ssd_os_print_i, ssd_os_print_lock, ssd_os_print_s, ssd_os_print_ss, ssd_os_print_unlock, ssd_os_sleep, ssd_os_this_cpu
+    ssd_os_get_connection, ssd_os_mem_cpy, ssd_os_mem_get, ssd_os_print_i, ssd_os_print_lock,
+    ssd_os_print_s, ssd_os_print_ss, ssd_os_print_unlock, ssd_os_sleep, ssd_os_this_cpu,
 };
 
+mod bbt;
 mod bindings;
-mod safe_bindings;
+mod core;
 mod my_alloc;
+mod safe_bindings;
 
 static mut my_int: u64 = 0;
 const hello: [u8; 32] = *b"hello world\0....................";
@@ -133,7 +141,7 @@ impl connector {
 #[global_allocator]
 static ALLOCATOR: SimpleAllocator = unsafe {
     // Define your memory region here
-    SimpleAllocator::new(0xA3835000, 0xA3835000+200000)
+    SimpleAllocator::new(0xA3835000, 0xA3835000 + 200000)
 };
 
 #[allow(static_mut_refs)]
@@ -144,25 +152,24 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     // let test = 90;
     // let s = b"MEMORY REGION STR!\0";
     let mut geo = MaybeUninit::<nvm_mmgr_geometry>::uninit();
-    
-    ssd_os_print_lock();        
+
+    ssd_os_print_lock();
     ssd_os_print_s(c"SE HER1 ! \n");
     ssd_os_print_unlock();
-    
-    ssd_os_print_lock();        
+
+    ssd_os_print_lock();
     ssd_os_print_i(memory_region as u32);
-    ssd_os_print_unlock(); 
-    
-    ssd_os_print_lock();        
+    ssd_os_print_unlock();
+
+    ssd_os_print_lock();
     ssd_os_print_s(c"SE HER2 ! \n");
     ssd_os_print_unlock();
-     
+
     let heap_val1 = Box::new(42);
     let heap_val2 = Box::new(43);
     let heap_val3 = Box::new(44);
 
-    
-    ssd_os_print_lock();     
+    ssd_os_print_lock();
     ssd_os_print_s(c"heap_val1;\n");
     ssd_os_print_i(*heap_val1 as u32);
     ssd_os_print_s(c"\n");
@@ -173,7 +180,6 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     ssd_os_print_i(*heap_val3 as u32);
     ssd_os_print_s(c"\n");
 
-    
     ssd_os_print_s(c"heap_val1_pointer;\n");
     ssd_os_print_i(&*heap_val1 as *const _ as u32);
     ssd_os_print_s(c"\n");
@@ -183,57 +189,47 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     ssd_os_print_s(c"heap_val3_pointer;\n");
     ssd_os_print_i(&*heap_val3 as *const _ as u32);
     ssd_os_print_s(c"\n");
-    
-    
+
     let mut vec = Vec::with_capacity(10);
     vec.push(1);
     vec.push(1);
     vec.push(1);
-    
+
     ssd_os_print_s(c"vec0;\n");
     ssd_os_print_i(vec[0]);
     ssd_os_print_s(c"\n");
 
-
     ssd_os_print_unlock();
-    
+
     unsafe {
         // core::ptr::copy(s, memory_region as *mut [u8; 19], s.len());
         // core::ptr::write_volatile(memory_region as *mut u8, b"MEMORY REGION STR! \0"); // Writes 90 to the address [2][5]
-        
-    
+
         // ssd_os_print_i(geo.pg_size as u32);
-        
-        // ssd_os_print_lock();        
+
+        // ssd_os_print_lock();
         // ssd_os_print_i(geo.pg_size as u32);
         //     ssd_os_print_lock();
 
-        // ssd_os_print_lock();        
+        // ssd_os_print_lock();
         // ssd_os_print_s(c"SE HER ! \n");
         // ssd_os_print_unlock();
 
-
-        // ssd_os_print_lock();        
+        // ssd_os_print_lock();
         // ssd_os_print_i(geo.sec_per_pg as u32);
         // ssd_os_print_unlock();
 
         // let res = volt_get_geometry(&mut geo.assume_init() as *mut nvm_mmgr_geometry);
-        
+
         // ssd_os_print_lock();
         // ssd_os_print_i(res as u32);
         // ssd_os_print_unlock();
-        
-        
+
         // ssd_os_print_lock();
         // ssd_os_print_i(geo.sec_per_pg as u32);
         // ssd_os_print_unlock();
-
-
     }
-    
-    
-    
-    
+
     // ssd_os_print_lock();
     // ssd_os_print_s(c"PAGE SIZE!!!: \n");
     // ssd_os_print_unlock();
@@ -254,8 +250,6 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     // ssd_os_print_i(42);
 
     // ssd_os_print_unlock();
-    
-    
 
     // ssd_os_print_lock();
     // ssd_os_mem_cpy(memory_region, s.as_ptr() as *const c_void, 19);
@@ -300,6 +294,6 @@ pub unsafe extern "C" fn bbt_conn_fn(entry: *mut lring_entry) -> *mut pipeline {
         );
         return pipe;
     } else {
-        return core::ptr::null_mut();
+        return ::core::ptr::null_mut();
     }
 }
