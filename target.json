@@ -20,5 +20,7 @@
   "panic-strategy": "abort",
   "relocation-model": "static",
   "target-pointer-width": "32",
-  "code-model": "medium"
+  "code-model": "medium",
+  "function-sections": false,
+  "data-sections": false
 }
