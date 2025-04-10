@@ -3,39 +3,37 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-
-extern crate alloc;
-
-// include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
-#[panic_handler]
-pub fn panic(_info: &::core::panic::PanicInfo) -> ! {
-    // safe_print("PANICING\n");
-    loop {}
-}
-use ::core::alloc::GlobalAlloc;
-use ::core::cmp::Ordering;
-use ::core::ffi::{CStr, c_void};
-use ::core::mem::MaybeUninit;
-use ::core::sync::atomic::AtomicPtr;
-
-use alloc::{boxed::Box, vec::Vec};
-use bindings::{
-    MAGIC_CONNECTOR, MAGIC_STAGE, connector, lring_entry, nvm_mmgr_geometry, pipeline,
-    ssd_os_ctrl_fn, ssd_os_stage_fn, stage, volt_get_geometry,
-};
-use my_alloc::SimpleAllocator;
-
-use safe_bindings::{
-    ssd_os_get_connection, ssd_os_mem_cpy, ssd_os_mem_get, ssd_os_print_i, ssd_os_print_lock,
-    ssd_os_print_s, ssd_os_print_ss, ssd_os_print_unlock, ssd_os_sleep, ssd_os_this_cpu,
-};
-
-mod bbt;
+#![allow(dead_code)]
+#[allow(static_mut_refs)]
 mod bindings;
-mod core;
 mod my_alloc;
 mod safe_bindings;
+extern crate alloc;
+
+use ::core::ffi::CStr;
+use alloc::boxed::Box;
+use bindings::{
+    MAGIC_CONNECTOR, MAGIC_STAGE, connector, lring_entry, pipeline, ssd_os_ctrl_fn,
+    ssd_os_stage_fn, stage,
+};
+use my_alloc::SimpleAllocator;
+use safe_bindings::{
+    ssd_os_get_connection, ssd_os_mem_get, ssd_os_mem_size, ssd_os_print_lock, ssd_os_print_s,
+    ssd_os_print_ss, ssd_os_print_unlock, ssd_os_sleep, ssd_os_this_cpu,
+};
+
+#[panic_handler]
+pub fn panic(_info: &core::panic::PanicInfo) -> ! {
+    ssd_os_print_lock();
+    ssd_os_print_s(c"PANICING\n");
+    ssd_os_print_unlock();
+
+    loop {}
+}
+
+#[global_allocator]
+static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
+
 
 static mut my_int: u64 = 0;
 const hello: [u8; 32] = *b"hello world\0....................";
@@ -97,169 +95,78 @@ pub unsafe extern "C" fn bbt_stage_fn(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn memcpy(
-    dest: *mut ::core::ffi::c_void,
-    src: *const ::core::ffi::c_void,
-    n: usize,
-) -> *mut ::core::ffi::c_void {
-    // Be careful: this will panic on oversized values in debug, or wrap silently in release
-    ssd_os_mem_cpy(dest, src, n as u32);
-    dest
-}
-
-#[unsafe(no_mangle)]
-pub static bbt_conn: connector = connector {
-    magic: *MAGIC_CONNECTOR,
-    name: {
-        let mut buf = [0u8; 32];
-        let s = *b"bbt_conn";
-        let mut i = 0;
-        while i < s.len() {
-            buf[i] = s[i];
-            i += 1;
-        }
-        buf
-    },
-    init_fn: Some(bbt_init),
-    exit_fn: Some(bbt_exit),
-    conn_fn: Some(bbt_conn_fn),
-    ring_fn: Some(bbt_ring),
-};
+pub static bbt_conn: connector =
+    connector::new(c"bbt_conn", bbt_init, bbt_exit, bbt_conn_fn, bbt_ring);
 
 impl connector {
+    const fn new(
+        name: &CStr,
+        init_fn: unsafe extern "C" fn() -> i32,
+        exit_fn: unsafe extern "C" fn() -> i32,
+        conn_fn: unsafe extern "C" fn(*mut lring_entry) -> *mut pipeline,
+        ring_fn: unsafe extern "C" fn(*mut lring_entry) -> i32,
+    ) -> Self {
+        Self {
+            magic: *MAGIC_CONNECTOR,
+            name: {
+                let mut buf = [0u8; 32];
+                let s = name.to_bytes();
+                let mut i = 0;
+                while i < s.len() {
+                    buf[i] = s[i];
+                    i += 1;
+                }
+                buf
+            },
+            init_fn: Some(init_fn),
+            exit_fn: Some(exit_fn),
+            conn_fn: Some(conn_fn),
+            ring_fn: Some(ring_fn),
+        }
+    }
     fn get_name(&self) -> &CStr {
         let Ok(s) = CStr::from_bytes_until_nul(&self.name) else {
-            ssd_os_print_lock();
-            ssd_os_print_s(c"here: ");
-            ssd_os_print_unlock();
+            println_s!(c"ERROR!");
             return c"";
         };
         s
     }
 }
 
-#[global_allocator]
-static ALLOCATOR: SimpleAllocator = unsafe {
-    // Define your memory region here
-    SimpleAllocator::new(0xA3835000, 0xA3835000 + 200000)
-};
-
-#[allow(static_mut_refs)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
-    let cpu_id = ssd_os_this_cpu(unsafe { bbt_conn.get_name() });
+    println_s!(c"init start:");
+    let cpu_id = ssd_os_this_cpu(bbt_conn.get_name());
     let memory_region = ssd_os_mem_get(cpu_id) as usize;
-    // let test = 90;
-    // let s = b"MEMORY REGION STR!\0";
-    let mut geo = MaybeUninit::<nvm_mmgr_geometry>::uninit();
+    let memory_size = ssd_os_mem_size(cpu_id) as usize;
 
-    ssd_os_print_lock();
-    ssd_os_print_s(c"SE HER1 ! \n");
-    ssd_os_print_unlock();
+    assert_eq!(
+        (&ALLOCATOR as *const _ as usize) % core::mem::align_of::<usize>(),
+        0
+    );
+    ALLOCATOR.initialize(memory_region, memory_region + memory_size);
 
-    ssd_os_print_lock();
-    ssd_os_print_i(memory_region as u32);
-    ssd_os_print_unlock();
 
-    ssd_os_print_lock();
-    ssd_os_print_s(c"SE HER2 ! \n");
-    ssd_os_print_unlock();
+    let mut heap_val1: alloc::vec::Vec<u32> = alloc::vec::Vec::with_capacity(3);
 
-    let heap_val1 = Box::new(42);
-    let heap_val2 = Box::new(43);
-    let heap_val3 = Box::new(44);
+    heap_val1.push(42);
+    println_i!(heap_val1[0]);
+    heap_val1[0] = 69;
+    println_i!(heap_val1[0]);
+    heap_val1.push(3);
+    // heap_val1.push(3);
+    // heap_val1.push(3);
+    // println_i!(heap_val1[3]);
 
-    ssd_os_print_lock();
-    ssd_os_print_s(c"heap_val1;\n");
-    ssd_os_print_i(*heap_val1 as u32);
-    ssd_os_print_s(c"\n");
-    ssd_os_print_s(c"heap_val2;\n");
-    ssd_os_print_i(*heap_val2 as u32);
-    ssd_os_print_s(c"\n");
-    ssd_os_print_s(c"heap_val3;\n");
-    ssd_os_print_i(*heap_val3 as u32);
-    ssd_os_print_s(c"\n");
+    let b1 = Box::new(41u32);
+    let b2 = Box::new(42u32);
+    let b3 = Box::new(43u32);
+    println_i!(*b1);
+    println_i!(*b2);
+    println_i!(*b3);
 
-    ssd_os_print_s(c"heap_val1_pointer;\n");
-    ssd_os_print_i(&*heap_val1 as *const _ as u32);
-    ssd_os_print_s(c"\n");
-    ssd_os_print_s(c"heap_val2_pointer;\n");
-    ssd_os_print_i(&*heap_val2 as *const _ as u32);
-    ssd_os_print_s(c"\n");
-    ssd_os_print_s(c"heap_val3_pointer;\n");
-    ssd_os_print_i(&*heap_val3 as *const _ as u32);
-    ssd_os_print_s(c"\n");
+    ssd_os_sleep(10);
 
-    let mut vec = Vec::with_capacity(10);
-    vec.push(1);
-    vec.push(1);
-    vec.push(1);
-
-    ssd_os_print_s(c"vec0;\n");
-    ssd_os_print_i(vec[0]);
-    ssd_os_print_s(c"\n");
-
-    ssd_os_print_unlock();
-
-    unsafe {
-        // core::ptr::copy(s, memory_region as *mut [u8; 19], s.len());
-        // core::ptr::write_volatile(memory_region as *mut u8, b"MEMORY REGION STR! \0"); // Writes 90 to the address [2][5]
-
-        // ssd_os_print_i(geo.pg_size as u32);
-
-        // ssd_os_print_lock();
-        // ssd_os_print_i(geo.pg_size as u32);
-        //     ssd_os_print_lock();
-
-        // ssd_os_print_lock();
-        // ssd_os_print_s(c"SE HER ! \n");
-        // ssd_os_print_unlock();
-
-        // ssd_os_print_lock();
-        // ssd_os_print_i(geo.sec_per_pg as u32);
-        // ssd_os_print_unlock();
-
-        // let res = volt_get_geometry(&mut geo.assume_init() as *mut nvm_mmgr_geometry);
-
-        // ssd_os_print_lock();
-        // ssd_os_print_i(res as u32);
-        // ssd_os_print_unlock();
-
-        // ssd_os_print_lock();
-        // ssd_os_print_i(geo.sec_per_pg as u32);
-        // ssd_os_print_unlock();
-    }
-
-    // ssd_os_print_lock();
-    // ssd_os_print_s(c"PAGE SIZE!!!: \n");
-    // ssd_os_print_unlock();
-
-    // ssd_os_print_lock();
-
-    // ssd_os_print_i(unsafe { geo.pg_size } as u32);
-    // ssd_os_print_unlock();
-
-    // ssd_os_print_s(c"-------!!!: ");
-
-    // ssd_os_print_s(CStr::from_ptr(memory_region as *mut u8));
-    // ssd_os_print_s(c"bbt memory region: ");
-    // ssd_os_print_i(memory_region as u32);
-    // ssd_os_print_s(c"\nbbt cpu_id: ");
-    // ssd_os_print_i(cpu_id as u32);
-    // ssd_os_print_s(c"\nhelloo\n ");
-    // ssd_os_print_i(42);
-
-    // ssd_os_print_unlock();
-
-    // ssd_os_print_lock();
-    // ssd_os_mem_cpy(memory_region, s.as_ptr() as *const c_void, 19);
-    // ssd_os_print_s(c"Printing from mem region\n");
-    // ssd_os_print_s(unsafe { CStr::from_ptr(memory_region as *const u8) });
-
-    // ssd_os_print_unlock();
-    // unsafe {
-    //     my_int = 0x0fffffffffffffff;
-    // }
     0
 }
 
@@ -281,7 +188,6 @@ pub unsafe extern "C" fn bbt_ring(ring: *mut lring_entry) -> ::core::ffi::c_int 
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn bbt_conn_fn(entry: *mut lring_entry) -> *mut pipeline {
-    ssd_os_sleep(1);
     let pipe = ssd_os_get_connection(
         c"bbt_conn".as_ptr().cast_mut(),
         c"bbt_pipe".as_ptr().cast_mut(),
