@@ -34,6 +34,7 @@ pub fn panic(_info: &core::panic::PanicInfo) -> ! {
 #[global_allocator]
 static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
 
+
 static mut my_int: u64 = 0;
 const hello: [u8; 32] = *b"hello world\0....................";
 
@@ -145,6 +146,7 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     );
     ALLOCATOR.initialize(memory_region, memory_region + memory_size);
 
+
     let mut heap_val1: alloc::vec::Vec<u32> = alloc::vec::Vec::with_capacity(3);
 
     heap_val1.push(42);
@@ -198,6 +200,6 @@ pub unsafe extern "C" fn bbt_conn_fn(entry: *mut lring_entry) -> *mut pipeline {
         );
         return pipe;
     } else {
-        return core::ptr::null_mut();
+        return ::core::ptr::null_mut();
     }
 }
