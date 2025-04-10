@@ -103,8 +103,9 @@ pub struct nvm_channel {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nvm_ppa_addr {
-    pub __bindgen_anon_1: nvm_ppa_addr__bindgen_ty_1,
+pub union nvm_ppa_addr {
+    pub ppa: u64,
+    pub g: u64,
 }
 
 #[repr(C)]
