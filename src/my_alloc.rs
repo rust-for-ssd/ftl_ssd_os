@@ -116,9 +116,7 @@ unsafe impl GlobalAlloc for SimpleAllocator {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        ssd_os_sleep(3);
         println_s!(c"DEALLOC!");
-        return;
         println_s!(c"DEALLOC!");
         return;
         let Some(start) = self.start.get() else {
@@ -136,7 +134,7 @@ unsafe impl GlobalAlloc for SimpleAllocator {
         let ptr_addr = ptr as usize;
 
         // Ensure the pointer is within our memory region
-        return;
+        // return;
         let b = ptr_addr < *self.start.get().unwrap();
         let a = ptr_addr >= *self.end.get().unwrap();
         if b || a {
@@ -144,7 +142,7 @@ unsafe impl GlobalAlloc for SimpleAllocator {
             // panic!("Attempted to free memory not managed by this allocator");
         }
 
-        return;
+        // return;
         let size = layout.size().max(mem::size_of::<FreeBlock>());
 
         let _adjusted_ptr = if layout.align() > mem::align_of::<FreeBlock>() {

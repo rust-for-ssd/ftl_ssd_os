@@ -5,7 +5,7 @@
   "data-layout": "e-m:e-p:32:32-i64:64-n32-S128",
   "eh-frame-header": false,
   "emit-debug-gdb-scripts": false,
-  "features": "+i,+a,+m,+f,+d,+v",
+  "features": "+i,+a,+m,+f,+d",
   "linker": "rust-lld",
   "linker-flavor": "gnu-lld",
   "llvm-abiname": "ilp32d",
@@ -21,6 +21,5 @@
   "relocation-model": "static",
   "target-pointer-width": "32",
   "code-model": "medium",
-  "function-sections": false,
-  "data-sections": false
+  "function-sections": false
 }
