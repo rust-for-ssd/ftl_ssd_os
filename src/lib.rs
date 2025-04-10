@@ -203,7 +203,7 @@ impl connector {
 
 static BBT : BadBlockTable = BadBlockTable::new();
 
-static mut GEO : nvm_mmgr_geometry = nvm_mmgr_geometry { n_of_ch: 10, lun_per_ch: 2, blk_per_lun: 2, pg_per_blk: 2, sec_per_pg: 2, n_of_planes: 2, pg_size: 2, sec_oob_sz: 2, sec_per_pl_pg: 2, sec_per_blk: 2, sec_per_lun: 2, sec_per_ch: 2, pg_per_lun: 2, pg_per_ch: 2, blk_per_ch: 2, tot_sec: 2, tot_pg: 2, tot_blk: 2, tot_lun: 2, sec_size: 2, pl_pg_size: 2, blk_size: 2, lun_size: 2, ch_size: 2, tot_size: 2, pg_oob_sz: 2, pl_pg_oob_sz: 2, blk_oob_sz: 2, lun_oob_sz: 2, ch_oob_sz: 2, tot_oob_sz: 2 };
+// static mut GEO : nvm_mmgr_geometry = nvm_mmgr_geometry { n_of_ch: 10, lun_per_ch: 2, blk_per_lun: 2, pg_per_blk: 2, sec_per_pg: 2, n_of_planes: 2, pg_size: 2, sec_oob_sz: 2, sec_per_pl_pg: 2, sec_per_blk: 2, sec_per_lun: 2, sec_per_ch: 2, pg_per_lun: 2, pg_per_ch: 2, blk_per_ch: 2, tot_sec: 2, tot_pg: 2, tot_blk: 2, tot_lun: 2, sec_size: 2, pl_pg_size: 2, blk_size: 2, lun_size: 2, ch_size: 2, tot_size: 2, pg_oob_sz: 2, pl_pg_oob_sz: 2, blk_oob_sz: 2, lun_oob_sz: 2, ch_oob_sz: 2, tot_oob_sz: 2 };
 
 
 #[unsafe(no_mangle)]
@@ -213,11 +213,13 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     let memory_region = ssd_os_mem_get(cpu_id) as usize;
     let memory_size = ssd_os_mem_size(cpu_id) as usize;
     println_s!(c"yo1:");
+    let mut geo : nvm_mmgr_geometry = nvm_mmgr_geometry { n_of_ch: 10, lun_per_ch: 2, blk_per_lun: 2, pg_per_blk: 2, sec_per_pg: 2, n_of_planes: 2, pg_size: 2, sec_oob_sz: 2, sec_per_pl_pg: 2, sec_per_blk: 2, sec_per_lun: 2, sec_per_ch: 2, pg_per_lun: 2, pg_per_ch: 2, blk_per_ch: 2, tot_sec: 2, tot_pg: 2, tot_blk: 2, tot_lun: 2, sec_size: 2, pl_pg_size: 2, blk_size: 2, lun_size: 2, ch_size: 2, tot_size: 2, pg_oob_sz: 2, pl_pg_oob_sz: 2, blk_oob_sz: 2, lun_oob_sz: 2, ch_oob_sz: 2, tot_oob_sz: 2 };
+
     // let mut geo = MaybeUninit::<nvm_mmgr_geometry>::uninit();
     // static GEO : MaybeUninit::<nvm_mmgr_geometry> = MaybeUninit::<nvm_mmgr_geometry>::uninit();
     println_s!(c"yo2:");
-    println_i!((&mut GEO as *mut nvm_mmgr_geometry)as u32);
-    unsafe { volt_get_geometry(&mut GEO as *mut nvm_mmgr_geometry) };
+    println_i!((&mut geo as *mut nvm_mmgr_geometry)as u32);
+    unsafe { volt_get_geometry(&mut geo as *mut nvm_mmgr_geometry) };
     println_s!(c"yo3:");
 
 
@@ -230,9 +232,8 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     // panic!("info");
     //
     println_s!(c"yoyo:");
-    unsafe {
-        BBT.init(&GEO);
-    }
+    
+    BBT.init(&geo);
 
 
     println_s!(c"Channel len");
