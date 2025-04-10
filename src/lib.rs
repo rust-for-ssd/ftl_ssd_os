@@ -14,11 +14,11 @@ mod bbt;
 extern crate alloc;
 
 use ::core::ffi::CStr;
-use core::{cell::{OnceCell, UnsafeCell}, mem};
+use core::{cell::{OnceCell, UnsafeCell}, mem::{self, MaybeUninit}};
 use alloc::{boxed::Box, vec::Vec};
 use bbt::BadBlockTable;
 use bindings::{
-    connector, lring_entry, nvm_mmgr_geometry, pipeline, ssd_os_ctrl_fn, ssd_os_stage_fn, stage, MAGIC_CONNECTOR, MAGIC_STAGE
+    connector, lring_entry, nvm_mmgr_geometry, pipeline, ssd_os_ctrl_fn, ssd_os_stage_fn, stage, volt_get_geometry, MAGIC_CONNECTOR, MAGIC_STAGE
 };
 use my_alloc::SimpleAllocator;
 use safe_bindings::{
@@ -203,7 +203,8 @@ impl connector {
 
 static BBT : BadBlockTable = BadBlockTable::new();
 
-static geo : nvm_mmgr_geometry = nvm_mmgr_geometry { n_of_ch: 10, lun_per_ch: 2, blk_per_lun: 2, pg_per_blk: 2, sec_per_pg: 2, n_of_planes: 2, pg_size: 2, sec_oob_sz: 2, sec_per_pl_pg: 2, sec_per_blk: 2, sec_per_lun: 2, sec_per_ch: 2, pg_per_lun: 2, pg_per_ch: 2, blk_per_ch: 2, tot_sec: 2, tot_pg: 2, tot_blk: 2, tot_lun: 2, sec_size: 2, pl_pg_size: 2, blk_size: 2, lun_size: 2, ch_size: 2, tot_size: 2, pg_oob_sz: 2, pl_pg_oob_sz: 2, blk_oob_sz: 2, lun_oob_sz: 2, ch_oob_sz: 2, tot_oob_sz: 2 };
+static mut GEO : nvm_mmgr_geometry = nvm_mmgr_geometry { n_of_ch: 10, lun_per_ch: 2, blk_per_lun: 2, pg_per_blk: 2, sec_per_pg: 2, n_of_planes: 2, pg_size: 2, sec_oob_sz: 2, sec_per_pl_pg: 2, sec_per_blk: 2, sec_per_lun: 2, sec_per_ch: 2, pg_per_lun: 2, pg_per_ch: 2, blk_per_ch: 2, tot_sec: 2, tot_pg: 2, tot_blk: 2, tot_lun: 2, sec_size: 2, pl_pg_size: 2, blk_size: 2, lun_size: 2, ch_size: 2, tot_size: 2, pg_oob_sz: 2, pl_pg_oob_sz: 2, blk_oob_sz: 2, lun_oob_sz: 2, ch_oob_sz: 2, tot_oob_sz: 2 };
+
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
@@ -211,36 +212,48 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     let cpu_id = ssd_os_this_cpu(bbt_conn.get_name());
     let memory_region = ssd_os_mem_get(cpu_id) as usize;
     let memory_size = ssd_os_mem_size(cpu_id) as usize;
+    println_s!(c"yo1:");
+    // let mut geo = MaybeUninit::<nvm_mmgr_geometry>::uninit();
+    // static GEO : MaybeUninit::<nvm_mmgr_geometry> = MaybeUninit::<nvm_mmgr_geometry>::uninit();
+    println_s!(c"yo2:");
+    println_i!((&mut GEO as *mut nvm_mmgr_geometry)as u32);
+    unsafe { volt_get_geometry(&mut GEO as *mut nvm_mmgr_geometry) };
+    println_s!(c"yo3:");
+
 
     assert_eq!(
         (&ALLOCATOR as *const _ as usize) % core::mem::align_of::<usize>(),
         0
     );
     ALLOCATOR.initialize(memory_region, memory_region + memory_size);
-    
-    // panic!("info");
-    // 
-    println_s!(c"yoyo:");
-    BBT.init(&geo);
 
-    
+    // panic!("info");
+    //
+    println_s!(c"yoyo:");
+    unsafe {
+        BBT.init(&GEO);
+    }
+
+
     println_s!(c"Channel len");
     println_i!(BBT.channels.borrow().len() as u32);
-    
+
+    ssd_os_sleep(10);
+
     let pba : PhysicalBlockAddress = PhysicalBlockAddress {
         channel: 0,
         lun: 0,
         plane: 0,
         block: 0,
     };
-    
+
     let pba_bad_check : PhysicalBlockAddress = PhysicalBlockAddress {
         channel: 5,
         lun: 0,
         plane: 0,
         block: 0,
     };
-  
+
     for i in 0..10 {
         let pba2 : PhysicalBlockAddress = PhysicalBlockAddress {
             channel: i,
@@ -251,17 +264,17 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
         BBT.set_bad_block(&pba2);
     }
 
-    
+
     println_s!(c"Bad block");
     println_i!(BBT.get_block_status(&pba) as u32);
-    
+
     println_s!(c"Another bad block");
     println_i!(BBT.get_block_status(&pba_bad_check) as u32);
-    
+
     // let mut test2: Vec<u32> = alloc::vec::Vec::new();
-    
+
     // test2.push(33);
-    // 
+    //
     println_s!(c"Size of bbt");
     // println_i!(mem::size_of_val(&BBT) as u32);
     // println_s!(c"");
@@ -326,7 +339,7 @@ pub unsafe extern "C" fn bbt_conn_fn(entry: *mut lring_entry) -> *mut pipeline {
             plane: 0,
             block: 0,
         };
-        
+
         let pba_good : PhysicalBlockAddress = PhysicalBlockAddress {
             channel: 0,
             lun: 0,
@@ -334,19 +347,19 @@ pub unsafe extern "C" fn bbt_conn_fn(entry: *mut lring_entry) -> *mut pipeline {
             block: 0,
         };
         println_s!(c"BAD: (SHOULD BE 0)");
-        println_i!(BBT.get_block_status(&pba_bad) as u32); 
-        
+        println_i!(BBT.get_block_status(&pba_bad) as u32);
+
         println_s!(c"GOD: (SHOULD BE 1)");
         println_i!(BBT.get_block_status(&pba_good) as u32);
-        
+
         println_s!(c"MUTATING BAD BLOCK TABLE!!");
         BBT.set_bad_block(&pba_good);
-        
+
         println_s!(c"SHOULD NOW BE SET TO BAD (0)");
         println_i!(BBT.get_block_status(&pba_good) as u32);
 
 
-        
+
         ssd_os_sleep(10);
         return pipe;
     } else {
