@@ -1,4 +1,6 @@
 #!/bin/sh
+rm *.o
+cargo clean
 cargo b --profile small
 ar x ./target/target/small/libftl_ssd_os.a
 find . -type f -name "ftl_ssd_os*.o" -exec cp {} ../ssd_os/app/programs/build_rs/rs_ftl.o \;
