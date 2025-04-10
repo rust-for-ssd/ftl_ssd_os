@@ -73,7 +73,6 @@ unsafe extern "C" {
     pub fn volt_get_last_address(ptr: *mut ::core::ffi::c_void) -> ::core::ffi::c_int;
 }
 
-
 // -- Structs etc from volt.h
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -103,8 +102,9 @@ pub struct nvm_channel {
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct nvm_ppa_addr {
-    pub __bindgen_anon_1: nvm_ppa_addr__bindgen_ty_1,
+pub union nvm_ppa_addr {
+    pub ppa: u64,
+    pub g: u64,
 }
 
 #[repr(C)]
@@ -261,4 +261,3 @@ pub type nvm_mmgr_set_ch_info = ::core::option::Option<
     unsafe extern "C" fn(arg1: *mut nvm_channel, arg2: u16) -> ::core::ffi::c_int,
 >;
 pub type nvm_mmgr_exit = ::core::option::Option<unsafe extern "C" fn(arg1: *mut nvm_mmgr)>;
-
