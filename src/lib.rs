@@ -102,7 +102,6 @@ pub fn panic(info: &core::panic::PanicInfo) -> ! {
 #[global_allocator]
 static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
 
-
 static mut my_int: u64 = 0;
 const hello: [u8; 32] = *b"hello world\0....................";
 
