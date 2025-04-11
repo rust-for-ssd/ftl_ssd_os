@@ -1,9 +1,10 @@
+use crate::bbt::bbt::BadBlockTable;
 use crate::sdd_os_alloc::SimpleAllocator;
 use crate::ssd_os::lring::LRing;
-use crate::{BadBlockTable, bindings, make_connector, make_stage, safe_bindings, shared};
+use crate::{bindings, make_connector_static, make_stage_static, safe_bindings, shared};
 use ::core::ffi::CStr;
 use alloc::boxed::Box;
-use bindings::{connector, lring_entry, nvm_mmgr_geometry, pipeline, stage, volt_get_geometry};
+use bindings::{lring_entry, nvm_mmgr_geometry, pipeline, volt_get_geometry};
 use safe_bindings::{
     ssd_os_get_connection, ssd_os_mem_get, ssd_os_mem_size, ssd_os_print_lock, ssd_os_print_ss,
     ssd_os_print_unlock, ssd_os_sleep, ssd_os_this_cpu,
@@ -17,8 +18,7 @@ static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
 
 const hello: [u8; 32] = *b"hello world\0....................";
 
-#[unsafe(no_mangle)]
-pub static bbt_stage: stage = make_stage!(c"bbt_stage", s1_init, s1_init, bbt_stage_fn);
+make_stage_static!(bbt_stage, s1_init, s1_init, bbt_stage_fn);
 
 fn s1_init() -> ::core::ffi::c_int {
     0
@@ -38,9 +38,7 @@ fn bbt_stage_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     context
 }
 
-#[unsafe(no_mangle)]
-pub static bbt_conn: connector =
-    make_connector!(c"bbt_conn", bbt_init, bbt_exit, bbt_conn_fn, bbt_ring);
+make_connector_static!(bbt_conn, bbt_init, bbt_exit, bbt_conn_fn, bbt_ring);
 
 static BBT: BadBlockTable = BadBlockTable::new();
 
@@ -99,7 +97,8 @@ fn bbt_init() -> ::core::ffi::c_int {
 
     BBT.init(&geo);
 
-    bbt_lring.init(c"BBT_LRING", 0);
+    println_s!(c"init ring");
+    // bbt_lring.init(c"BBT_LRING", 0);
 
     println_s!(c"Channel len");
     println_i!(BBT.channels.borrow().len() as u32);

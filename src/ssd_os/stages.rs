@@ -58,3 +58,12 @@ macro_rules! make_stage {
         }
     }};
 }
+
+#[macro_export]
+macro_rules! make_stage_static {
+    ($ident:ident, $init:ident, $exit:ident, $stage_fn:ident) => {
+        #[unsafe(no_mangle)]
+        pub static $ident: $crate::bindings::stage =
+            $crate::make_stage!($crate::cstr!($ident), $init, $exit, $stage_fn);
+    };
+}
