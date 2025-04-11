@@ -16,11 +16,7 @@ extern crate alloc;
 
 use crate::bbt::bbt::BadBlockTable;
 use ::core::ffi::CStr;
-// use bbt::BadBlockTable;
-use bindings::{
-    MAGIC_CONNECTOR, MAGIC_STAGE, connector, lring_entry, pipeline, ssd_os_ctrl_fn,
-    ssd_os_stage_fn, stage,
-};
+use bindings::{MAGIC_STAGE, ssd_os_ctrl_fn, ssd_os_stage_fn, stage};
 
 #[inline(never)]
 fn panic_printer(info: &core::panic::PanicInfo) {
@@ -63,64 +59,4 @@ pub fn panic(info: &core::panic::PanicInfo) -> ! {
     println_s!(c"PANIC!");
     panic_printer(info);
     loop {}
-}
-
-impl stage {
-    const fn new(
-        name: &[u8],
-        init: ssd_os_ctrl_fn,
-        exit: ssd_os_ctrl_fn,
-        stage_fn: ssd_os_stage_fn,
-    ) -> Self {
-        stage {
-            magic: *MAGIC_STAGE,
-            name: {
-                let mut buf = [0u8; 32];
-                let mut i = 0;
-                while i < name.len() {
-                    buf[i] = name[i];
-                    i += 1;
-                }
-                buf
-            },
-            init_fn: init,
-            exit_fn: exit,
-            stage_fn,
-        }
-    }
-}
-
-impl connector {
-    const fn new(
-        name: &CStr,
-        init_fn: unsafe extern "C" fn() -> i32,
-        exit_fn: unsafe extern "C" fn() -> i32,
-        conn_fn: unsafe extern "C" fn(*mut lring_entry) -> *mut pipeline,
-        ring_fn: unsafe extern "C" fn(*mut lring_entry) -> i32,
-    ) -> Self {
-        Self {
-            magic: *MAGIC_CONNECTOR,
-            name: {
-                let mut buf = [0u8; 32];
-                let s = name.to_bytes();
-                let mut i = 0;
-                while i < s.len() {
-                    buf[i] = s[i];
-                    i += 1;
-                }
-                buf
-            },
-            init_fn: Some(init_fn),
-            exit_fn: Some(exit_fn),
-            conn_fn: Some(conn_fn),
-            ring_fn: Some(ring_fn),
-        }
-    }
-    fn get_name(&self) -> &CStr {
-        let Ok(s) = CStr::from_bytes_until_nul(&self.name) else {
-            println_s!(c"ERROR!");
-            return c"";
-        };
-        s
-    }
 }
