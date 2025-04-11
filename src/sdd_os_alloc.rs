@@ -116,7 +116,6 @@ unsafe impl GlobalAlloc for SimpleAllocator {
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         println_s!(c"DEALLOC!");
-        println_s!(c"DEALLOC!");
         return;
         let Some(start) = self.start.get() else {
             return;

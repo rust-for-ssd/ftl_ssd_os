@@ -1,3 +1,5 @@
 volt_cpipe volt_conn,slicer_conn
 volt_spipe slicer_conn,volt_conn
 bbt_pipe bbt_conn,bbt_conn
+gcc_spipe gc_conn,bbt_conn
+gcc_cpipe bbt_conn,gc_conn
