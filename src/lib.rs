@@ -7,6 +7,7 @@
 #![allow(static_mut_refs)]
 mod bbt;
 mod bindings;
+mod garbage_collector;
 mod safe_bindings;
 mod sdd_os_alloc;
 mod shared;

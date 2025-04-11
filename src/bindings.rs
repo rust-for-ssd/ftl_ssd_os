@@ -65,6 +65,25 @@ unsafe extern "C" {
         src: *const ::core::ffi::c_void,
         n: u32,
     ) -> *mut ::core::ffi::c_void;
+    pub fn ssd_os_lring_enqueue(ring: *mut lring, entry: *mut lring_entry) -> ::core::ffi::c_int;
+
+    pub fn ssd_os_lring_enqueue_m(ring: *mut lring, entry: *mut lring_entry) -> ::core::ffi::c_int;
+
+    pub fn ssd_os_lring_dequeue(ring: *mut lring, entry: *mut lring_entry) -> ::core::ffi::c_int;
+
+    pub fn ssd_os_lring_dequeue_m(ring: *mut lring, entry: *mut lring_entry) -> ::core::ffi::c_int;
+    pub fn ssd_os_lring_create(
+        name: *mut ::core::ffi::c_char,
+        size: ::core::ffi::c_int,
+        mem: *mut ::core::ffi::c_void,
+        flags: ::core::ffi::c_int,
+    ) -> *mut lring;
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct lring {
+    _unused: [u8; 0],
 }
 
 // ---------- Volt Manager (MEDIA MANAGER) ---------

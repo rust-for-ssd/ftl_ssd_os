@@ -1,27 +1,60 @@
-use bindings::{MAGIC_STAGE, ssd_os_ctrl_fn, ssd_os_stage_fn, stage};
+use core::ffi::CStr;
+
+use bindings::{MAGIC_STAGE, stage};
 
 use crate::bindings;
 impl stage {
     pub const fn new(
-        name: &[u8],
-        init: ssd_os_ctrl_fn,
-        exit: ssd_os_ctrl_fn,
-        stage_fn: ssd_os_stage_fn,
+        name: &CStr,
+        init: unsafe extern "C" fn() -> ::core::ffi::c_int,
+        exit: unsafe extern "C" fn() -> ::core::ffi::c_int,
+        stage_fn: unsafe extern "C" fn(
+            context: *mut ::core::ffi::c_void,
+        ) -> *mut ::core::ffi::c_void,
     ) -> Self {
         stage {
             magic: *MAGIC_STAGE,
             name: {
                 let mut buf = [0u8; 32];
+                let s = name.to_bytes();
                 let mut i = 0;
-                while i < name.len() {
-                    buf[i] = name[i];
+                while i < s.len() {
+                    buf[i] = s[i];
                     i += 1;
                 }
                 buf
             },
-            init_fn: init,
-            exit_fn: exit,
-            stage_fn,
+            init_fn: Some(init),
+            exit_fn: Some(exit),
+            stage_fn: Some(stage_fn),
         }
     }
+}
+
+#[macro_export]
+macro_rules! make_stage {
+    (
+        $name:expr,
+        $init_fn:ident,
+        $exit_fn:ident,
+        $stage_fn:ident
+    ) => {{
+        {
+            unsafe extern "C" fn wrapped_init() -> ::core::ffi::c_int {
+                $init_fn()
+            }
+
+            unsafe extern "C" fn wrapped_exit() -> ::core::ffi::c_int {
+                $exit_fn()
+            }
+
+            unsafe extern "C" fn wrapped_stage(
+                context: *mut ::core::ffi::c_void,
+            ) -> *mut ::core::ffi::c_void {
+                $stage_fn(context)
+            }
+
+            $crate::bindings::stage::new($name, wrapped_init, wrapped_exit, wrapped_stage)
+        }
+    }};
 }
