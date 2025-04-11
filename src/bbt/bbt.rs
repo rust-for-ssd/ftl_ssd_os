@@ -3,7 +3,7 @@ use core::cell::RefCell;
 /// ASSUMPTIONS:
 /// We assume that bbt is static, as such we use static lifetimes.
 /// we assume the structure is channels[LUNS[Planes[Blocks]]]
-use alloc::vec::{self, Vec};
+use alloc::vec::Vec;
 
 use crate::{bindings::nvm_mmgr_geometry, shared::addresses::PhysicalBlockAddress};
 

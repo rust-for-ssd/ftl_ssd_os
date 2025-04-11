@@ -3,7 +3,6 @@ use core::cell::{Cell, OnceCell};
 use core::mem;
 
 use crate::println_s;
-use crate::safe_bindings::ssd_os_sleep;
 
 // ISSUES: Dealloc does not work.
 // Dynamic allocator
