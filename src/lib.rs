@@ -15,7 +15,6 @@ mod ssd_os;
 
 extern crate alloc;
 
-use crate::bbt::bbt::BadBlockTable;
 use ::core::ffi::CStr;
 
 #[inline(never)]

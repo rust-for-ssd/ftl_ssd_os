@@ -5,9 +5,12 @@ use crate::safe_bindings::{
 use ::core::ffi::CStr;
 
 use crate::ssd_os::lring::LRing;
-use crate::{make_connector, make_stage, println_s};
+use crate::{make_connector, make_connector_static, make_stage, make_stage_static, println_s};
 
 const hello: [u8; 32] = *b"hello world\0....................";
+
+make_stage_static!(gc_sstage, s1_init, s1_init, gc_sstage_fn);
+make_stage_static!(gc_cstage, s1_init, s1_init, gc_cstage_fn);
 
 fn gc_sstage_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     ssd_os_print_lock();
@@ -19,9 +22,6 @@ fn gc_sstage_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     context
 }
 
-#[unsafe(no_mangle)]
-pub static gc_sstage: stage = make_stage!(c"gc_sstage", s1_init, s1_init, gc_sstage_fn);
-
 fn gc_cstage_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     ssd_os_print_lock();
     ssd_os_print_ss(
@@ -31,9 +31,6 @@ fn gc_cstage_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     ssd_os_print_unlock();
     context
 }
-
-#[unsafe(no_mangle)]
-pub static gc_cstage: stage = make_stage!(c"gc_cstage", s1_init, s1_init, gc_cstage_fn);
 
 fn s1_init() -> ::core::ffi::c_int {
     0
@@ -45,8 +42,7 @@ fn s1_exit() -> ::core::ffi::c_int {
 
 static gc_lring: LRing<128> = LRing::new();
 
-#[unsafe(no_mangle)]
-pub static gc_conn: connector = make_connector!(c"gc_conn", gc_init, gc_exit, gc_conn_fn, gc_ring);
+make_connector_static!(gc_conn, gc_init, gc_exit, gc_conn_fn, gc_ring);
 
 fn gc_init() -> ::core::ffi::c_int {
     println_s!(c"init start:");
