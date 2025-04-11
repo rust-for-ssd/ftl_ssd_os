@@ -1,4 +1,4 @@
-use crate::my_alloc::SimpleAllocator;
+use crate::sdd_os_alloc::SimpleAllocator;
 use crate::{BadBlockTable, bindings, safe_bindings, shared};
 use ::core::ffi::CStr;
 use alloc::boxed::Box;

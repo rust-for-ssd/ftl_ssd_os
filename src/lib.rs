@@ -7,8 +7,8 @@
 #![allow(static_mut_refs)]
 mod bbt;
 mod bindings;
-mod my_alloc;
 mod safe_bindings;
+mod sdd_os_alloc;
 mod shared;
 mod ssd_os;
 
@@ -16,7 +16,6 @@ extern crate alloc;
 
 use crate::bbt::bbt::BadBlockTable;
 use ::core::ffi::CStr;
-use bindings::{MAGIC_STAGE, ssd_os_ctrl_fn, ssd_os_stage_fn, stage};
 
 #[inline(never)]
 fn panic_printer(info: &core::panic::PanicInfo) {
