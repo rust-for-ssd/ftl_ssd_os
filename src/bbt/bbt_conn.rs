@@ -4,6 +4,7 @@ use crate::ssd_os::lring::LRing;
 use crate::{bindings, make_connector_static, make_stage_static, safe_bindings, shared};
 use ::core::ffi::CStr;
 use alloc::boxed::Box;
+use alloc::vec::Vec;
 use bindings::{lring_entry, nvm_mmgr_geometry, pipeline, volt_get_geometry};
 use safe_bindings::{
     ssd_os_get_connection, ssd_os_mem_get, ssd_os_mem_size, ssd_os_print_lock, ssd_os_print_ss,
@@ -14,7 +15,7 @@ use shared::addresses::PhysicalBlockAddress;
 use crate::{println_i, println_s};
 
 #[global_allocator]
-static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
+pub static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
 
 const hello: [u8; 32] = *b"hello world\0....................";
 
@@ -92,6 +93,9 @@ fn bbt_init() -> ::core::ffi::c_int {
         0
     );
     ALLOCATOR.initialize(memory_region, memory_region + memory_size);
+
+    println_s!(c"alloc location bbt:");
+    println_i!(&ALLOCATOR as *const _ as u32);
 
     println_s!(c"yoyo:");
 
