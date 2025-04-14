@@ -1,8 +1,11 @@
+use crate::bbt::bbt::BadBlockTable;
 use crate::sdd_os_alloc::SimpleAllocator;
-use crate::{BadBlockTable, bindings, safe_bindings, shared};
+use crate::ssd_os::lring::LRing;
+use crate::{bindings, make_connector_static, make_stage_static, safe_bindings, shared};
 use ::core::ffi::CStr;
 use alloc::boxed::Box;
-use bindings::{connector, lring_entry, nvm_mmgr_geometry, pipeline, stage, volt_get_geometry};
+use alloc::vec::Vec;
+use bindings::{lring_entry, nvm_mmgr_geometry, pipeline, volt_get_geometry};
 use safe_bindings::{
     ssd_os_get_connection, ssd_os_mem_get, ssd_os_mem_size, ssd_os_print_lock, ssd_os_print_ss,
     ssd_os_print_unlock, ssd_os_sleep, ssd_os_this_cpu,
@@ -12,33 +15,21 @@ use shared::addresses::PhysicalBlockAddress;
 use crate::{println_i, println_s};
 
 #[global_allocator]
-static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
+pub static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
 
-static mut my_int: u64 = 0;
 const hello: [u8; 32] = *b"hello world\0....................";
 
-#[unsafe(no_mangle)]
-pub static bbt_stage: stage = stage::new(
-    b"bbt_stage",
-    Some(s1_init),
-    Some(s1_init),
-    Some(bbt_stage_fn),
-);
+make_stage_static!(bbt_stage, s1_init, s1_init, bbt_stage_fn);
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn s1_init() -> ::core::ffi::c_int {
+fn s1_init() -> ::core::ffi::c_int {
     0
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn s1_exit() -> ::core::ffi::c_int {
+fn s1_exit() -> ::core::ffi::c_int {
     0
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn bbt_stage_fn(
-    context: *mut ::core::ffi::c_void,
-) -> *mut ::core::ffi::c_void {
+fn bbt_stage_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     ssd_os_print_lock();
     ssd_os_print_ss(
         unsafe { CStr::from_ptr(context as *const u8) },
@@ -48,14 +39,11 @@ pub unsafe extern "C" fn bbt_stage_fn(
     context
 }
 
-#[unsafe(no_mangle)]
-pub static bbt_conn: connector =
-    connector::new(c"bbt_conn", bbt_init, bbt_exit, bbt_conn_fn, bbt_ring);
+make_connector_static!(bbt_conn, bbt_init, bbt_exit, bbt_conn_fn, bbt_ring);
 
 static BBT: BadBlockTable = BadBlockTable::new();
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
+fn bbt_init() -> ::core::ffi::c_int {
     println_s!(c"init start:");
     let cpu_id = ssd_os_this_cpu(bbt_conn.get_name());
     let memory_region = ssd_os_mem_get(cpu_id) as usize;
@@ -106,14 +94,20 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     );
     ALLOCATOR.initialize(memory_region, memory_region + memory_size);
 
+    println_s!(c"alloc location bbt:");
+    println_i!(&ALLOCATOR as *const _ as u32);
+
     println_s!(c"yoyo:");
 
     BBT.init(&geo);
 
+    println_s!(c"init ring");
+    // bbt_lring.init(c"BBT_LRING", 0);
+
     println_s!(c"Channel len");
     println_i!(BBT.channels.borrow().len() as u32);
 
-    ssd_os_sleep(10);
+    ssd_os_sleep(1);
 
     let pba: PhysicalBlockAddress = PhysicalBlockAddress {
         channel: 0,
@@ -123,18 +117,18 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     };
 
     let pba_bad_check: PhysicalBlockAddress = PhysicalBlockAddress {
-        channel: 5,
+        channel: 0,
         lun: 0,
         plane: 0,
-        block: 0,
+        block: 5,
     };
 
     for i in 0..10 {
         let pba2: PhysicalBlockAddress = PhysicalBlockAddress {
-            channel: i,
+            channel: 0,
             lun: 0,
             plane: 0,
-            block: 0,
+            block: i,
         };
         BBT.set_bad_block(&pba2);
     }
@@ -165,13 +159,11 @@ pub unsafe extern "C" fn bbt_init() -> ::core::ffi::c_int {
     0
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn bbt_exit() -> ::core::ffi::c_int {
+fn bbt_exit() -> ::core::ffi::c_int {
     0
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn bbt_ring(ring: *mut lring_entry) -> ::core::ffi::c_int {
+fn bbt_ring(ring: *mut lring_entry) -> ::core::ffi::c_int {
     ssd_os_print_lock();
     ssd_os_print_ss(
         unsafe { CStr::from_ptr(ring.as_ref().unwrap().ctx as *const u8) },
@@ -181,47 +173,51 @@ pub unsafe extern "C" fn bbt_ring(ring: *mut lring_entry) -> ::core::ffi::c_int 
     0
 }
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn bbt_conn_fn(entry: *mut lring_entry) -> *mut pipeline {
-    let pipe = ssd_os_get_connection(
-        c"bbt_conn".as_ptr().cast_mut(),
-        c"bbt_pipe".as_ptr().cast_mut(),
-    );
-    if !pipe.is_null() {
-        unsafe { entry.as_mut().unwrap() }.ctx = hello.as_ptr() as *mut ::core::ffi::c_void;
-        ssd_os_print_ss(
-            unsafe { CStr::from_ptr(entry.as_ref().unwrap().ctx as *const u8) },
-            c"START\n",
+static bbt_lring: LRing<128> = LRing::new();
+
+fn bbt_conn_fn(entry: *mut lring_entry) -> *mut pipeline {
+    let Some(_entry) = bbt_lring.dequeue(entry) else {
+        let pipe = ssd_os_get_connection(
+            c"bbt_conn".as_ptr().cast_mut(),
+            c"gc_pipe".as_ptr().cast_mut(),
         );
-        println_s!(c"Accessing BBT from conn function");
-        let pba_bad: PhysicalBlockAddress = PhysicalBlockAddress {
-            channel: 0,
-            lun: 0,
-            plane: 0,
-            block: 0,
-        };
+        if !pipe.is_null() {
+            unsafe { entry.as_mut().unwrap() }.ctx = hello.as_ptr() as *mut ::core::ffi::c_void;
+            ssd_os_print_ss(
+                unsafe { CStr::from_ptr(entry.as_ref().unwrap().ctx as *const u8) },
+                c"START\n",
+            );
+            println_s!(c"Accessing BBT from conn function");
+            let pba_bad: PhysicalBlockAddress = PhysicalBlockAddress {
+                channel: 0,
+                lun: 0,
+                plane: 0,
+                block: 0,
+            };
 
-        let pba_good: PhysicalBlockAddress = PhysicalBlockAddress {
-            channel: 0,
-            lun: 0,
-            plane: 1,
-            block: 0,
-        };
-        println_s!(c"BAD: (SHOULD BE 0)");
-        println_i!(BBT.get_block_status(&pba_bad) as u32);
+            let pba_good: PhysicalBlockAddress = PhysicalBlockAddress {
+                channel: 0,
+                lun: 0,
+                plane: 0,
+                block: 1,
+            };
+            println_s!(c"BAD: (SHOULD BE 0)");
+            println_i!(BBT.get_block_status(&pba_bad) as u32);
 
-        println_s!(c"GOD: (SHOULD BE 1)");
-        println_i!(BBT.get_block_status(&pba_good) as u32);
+            println_s!(c"GOD: (SHOULD BE 1)");
+            println_i!(BBT.get_block_status(&pba_good) as u32);
 
-        println_s!(c"MUTATING BAD BLOCK TABLE!!");
-        BBT.set_bad_block(&pba_good);
+            println_s!(c"MUTATING BAD BLOCK TABLE!!");
+            BBT.set_bad_block(&pba_good);
 
-        println_s!(c"SHOULD NOW BE SET TO BAD (0)");
-        println_i!(BBT.get_block_status(&pba_good) as u32);
+            println_s!(c"SHOULD NOW BE SET TO BAD (0)");
+            println_i!(BBT.get_block_status(&pba_good) as u32);
 
-        ssd_os_sleep(10);
-        return pipe;
-    } else {
-        return ::core::ptr::null_mut();
-    }
+            ssd_os_sleep(1);
+            return pipe;
+        } else {
+            return ::core::ptr::null_mut();
+        }
+    };
+    return ::core::ptr::null_mut();
 }

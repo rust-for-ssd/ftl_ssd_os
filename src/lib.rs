@@ -7,6 +7,7 @@
 #![allow(static_mut_refs)]
 mod bbt;
 mod bindings;
+mod garbage_collector;
 mod safe_bindings;
 mod sdd_os_alloc;
 mod shared;
@@ -14,7 +15,6 @@ mod ssd_os;
 
 extern crate alloc;
 
-use crate::bbt::bbt::BadBlockTable;
 use ::core::ffi::CStr;
 
 #[inline(never)]
