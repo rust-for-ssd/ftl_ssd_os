@@ -5,8 +5,10 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 #![allow(static_mut_refs)]
+#![feature(allocator_api)]
 mod bbt;
 mod bindings;
+mod fake_alloc;
 mod garbage_collector;
 mod safe_bindings;
 mod sdd_os_alloc;

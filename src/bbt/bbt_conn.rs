@@ -1,4 +1,4 @@
-use crate::bbt::bbt::BadBlockTable;
+// use crate::bbt::bbt::BadBlockTable;
 use crate::sdd_os_alloc::SimpleAllocator;
 use crate::ssd_os::lring::LRing;
 use crate::{bindings, make_connector_static, make_stage_static, safe_bindings, shared};
@@ -6,6 +6,7 @@ use ::core::ffi::CStr;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use bindings::{lring_entry, nvm_mmgr_geometry, pipeline, volt_get_geometry};
+use core::cell::{LazyCell, OnceCell};
 use safe_bindings::{
     ssd_os_get_connection, ssd_os_mem_get, ssd_os_mem_size, ssd_os_print_lock, ssd_os_print_ss,
     ssd_os_print_unlock, ssd_os_sleep, ssd_os_this_cpu,
@@ -14,8 +15,10 @@ use shared::addresses::PhysicalBlockAddress;
 
 use crate::{println_i, println_s};
 
-#[global_allocator]
-pub static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
+use super::bbt::BadBlockTable;
+
+// static BBT_ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
+static mut BBT_ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
 
 const hello: [u8; 32] = *b"hello world\0....................";
 
@@ -41,13 +44,13 @@ fn bbt_stage_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
 
 make_connector_static!(bbt_conn, bbt_init, bbt_exit, bbt_conn_fn, bbt_ring);
 
-static BBT: BadBlockTable = BadBlockTable::new();
+static BBT: BadBlockTable<SimpleAllocator> = BadBlockTable::new();
 
 fn bbt_init() -> ::core::ffi::c_int {
     println_s!(c"init start:");
     let cpu_id = ssd_os_this_cpu(bbt_conn.get_name());
-    let memory_region = ssd_os_mem_get(cpu_id) as usize;
-    let memory_size = ssd_os_mem_size(cpu_id) as usize;
+    let memory_region = ssd_os_mem_get(cpu_id);
+    let memory_size = ssd_os_mem_size(cpu_id);
     println_s!(c"yo1:");
     let mut geo: nvm_mmgr_geometry = nvm_mmgr_geometry {
         n_of_ch: 10,
@@ -89,23 +92,30 @@ fn bbt_init() -> ::core::ffi::c_int {
     println_s!(c"yo3:");
 
     assert_eq!(
-        (&ALLOCATOR as *const _ as usize) % core::mem::align_of::<usize>(),
+        unsafe { (&BBT_ALLOCATOR as *const _ as usize) } % core::mem::align_of::<usize>(),
         0
     );
-    ALLOCATOR.initialize(memory_region, memory_region + memory_size);
+    unsafe {
+        BBT_ALLOCATOR.initialize(
+            memory_region.cast(),
+            memory_region.add(memory_size as usize).cast(),
+        )
+    };
 
     println_s!(c"alloc location bbt:");
-    println_i!(&ALLOCATOR as *const _ as u32);
+    unsafe {
+        println_i!(&BBT_ALLOCATOR as *const _ as u32);
+    }
 
     println_s!(c"yoyo:");
 
-    BBT.init(&geo);
+    BBT.init(&geo, unsafe { &BBT_ALLOCATOR });
 
     println_s!(c"init ring");
-    // bbt_lring.init(c"BBT_LRING", 0);
+    bbt_lring.init(c"BBT_LRING", 0);
 
     println_s!(c"Channel len");
-    println_i!(BBT.channels.borrow().len() as u32);
+    // println_i!(BBT.channels.borrow().len() as u32);
 
     ssd_os_sleep(1);
 
@@ -141,7 +151,8 @@ fn bbt_init() -> ::core::ffi::c_int {
 
     println_s!(c"Size of bbt");
 
-    let mut heap_val1: alloc::vec::Vec<u32> = alloc::vec::Vec::with_capacity(3);
+    let mut heap_val1: alloc::vec::Vec<u32, &SimpleAllocator> =
+        alloc::vec::Vec::with_capacity_in(3, unsafe { &BBT_ALLOCATOR });
 
     heap_val1.push(42);
     println_i!(heap_val1[0]);
@@ -149,9 +160,9 @@ fn bbt_init() -> ::core::ffi::c_int {
     println_i!(heap_val1[0]);
     heap_val1.push(3);
 
-    let b1 = Box::new(41u32);
-    let b2 = Box::new(42u32);
-    let b3 = Box::new(43u32);
+    let b1 = Box::new_in(41u32, unsafe { &BBT_ALLOCATOR });
+    let b2 = Box::new_in(42u32, unsafe { &BBT_ALLOCATOR });
+    let b3 = Box::new_in(43u32, unsafe { &BBT_ALLOCATOR });
     println_i!(*b1);
     println_i!(*b2);
     println_i!(*b3);
@@ -202,16 +213,16 @@ fn bbt_conn_fn(entry: *mut lring_entry) -> *mut pipeline {
                 block: 1,
             };
             println_s!(c"BAD: (SHOULD BE 0)");
-            println_i!(BBT.get_block_status(&pba_bad) as u32);
+            // println_i!(BBT.get_block_status(&pba_bad) as u32);
 
             println_s!(c"GOD: (SHOULD BE 1)");
-            println_i!(BBT.get_block_status(&pba_good) as u32);
+            // println_i!(BBT.get_block_status(&pba_good) as u32);
 
             println_s!(c"MUTATING BAD BLOCK TABLE!!");
-            BBT.set_bad_block(&pba_good);
+            // BBT.set_bad_block(&pba_good);
 
             println_s!(c"SHOULD NOW BE SET TO BAD (0)");
-            println_i!(BBT.get_block_status(&pba_good) as u32);
+            // println_i!(BBT.get_block_status(&pba_good) as u32);
 
             ssd_os_sleep(1);
             return pipe;
