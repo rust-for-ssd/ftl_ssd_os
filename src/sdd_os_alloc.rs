@@ -1,15 +1,15 @@
-use core::alloc::{GlobalAlloc, Layout};
-use core::cell::{Cell, OnceCell};
-use core::mem;
-
-use crate::println_s;
+use core::alloc::{AllocError, Allocator, Layout};
+use core::cell::Cell;
+use core::mem::transmute;
+use core::ptr::NonNull;
+use core::{mem, ptr};
 
 // ISSUES: Dealloc does not work.
 // Dynamic allocator
 
 pub struct SimpleAllocator {
-    start: OnceCell<usize>,
-    end: OnceCell<usize>,
+    start: *mut u8,
+    end: *mut u8,
     free_list_head: Cell<*mut FreeBlock>,
 }
 
@@ -24,22 +24,22 @@ unsafe impl Sync for SimpleAllocator {}
 impl SimpleAllocator {
     pub const fn new() -> Self {
         Self {
-            start: OnceCell::new(),
-            end: OnceCell::new(),
-            free_list_head: Cell::new(core::ptr::null_mut()),
+            start: ptr::null_mut(),
+            end: ptr::null_mut(),
+            free_list_head: Cell::new(ptr::null_mut()),
         }
     }
 
     /// Initializes the allocator by setting up the initial free block.
-    pub fn initialize(&self, start: usize, end: usize) {
-        if self.start.get().is_some() {
+    pub fn initialize(&mut self, start: *mut u8, end: *mut u8) {
+        if !self.start.is_null() {
             return;
         }
 
-        let _ = self.start.set(start);
-        let _ = self.end.set(end);
+        self.start = start;
+        self.end = end;
 
-        let size = end - start;
+        let size = end.addr() - start.addr();
 
         // Only initialize if the region has enough space for a block
         if size >= mem::size_of::<FreeBlock>() {
@@ -55,8 +55,8 @@ impl SimpleAllocator {
     }
 }
 
-unsafe impl GlobalAlloc for SimpleAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+unsafe impl Allocator for SimpleAllocator {
+    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         let size = layout.size().max(mem::size_of::<FreeBlock>());
         let align = layout.align().max(mem::align_of::<FreeBlock>());
 
@@ -103,7 +103,10 @@ unsafe impl GlobalAlloc for SimpleAllocator {
                     }
                 }
 
-                return aligned_addr as *mut u8;
+                let ptr: NonNull<[u8]> = unsafe {
+                    core::slice::from_raw_parts_mut(aligned_addr as *mut u8, size).into()
+                };
+                return Ok(ptr);
             }
 
             prev_ptr = current_ptr;
@@ -111,9 +114,13 @@ unsafe impl GlobalAlloc for SimpleAllocator {
         }
 
         // No suitable block found
-        core::ptr::null_mut()
+        Err(AllocError)
     }
 
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+        return;
+    }
+    /*
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         println_s!(c"DEALLOC!");
         return;
@@ -171,7 +178,7 @@ unsafe impl GlobalAlloc for SimpleAllocator {
         }
 
         // Note: A production allocator would merge adjacent free blocks here
-    }
+    } */
 }
 
 pub fn align_up(addr: usize, align: usize) -> usize {
