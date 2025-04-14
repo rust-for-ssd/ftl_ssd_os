@@ -1,12 +1,12 @@
-// use crate::bbt::bbt::BadBlockTable;
+use crate::bindings::lring_entry;
+use crate::bindings::nvm_mmgr_geometry;
+use crate::bindings::pipeline;
+use crate::bindings::volt_get_geometry;
 use crate::sdd_os_alloc::SimpleAllocator;
 use crate::ssd_os::lring::LRing;
-use crate::{bindings, make_connector_static, make_stage_static, safe_bindings, shared};
+use crate::{make_connector_static, make_stage_static, safe_bindings, shared};
 use ::core::ffi::CStr;
 use alloc::boxed::Box;
-use alloc::vec::Vec;
-use bindings::{lring_entry, nvm_mmgr_geometry, pipeline, volt_get_geometry};
-use core::cell::{LazyCell, OnceCell};
 use safe_bindings::{
     ssd_os_get_connection, ssd_os_mem_get, ssd_os_mem_size, ssd_os_print_lock, ssd_os_print_ss,
     ssd_os_print_unlock, ssd_os_sleep, ssd_os_this_cpu,
@@ -18,7 +18,7 @@ use crate::{println_i, println_s};
 use super::bbt::BadBlockTable;
 
 // static BBT_ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
-static mut BBT_ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
+static BBT_ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
 
 const hello: [u8; 32] = *b"hello world\0....................";
 
@@ -92,7 +92,7 @@ fn bbt_init() -> ::core::ffi::c_int {
     println_s!(c"yo3:");
 
     assert_eq!(
-        unsafe { (&BBT_ALLOCATOR as *const _ as usize) } % core::mem::align_of::<usize>(),
+        (&BBT_ALLOCATOR as *const _ as usize) % core::mem::align_of::<usize>(),
         0
     );
     unsafe {
@@ -103,13 +103,11 @@ fn bbt_init() -> ::core::ffi::c_int {
     };
 
     println_s!(c"alloc location bbt:");
-    unsafe {
-        println_i!(&BBT_ALLOCATOR as *const _ as u32);
-    }
+    println_i!(&BBT_ALLOCATOR as *const _ as u32);
 
     println_s!(c"yoyo:");
 
-    BBT.init(&geo, unsafe { &BBT_ALLOCATOR });
+    let _ = BBT.init(&geo, &BBT_ALLOCATOR);
 
     println_s!(c"init ring");
     bbt_lring.init(c"BBT_LRING", 0);
@@ -152,7 +150,7 @@ fn bbt_init() -> ::core::ffi::c_int {
     println_s!(c"Size of bbt");
 
     let mut heap_val1: alloc::vec::Vec<u32, &SimpleAllocator> =
-        alloc::vec::Vec::with_capacity_in(3, unsafe { &BBT_ALLOCATOR });
+        alloc::vec::Vec::with_capacity_in(3, &BBT_ALLOCATOR);
 
     heap_val1.push(42);
     println_i!(heap_val1[0]);
@@ -160,9 +158,9 @@ fn bbt_init() -> ::core::ffi::c_int {
     println_i!(heap_val1[0]);
     heap_val1.push(3);
 
-    let b1 = Box::new_in(41u32, unsafe { &BBT_ALLOCATOR });
-    let b2 = Box::new_in(42u32, unsafe { &BBT_ALLOCATOR });
-    let b3 = Box::new_in(43u32, unsafe { &BBT_ALLOCATOR });
+    let b1 = Box::new_in(41u32, &BBT_ALLOCATOR);
+    let b2 = Box::new_in(42u32, &BBT_ALLOCATOR);
+    let b3 = Box::new_in(43u32, &BBT_ALLOCATOR);
     println_i!(*b1);
     println_i!(*b2);
     println_i!(*b3);
@@ -213,16 +211,16 @@ fn bbt_conn_fn(entry: *mut lring_entry) -> *mut pipeline {
                 block: 1,
             };
             println_s!(c"BAD: (SHOULD BE 0)");
-            // println_i!(BBT.get_block_status(&pba_bad) as u32);
+            println_i!(BBT.get_block_status(&pba_bad) as u32);
 
             println_s!(c"GOD: (SHOULD BE 1)");
-            // println_i!(BBT.get_block_status(&pba_good) as u32);
+            println_i!(BBT.get_block_status(&pba_good) as u32);
 
             println_s!(c"MUTATING BAD BLOCK TABLE!!");
-            // BBT.set_bad_block(&pba_good);
+            BBT.set_bad_block(&pba_good);
 
             println_s!(c"SHOULD NOW BE SET TO BAD (0)");
-            // println_i!(BBT.get_block_status(&pba_good) as u32);
+            println_i!(BBT.get_block_status(&pba_good) as u32);
 
             ssd_os_sleep(1);
             return pipe;

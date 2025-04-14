@@ -5,7 +5,7 @@ use crate::safe_bindings::{
 use ::core::ffi::CStr;
 
 use crate::ssd_os::lring::LRing;
-use crate::{make_connector_static, make_stage_static, println_i, println_s};
+use crate::{make_connector_static, make_stage_static, println_s};
 
 const hello: [u8; 32] = *b"hello world\0....................";
 
