@@ -79,7 +79,12 @@ macro_rules! make_connector {
 macro_rules! make_connector_static {
     ($ident:ident, $init:ident, $exit:ident, $conn:ident, $ring:ident) => {
         #[unsafe(no_mangle)]
-        pub static $ident: $crate::bindings::connector =
-            $crate::make_connector!($crate::cstr!($ident), $init, $exit, $conn, $ring);
+        pub static $ident: $crate::bindings::connector = $crate::make_connector!(
+            $crate::shared::macros::cstr!($ident),
+            $init,
+            $exit,
+            $conn,
+            $ring
+        );
     };
 }

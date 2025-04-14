@@ -1,11 +1,11 @@
-use crate::bindings::{connector, lring_entry, pipeline, stage};
+use crate::bindings::{lring_entry, pipeline};
 use crate::safe_bindings::{
     ssd_os_get_connection, ssd_os_print_lock, ssd_os_print_ss, ssd_os_print_unlock, ssd_os_sleep,
 };
 use ::core::ffi::CStr;
 
 use crate::ssd_os::lring::LRing;
-use crate::{make_connector, make_connector_static, make_stage, make_stage_static, println_s};
+use crate::{make_connector_static, make_stage_static, println_s};
 
 const hello: [u8; 32] = *b"hello world\0....................";
 
