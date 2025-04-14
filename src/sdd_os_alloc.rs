@@ -117,47 +117,35 @@ unsafe impl Allocator for SimpleAllocator {
     }
 
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
-        return;
-    }
-    /*
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        println_s!(c"DEALLOC!");
+        crate::println_s!(c"DEALLOC!");
         return;
         let Some(start) = self.start.get() else {
             return;
         };
 
-        let end = self.end.get().unwrap();
-
-        if (ptr as usize) < *start {
+        let Some(end) = self.end.get() else {
             return;
-        } else if (ptr as usize) >= *end {
+        };
+
+        if ptr.as_mut() < start.as_mut().unwrap() {
+            return;
+        } else if ptr.as_mut() >= end.as_mut().unwrap() {
             return;
         }
 
-        let ptr_addr = ptr as usize;
+        let ptr_addr = ptr.addr();
 
-        // Ensure the pointer is within our memory region
-        // return;
-        let b = ptr_addr < *self.start.get().unwrap();
-        let a = ptr_addr >= *self.end.get().unwrap();
-        if b || a {
-            return;
-            // panic!("Attempted to free memory not managed by this allocator");
-        }
-
-        // return;
         let size = layout.size().max(mem::size_of::<FreeBlock>());
 
         let _adjusted_ptr = if layout.align() > mem::align_of::<FreeBlock>() {
             // Ensure pointer is aligned for both the layout and FreeBlock
-            align_up(ptr as usize, layout.align()) as *mut u8
+            align_up(ptr.addr().into(), layout.align()) as *mut u8
         } else {
-            ptr
+            ptr.as_mut()
         };
         // let block_ptr = adjusted_ptr as *mut FreeBlock;
 
-        let block_ptr = ptr as *mut FreeBlock;
+        let block_ptr: *mut FreeBlock = ptr.cast().as_mut();
 
         unsafe {
             (*block_ptr).size = size;
@@ -177,7 +165,7 @@ unsafe impl Allocator for SimpleAllocator {
         }
 
         // Note: A production allocator would merge adjacent free blocks here
-    } */
+    }
 }
 
 pub fn align_up(addr: usize, align: usize) -> usize {
