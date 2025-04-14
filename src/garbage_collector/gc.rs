@@ -5,7 +5,7 @@ use crate::safe_bindings::{
 use ::core::ffi::CStr;
 
 use crate::ssd_os::lring::LRing;
-use crate::{make_connector_static, make_stage_static, println_s};
+use crate::{make_connector_static, make_stage_static, println_i, println_s};
 
 const hello: [u8; 32] = *b"hello world\0....................";
 
@@ -46,6 +46,8 @@ make_connector_static!(gc_conn, gc_init, gc_exit, gc_conn_fn, gc_ring);
 
 fn gc_init() -> ::core::ffi::c_int {
     println_s!(c"init start:");
+    println_s!(c"alloc location gc:");
+    println_i!(&crate::bbt::bbt_conn::ALLOCATOR as *const _ as u32);
     // let cpu_id = ssd_os_this_cpu(gc_conn.get_name());
     // let memory_region = ssd_os_mem_get(cpu_id) as usize;
     // let memory_size = ssd_os_mem_size(cpu_id) as usize;
