@@ -32,6 +32,11 @@ pub enum BadBlockStatus {
     Reserved,
 }
 
+pub enum BBTError {
+    AlreadyInit,
+}
+
+// TODO: shoudl this reallt b sync???
 unsafe impl<A: Allocator> Sync for BadBlockTable<A> {}
 
 impl<A: Allocator> BadBlockTable<A> {
@@ -42,8 +47,8 @@ impl<A: Allocator> BadBlockTable<A> {
         }
     }
 
-    pub fn init(&self, geometry: &nvm_mmgr_geometry, alloc: &'static A) -> () {
-        self.alloc.set(&alloc);
+    pub fn init(&self, geometry: &nvm_mmgr_geometry, alloc: &'static A) -> Result<(), BBTError> {
+        self.alloc.set(&alloc).map_err(|_| BBTError::AlreadyInit)?;
         let mut channels: Vec<Channel<A>, &A> =
             Vec::with_capacity_in(geometry.n_of_ch as usize, alloc);
         for _ in 0..geometry.n_of_ch {
@@ -65,7 +70,7 @@ impl<A: Allocator> BadBlockTable<A> {
             channels.push(Channel { luns });
         }
         *self.get_channel_cell().borrow_mut() = channels;
-        return;
+        return Ok(());
     }
 
     pub fn get_channel_cell(&self) -> &RefCell<Vec<Channel<A>, &'static A>> {

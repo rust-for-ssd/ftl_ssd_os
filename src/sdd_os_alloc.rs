@@ -1,6 +1,5 @@
 use core::alloc::{AllocError, Allocator, Layout};
-use core::cell::Cell;
-use core::mem::transmute;
+use core::cell::{Cell, OnceCell};
 use core::ptr::NonNull;
 use core::{mem, ptr};
 
@@ -8,8 +7,8 @@ use core::{mem, ptr};
 // Dynamic allocator
 
 pub struct SimpleAllocator {
-    start: *mut u8,
-    end: *mut u8,
+    start: OnceCell<*mut u8>,
+    end: OnceCell<*mut u8>,
     free_list_head: Cell<*mut FreeBlock>,
 }
 
@@ -24,20 +23,20 @@ unsafe impl Sync for SimpleAllocator {}
 impl SimpleAllocator {
     pub const fn new() -> Self {
         Self {
-            start: ptr::null_mut(),
-            end: ptr::null_mut(),
+            start: OnceCell::new(),
+            end: OnceCell::new(),
             free_list_head: Cell::new(ptr::null_mut()),
         }
     }
 
     /// Initializes the allocator by setting up the initial free block.
-    pub fn initialize(&mut self, start: *mut u8, end: *mut u8) {
-        if !self.start.is_null() {
+    pub fn initialize(&self, start: *mut u8, end: *mut u8) {
+        let Ok(()) = self.start.set(start) else {
             return;
-        }
-
-        self.start = start;
-        self.end = end;
+        };
+        let Ok(()) = self.end.set(end) else {
+            return;
+        };
 
         let size = end.addr() - start.addr();
 
