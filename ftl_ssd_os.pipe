@@ -1,5 +1,4 @@
 volt_spipe volt_submit_stage
 volt_cpipe volt_complete_stage
 bbt_pipe bbt_stage
-gc_spipe gc_sstage
-gc_cpipe gc_cstage
+gc_pipe gc_sstage

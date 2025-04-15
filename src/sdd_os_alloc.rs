@@ -1,15 +1,14 @@
-use core::alloc::{GlobalAlloc, Layout};
+use core::alloc::{AllocError, Allocator, Layout};
 use core::cell::{Cell, OnceCell};
-use core::mem;
-
-use crate::println_s;
+use core::ptr::NonNull;
+use core::{mem, ptr};
 
 // ISSUES: Dealloc does not work.
 // Dynamic allocator
 
 pub struct SimpleAllocator {
-    start: OnceCell<usize>,
-    end: OnceCell<usize>,
+    start: OnceCell<*mut u8>,
+    end: OnceCell<*mut u8>,
     free_list_head: Cell<*mut FreeBlock>,
 }
 
@@ -26,20 +25,20 @@ impl SimpleAllocator {
         Self {
             start: OnceCell::new(),
             end: OnceCell::new(),
-            free_list_head: Cell::new(core::ptr::null_mut()),
+            free_list_head: Cell::new(ptr::null_mut()),
         }
     }
 
     /// Initializes the allocator by setting up the initial free block.
-    pub fn initialize(&self, start: usize, end: usize) {
-        if self.start.get().is_some() {
+    pub fn initialize(&self, start: *mut u8, end: *mut u8) {
+        let Ok(()) = self.start.set(start) else {
             return;
-        }
+        };
+        let Ok(()) = self.end.set(end) else {
+            return;
+        };
 
-        let _ = self.start.set(start);
-        let _ = self.end.set(end);
-
-        let size = end - start;
+        let size = end.addr() - start.addr();
 
         // Only initialize if the region has enough space for a block
         if size >= mem::size_of::<FreeBlock>() {
@@ -55,8 +54,8 @@ impl SimpleAllocator {
     }
 }
 
-unsafe impl GlobalAlloc for SimpleAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+unsafe impl Allocator for SimpleAllocator {
+    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         let size = layout.size().max(mem::size_of::<FreeBlock>());
         let align = layout.align().max(mem::align_of::<FreeBlock>());
 
@@ -103,7 +102,10 @@ unsafe impl GlobalAlloc for SimpleAllocator {
                     }
                 }
 
-                return aligned_addr as *mut u8;
+                let ptr: NonNull<[u8]> = unsafe {
+                    core::slice::from_raw_parts_mut(aligned_addr as *mut u8, size).into()
+                };
+                return Ok(ptr);
             }
 
             prev_ptr = current_ptr;
@@ -111,47 +113,39 @@ unsafe impl GlobalAlloc for SimpleAllocator {
         }
 
         // No suitable block found
-        core::ptr::null_mut()
+        Err(AllocError)
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        println_s!(c"DEALLOC!");
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+        crate::println_s!(c"DEALLOC!");
         return;
         let Some(start) = self.start.get() else {
             return;
         };
 
-        let end = self.end.get().unwrap();
-
-        if (ptr as usize) < *start {
+        let Some(end) = self.end.get() else {
             return;
-        } else if (ptr as usize) >= *end {
+        };
+
+        if ptr.as_mut() < start.as_mut().unwrap() {
+            return;
+        } else if ptr.as_mut() >= end.as_mut().unwrap() {
             return;
         }
 
-        let ptr_addr = ptr as usize;
+        let ptr_addr = ptr.addr();
 
-        // Ensure the pointer is within our memory region
-        // return;
-        let b = ptr_addr < *self.start.get().unwrap();
-        let a = ptr_addr >= *self.end.get().unwrap();
-        if b || a {
-            return;
-            // panic!("Attempted to free memory not managed by this allocator");
-        }
-
-        // return;
         let size = layout.size().max(mem::size_of::<FreeBlock>());
 
         let _adjusted_ptr = if layout.align() > mem::align_of::<FreeBlock>() {
             // Ensure pointer is aligned for both the layout and FreeBlock
-            align_up(ptr as usize, layout.align()) as *mut u8
+            align_up(ptr.addr().into(), layout.align()) as *mut u8
         } else {
-            ptr
+            ptr.as_mut()
         };
         // let block_ptr = adjusted_ptr as *mut FreeBlock;
 
-        let block_ptr = ptr as *mut FreeBlock;
+        let block_ptr: *mut FreeBlock = ptr.cast().as_mut();
 
         unsafe {
             (*block_ptr).size = size;
