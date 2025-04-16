@@ -1,7 +1,7 @@
 use core::{cell::OnceCell, ffi::CStr, mem::MaybeUninit};
 
-use crate::bindings::generated::ssd_os::lring_entry;
-use crate::bindings::generated::ssd_os::{lring, ssd_os_lring_create, ssd_os_lring_dequeue};
+use crate::bindings::generated::wrapper::lring_entry;
+use crate::bindings::generated::wrapper::{lring, ssd_os_lring_create, ssd_os_lring_dequeue};
 
 pub struct LRing<const Capacity: usize> {
     pub ssd_os_lring: OnceCell<*mut lring>,

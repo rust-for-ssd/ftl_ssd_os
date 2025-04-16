@@ -1,7 +1,7 @@
 use core::ffi::CStr;
 
-use bindings::generated::ssd_os::MAGIC_STAGE;
-pub use bindings::generated::ssd_os::stage;
+use bindings::generated::wrapper::MAGIC_STAGE;
+pub use bindings::generated::wrapper::stage;
 
 use crate::bindings;
 impl stage {
