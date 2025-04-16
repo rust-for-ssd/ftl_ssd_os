@@ -3,7 +3,7 @@ use core::{
     fmt::{Error, Result, Write},
 };
 
-use super::generated::ssd_os;
+use super::generated::wrapper;
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn memcpy(
@@ -18,62 +18,62 @@ pub unsafe extern "C" fn memcpy(
     assert!(src as usize % alignment == 0);
 
     // Now that we know the pointers are properly aligned, call the underlying implementation.
-    unsafe { ssd_os::ssd_os_mem_cpy(dest, src, n) }
+    unsafe { wrapper::ssd_os_mem_cpy(dest, src, n) }
 }
 
 pub fn ssd_os_get_connection(
     connector_name: *mut ::core::ffi::c_char,
     pipe_name: *mut ::core::ffi::c_char,
-) -> *mut ssd_os::pipeline {
-    unsafe { ssd_os::ssd_os_get_connection(connector_name, pipe_name) }
+) -> *mut wrapper::pipeline {
+    unsafe { wrapper::ssd_os_get_connection(connector_name, pipe_name) }
 }
 
 pub fn ssd_os_this_cpu(name: &CStr) -> ::core::ffi::c_int {
-    unsafe { ssd_os::ssd_os_this_cpu(name.as_ptr().cast_mut()) }
+    unsafe { wrapper::ssd_os_this_cpu(name.as_ptr().cast_mut()) }
 }
 
 pub fn ssd_os_mem_get(key: ::core::ffi::c_int) -> *mut ::core::ffi::c_void {
-    unsafe { ssd_os::ssd_os_mem_get(key) }
+    unsafe { wrapper::ssd_os_mem_get(key) }
 }
 
 pub fn ssd_os_print_lock() {
     unsafe {
-        ssd_os::ssd_os_print_lock();
+        wrapper::ssd_os_print_lock();
     }
 }
 
 pub fn ssd_os_print_unlock() {
     unsafe {
-        ssd_os::ssd_os_print_unlock();
+        wrapper::ssd_os_print_unlock();
     }
 }
 
 pub fn ssd_os_sleep(i: u32) {
     unsafe {
-        ssd_os::ssd_os_sleep(i as i32);
+        wrapper::ssd_os_sleep(i as i32);
     }
 }
 
 pub fn ssd_os_print_ss(s1: &CStr, s2: &CStr) {
     unsafe {
-        ssd_os::ssd_os_print_ss(s1.as_ptr(), s2.as_ptr());
+        wrapper::ssd_os_print_ss(s1.as_ptr(), s2.as_ptr());
     }
 }
 
 pub fn ssd_os_print_i(i: u32) {
     unsafe {
-        ssd_os::ssd_os_print_i(i);
+        wrapper::ssd_os_print_i(i);
     }
 }
 
 pub fn ssd_os_print_s(s: &CStr) {
     unsafe {
-        ssd_os::ssd_os_print_s(s.as_ptr());
+        wrapper::ssd_os_print_s(s.as_ptr());
     }
 }
 
 pub fn ssd_os_mem_size(key: i32) -> ::core::ffi::c_int {
-    unsafe { ssd_os::ssd_os_mem_size(key) }
+    unsafe { wrapper::ssd_os_mem_size(key) }
 }
 
 pub fn safe_print(s: &str) {

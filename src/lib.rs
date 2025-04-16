@@ -12,8 +12,8 @@ extern crate alloc;
 mod allocator;
 mod bbt;
 mod bindings;
+mod cpath;
 mod shared;
-mod test;
 
 use ::core::ffi::CStr;
 

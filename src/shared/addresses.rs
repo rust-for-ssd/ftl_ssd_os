@@ -1,5 +1,6 @@
-use crate::bindings::generated::volt::nvm_ppa_addr;
+use crate::bindings::generated::wrapper::nvm_ppa_addr;
 
+#[derive(Clone, Copy)]
 pub struct PhysicalBlockAddress {
     pub channel: u16,
     pub lun: u8,

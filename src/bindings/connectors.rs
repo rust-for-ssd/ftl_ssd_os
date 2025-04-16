@@ -1,10 +1,10 @@
 use core::ffi::CStr;
 
-use bindings::generated::ssd_os::{MAGIC_CONNECTOR, lring_entry, pipeline};
+use bindings::generated::wrapper::{MAGIC_CONNECTOR, lring_entry, pipeline};
 
 use crate::{bindings, println_s};
 
-pub use bindings::generated::ssd_os::connector;
+pub use bindings::generated::wrapper::connector;
 
 impl connector {
     pub const fn new(
