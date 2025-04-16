@@ -1,8 +1,10 @@
 use core::ffi::CStr;
 
-use bindings::generated::ssd_os::{MAGIC_CONNECTOR, connector, lring_entry, pipeline};
+use bindings::generated::ssd_os::{MAGIC_CONNECTOR, lring_entry, pipeline};
 
 use crate::{bindings, println_s};
+
+pub use bindings::generated::ssd_os::connector;
 
 impl connector {
     pub const fn new(
@@ -71,7 +73,7 @@ macro_rules! make_connector {
                 $ring_fn(entry)
             }
 
-            $crate::bindings::generated::ssd_os::connector::new(
+            $crate::bindings::connectors::connector::new(
                 $name,
                 wrapped_init,
                 wrapped_exit,
@@ -86,7 +88,7 @@ macro_rules! make_connector {
 macro_rules! make_connector_static {
     ($ident:ident, $init:ident, $exit:ident, $conn:ident, $ring:ident) => {
         #[unsafe(no_mangle)]
-        pub static $ident: $crate::bindings::generated::ssd_os::connector = $crate::make_connector!(
+        pub static $ident: $crate::bindings::connectors::connector = $crate::make_connector!(
             $crate::shared::macros::cstr!($ident),
             $init,
             $exit,
