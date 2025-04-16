@@ -11,7 +11,7 @@ extern crate alloc;
 
 mod allocator;
 mod bbt;
-pub mod bindings;
+mod bindings;
 mod shared;
 mod test;
 
