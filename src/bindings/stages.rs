@@ -1,6 +1,7 @@
 use core::ffi::CStr;
 
-use bindings::generated::ssd_os::{MAGIC_STAGE, stage};
+use bindings::generated::ssd_os::MAGIC_STAGE;
+pub use bindings::generated::ssd_os::stage;
 
 use crate::bindings;
 impl stage {
@@ -59,12 +60,7 @@ macro_rules! make_stage {
                 $stage_fn(context)
             }
 
-            $crate::bindings::generated::ssd_os::stage::new(
-                $name,
-                wrapped_init,
-                wrapped_exit,
-                wrapped_stage,
-            )
+            $crate::bindings::stages::stage::new($name, wrapped_init, wrapped_exit, wrapped_stage)
         }
     }};
 }
@@ -73,7 +69,7 @@ macro_rules! make_stage {
 macro_rules! make_stage_static {
     ($ident:ident, $init:ident, $exit:ident, $stage_fn:ident) => {
         #[unsafe(no_mangle)]
-        pub static $ident: $crate::bindings::generated::ssd_os::stage = $crate::make_stage!(
+        pub static $ident: $crate::bindings::stages::stage = $crate::make_stage!(
             $crate::shared::macros::cstr!($ident),
             $init,
             $exit,
