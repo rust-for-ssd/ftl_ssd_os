@@ -8,6 +8,9 @@ crate-type = ["staticlib"]
 test = false
 harness = false
 
+[build]
+target = "./target.json"
+
 [profile.small]
 inherits = "release"
 opt-level = "z"   # Optimize for size
@@ -15,3 +18,6 @@ lto = true        # Enable Link-Time Optimization
 strip = true # Strip debug symbols
 panic = "abort"   # Reduce binary size by removing panic unwinding
 codegen-units = 1
+
+[build-dependencies]
+bindgen = "0.71.1"

@@ -9,7 +9,8 @@ use core::{
 /// we assume the structure is channels[LUNS[Planes[Blocks]]]
 use alloc::vec::Vec;
 
-use crate::{bindings::nvm_mmgr_geometry, shared::addresses::PhysicalBlockAddress};
+use crate::bindings::generated::volt::nvm_mmgr_geometry;
+use crate::shared::addresses::PhysicalBlockAddress;
 
 pub struct BadBlockTable<A: Allocator + 'static> {
     pub channels: MaybeUninit<RefCell<Vec<Channel<A>, &'static A>>>,
