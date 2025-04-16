@@ -54,13 +54,14 @@ struct pipeline {
 struct connector {
     char 	     	 magic[4];
     char 	     	 name[32];
+    uint32_t		 nosched;  /* Set to lock a core for itself */
     ssd_os_ctrl_fn  	*init_fn;
     ssd_os_ctrl_fn  	*exit_fn;
     ssd_os_conn_fn  	*conn_fn;
-    ssd_os_conn_ring_fn *ring_fn; 
+    ssd_os_conn_ring_fn *ring_fn;
 };
 
-/* DISTRIBUTION FUNCTIONS */
+/* APPLICATION FUNCTIONS */
 
 int  program_load    (uint8_t *elf, uint32_t size);
 int  program_pipe    (uint8_t *file);
@@ -69,6 +70,13 @@ int  program_connect (uint8_t *file);
 void loader_extensions_print (void);
 void loader_stages_print (void);
 void loader_connectors_print (void);
+
+void timer_interrupt_on (int interval, void *function);
+void timer_interrupt_off (void);
+
+typedef void (ssd_os_thread) (int cpu, void *context);
+
+int thread_yield (int cpu, ssd_os_thread thread, void *context);
 
 /* PROGRAMMING FUNCTIONS */
 

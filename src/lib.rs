@@ -6,16 +6,14 @@
 #![allow(dead_code)]
 #![allow(static_mut_refs)]
 #![feature(allocator_api)]
-mod bbt;
-mod bindings;
-mod fake_alloc;
-mod garbage_collector;
-mod safe_bindings;
-mod sdd_os_alloc;
-mod shared;
-mod ssd_os;
 
 extern crate alloc;
+
+mod allocator;
+mod bbt;
+pub mod bindings;
+mod shared;
+mod test;
 
 use ::core::ffi::CStr;
 
