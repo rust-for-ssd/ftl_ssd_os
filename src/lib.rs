@@ -53,6 +53,7 @@ fn panic_printer(info: &core::panic::PanicInfo) {
     }
 }
 
+#[cfg(not(feature = "qemu_testing"))]
 #[panic_handler]
 pub fn panic(info: &core::panic::PanicInfo) -> ! {
     println_s!(c"PANIC!");
