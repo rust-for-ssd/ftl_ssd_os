@@ -1,6 +1,7 @@
 use core::ffi::CStr;
 
-use bindings::{MAGIC_STAGE, stage};
+use bindings::generated::MAGIC_STAGE;
+pub use bindings::generated::stage;
 
 use crate::bindings;
 impl stage {
@@ -13,7 +14,12 @@ impl stage {
         ) -> *mut ::core::ffi::c_void,
     ) -> Self {
         stage {
-            magic: *MAGIC_STAGE,
+            magic: [
+                MAGIC_STAGE.to_bytes_with_nul()[0],
+                MAGIC_STAGE.to_bytes_with_nul()[1],
+                MAGIC_STAGE.to_bytes_with_nul()[2],
+                MAGIC_STAGE.to_bytes_with_nul()[3],
+            ],
             name: {
                 let mut buf = [0u8; 32];
                 let s = name.to_bytes();
@@ -54,7 +60,7 @@ macro_rules! make_stage {
                 $stage_fn(context)
             }
 
-            $crate::bindings::stage::new($name, wrapped_init, wrapped_exit, wrapped_stage)
+            $crate::bindings::stages::stage::new($name, wrapped_init, wrapped_exit, wrapped_stage)
         }
     }};
 }
@@ -63,7 +69,7 @@ macro_rules! make_stage {
 macro_rules! make_stage_static {
     ($ident:ident, $init:ident, $exit:ident, $stage_fn:ident) => {
         #[unsafe(no_mangle)]
-        pub static $ident: $crate::bindings::stage = $crate::make_stage!(
+        pub static $ident: $crate::bindings::stages::stage = $crate::make_stage!(
             $crate::shared::macros::cstr!($ident),
             $init,
             $exit,

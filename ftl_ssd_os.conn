@@ -1,4 +1,4 @@
 volt_cpipe volt_conn,slicer_conn
 volt_spipe slicer_conn,volt_conn
-bbt_pipe bbt_conn,bbt_conn
-gc_pipe gc_conn,gc_conn
+pipe_1 conn_1,conn_2
+pipe_2 conn_2,conn_1

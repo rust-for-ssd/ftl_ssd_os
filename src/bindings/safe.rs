@@ -3,6 +3,8 @@ use core::{
     fmt::{Error, Result, Write},
 };
 
+use super::generated;
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn memcpy(
     dest: *mut ::core::ffi::c_void,
@@ -16,64 +18,62 @@ pub unsafe extern "C" fn memcpy(
     assert!(src as usize % alignment == 0);
 
     // Now that we know the pointers are properly aligned, call the underlying implementation.
-    unsafe { bindings::ssd_os_mem_cpy(dest, src, n) }
+    unsafe { generated::ssd_os_mem_cpy(dest, src, n) }
 }
-
-use crate::bindings::{self};
 
 pub fn ssd_os_get_connection(
     connector_name: *mut ::core::ffi::c_char,
     pipe_name: *mut ::core::ffi::c_char,
-) -> *mut bindings::pipeline {
-    unsafe { bindings::ssd_os_get_connection(connector_name, pipe_name) }
+) -> *mut generated::pipeline {
+    unsafe { generated::ssd_os_get_connection(connector_name, pipe_name) }
 }
 
 pub fn ssd_os_this_cpu(name: &CStr) -> ::core::ffi::c_int {
-    unsafe { bindings::ssd_os_this_cpu(name.as_ptr()) }
+    unsafe { generated::ssd_os_this_cpu(name.as_ptr().cast_mut()) }
 }
 
 pub fn ssd_os_mem_get(key: ::core::ffi::c_int) -> *mut ::core::ffi::c_void {
-    unsafe { bindings::ssd_os_mem_get(key) }
+    unsafe { generated::ssd_os_mem_get(key) }
 }
 
 pub fn ssd_os_print_lock() {
     unsafe {
-        bindings::ssd_os_print_lock();
+        generated::ssd_os_print_lock();
     }
 }
 
 pub fn ssd_os_print_unlock() {
     unsafe {
-        bindings::ssd_os_print_unlock();
+        generated::ssd_os_print_unlock();
     }
 }
 
 pub fn ssd_os_sleep(i: u32) {
     unsafe {
-        bindings::ssd_os_sleep(i as i32);
+        generated::ssd_os_sleep(i as i32);
     }
 }
 
 pub fn ssd_os_print_ss(s1: &CStr, s2: &CStr) {
     unsafe {
-        bindings::ssd_os_print_ss(s1.as_ptr(), s2.as_ptr());
+        generated::ssd_os_print_ss(s1.as_ptr(), s2.as_ptr());
     }
 }
 
 pub fn ssd_os_print_i(i: u32) {
     unsafe {
-        bindings::ssd_os_print_i(i);
+        generated::ssd_os_print_i(i);
     }
 }
 
 pub fn ssd_os_print_s(s: &CStr) {
     unsafe {
-        bindings::ssd_os_print_s(s.as_ptr());
+        generated::ssd_os_print_s(s.as_ptr());
     }
 }
 
 pub fn ssd_os_mem_size(key: i32) -> ::core::ffi::c_int {
-    unsafe { bindings::ssd_os_mem_size(key) }
+    unsafe { generated::ssd_os_mem_size(key) }
 }
 
 pub fn safe_print(s: &str) {
@@ -123,19 +123,19 @@ impl Write for ssd_os_printer {
 #[macro_export]
 macro_rules! println_s {
     ($msg:expr) => {{
-        $crate::safe_bindings::ssd_os_print_lock();
-        $crate::safe_bindings::ssd_os_print_s($msg);
-        $crate::safe_bindings::ssd_os_print_s(c"\n");
-        $crate::safe_bindings::ssd_os_print_unlock();
+        $crate::bindings::safe::ssd_os_print_lock();
+        $crate::bindings::safe::ssd_os_print_s($msg);
+        $crate::bindings::safe::ssd_os_print_s(c"\n");
+        $crate::bindings::safe::ssd_os_print_unlock();
     }};
 }
 
 #[macro_export]
 macro_rules! println_i {
     ($msg:expr) => {{
-        $crate::safe_bindings::ssd_os_print_lock();
-        $crate::safe_bindings::ssd_os_print_i($msg);
-        $crate::safe_bindings::ssd_os_print_s(c"\n");
-        $crate::safe_bindings::ssd_os_print_unlock();
+        $crate::bindings::safe::ssd_os_print_lock();
+        $crate::bindings::safe::ssd_os_print_i($msg);
+        $crate::bindings::safe::ssd_os_print_s(c"\n");
+        $crate::bindings::safe::ssd_os_print_unlock();
     }};
 }

@@ -1,5 +1,6 @@
-use crate::bindings::nvm_ppa_addr;
+use crate::bindings::generated::nvm_ppa_addr;
 
+#[derive(Clone, Copy)]
 pub struct PhysicalBlockAddress {
     pub channel: u16,
     pub lun: u8,
@@ -36,20 +37,21 @@ impl From<nvm_ppa_addr> for PhysicalBlockAddress {
 ///     };
 /// };
 ///
+//TODO fix the bindgen
 impl nvm_ppa_addr {
     pub fn get_channel(self) -> u16 {
-        ((unsafe { self.ppa } >> 5) & 0b1111_1111_1111) as u16
+        ((unsafe { self.__bindgen_anon_1.ppa } >> 5) & 0b1111_1111_1111) as u16
     }
 
     pub fn get_plane(&self) -> u8 {
-        ((unsafe { self.ppa } >> 3) & 0b0011) as u8
+        ((unsafe { self.__bindgen_anon_1.ppa } >> 3) & 0b0011) as u8
     }
 
     pub fn get_lun(&self) -> u8 {
-        ((unsafe { self.ppa } >> 17) & 0b0011_1111) as u8
+        ((unsafe { self.__bindgen_anon_1.ppa } >> 17) & 0b0011_1111) as u8
     }
 
     pub fn get_block(&self) -> u16 {
-        ((unsafe { self.ppa } >> 35) & 0b0111_1111_1111_1111) as u16
+        ((unsafe { self.__bindgen_anon_1.ppa } >> 35) & 0b0111_1111_1111_1111) as u16
     }
 }

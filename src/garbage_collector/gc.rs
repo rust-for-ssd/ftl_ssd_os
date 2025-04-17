@@ -7,28 +7,10 @@ use ::core::ffi::CStr;
 use crate::ssd_os::lring::LRing;
 use crate::{make_connector_static, make_stage_static, println_s};
 
-const hello: [u8; 32] = *b"hello world\0....................";
-
 make_stage_static!(gc_sstage, s1_init, s1_init, gc_sstage_fn);
-make_stage_static!(gc_cstage, s1_init, s1_init, gc_cstage_fn);
 
 fn gc_sstage_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ssd_os_print_lock();
-    ssd_os_print_ss(
-        unsafe { CStr::from_ptr(context as *const u8) },
-        c"gc_sstage\n",
-    );
-    ssd_os_print_unlock();
-    context
-}
-
-fn gc_cstage_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ssd_os_print_lock();
-    ssd_os_print_ss(
-        unsafe { CStr::from_ptr(context as *const u8) },
-        c"gc_cstage\n",
-    );
-    ssd_os_print_unlock();
+    println_s!(c"GC SUBMISSION STAGE");
     context
 }
 
@@ -45,15 +27,10 @@ static gc_lring: LRing<128> = LRing::new();
 make_connector_static!(gc_conn, gc_init, gc_exit, gc_conn_fn, gc_ring);
 
 fn gc_init() -> ::core::ffi::c_int {
-    println_s!(c"init start:");
-    println_s!(c"alloc location gc:");
-    // println_i!(&crate::bbt::bbt_conn::ALLOCATOR as *const _ as u32);
-    // let cpu_id = ssd_os_this_cpu(gc_conn.get_name());
-    // let memory_region = ssd_os_mem_get(cpu_id) as usize;
-    // let memory_size = ssd_os_mem_size(cpu_id) as usize;
-
+    println_s!(c"GC INIT: START");
+    println_s!(c"GC INIT: RING");
     gc_lring.init(c"gc_lring", 0);
-
+    println_s!(c"GC INIT: END");
     0
 }
 
@@ -62,29 +39,25 @@ fn gc_exit() -> ::core::ffi::c_int {
 }
 
 fn gc_ring(ring: *mut lring_entry) -> ::core::ffi::c_int {
-    ssd_os_print_lock();
-    ssd_os_print_ss(
-        unsafe { CStr::from_ptr(ring.as_ref().unwrap().ctx as *const u8) },
-        c"END\n",
-    );
-    ssd_os_print_unlock();
+    println_s!(c"GC RING");
     0
 }
 
 fn gc_conn_fn(entry: *mut lring_entry) -> *mut pipeline {
+    ssd_os_sleep(1);
+    println_s!(c"GC CONN FN: START");
     let pipe = ssd_os_get_connection(
         c"gc_conn".as_ptr().cast_mut(),
-        c"gc_pipe".as_ptr().cast_mut(),
+        c"gc_spipe".as_ptr().cast_mut(),
     );
     if !pipe.is_null() {
-        unsafe { entry.as_mut().unwrap() }.ctx = hello.as_ptr() as *mut ::core::ffi::c_void;
-        ssd_os_print_ss(
-            unsafe { CStr::from_ptr(entry.as_ref().unwrap().ctx as *const u8) },
-            c"START\n",
-        );
-        ssd_os_sleep(1);
+        unsafe { entry.as_mut().unwrap().ctx = 42 as *mut _ };
         return pipe;
     } else {
         return ::core::ptr::null_mut();
     }
 }
+
+
+
+// GC INIT -> GC CONN -> GC_PIPE (GC STAGE1 -> ...) -> BBT RING -> 

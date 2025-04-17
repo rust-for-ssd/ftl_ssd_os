@@ -1,6 +1,6 @@
 #!/bin/sh
 rm *.o;
-cargo clean;
+# cargo clean;
 cargo b --profile small;
 ar x ./target/target/small/libftl_ssd_os.a;
 
