@@ -5,6 +5,7 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(rv_unit::test_runner)]
 
+use ftl_ssd_os;
 use riscv_rt::entry;
 use semihosting::println;
 

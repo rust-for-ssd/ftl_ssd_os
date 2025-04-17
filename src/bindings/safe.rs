@@ -5,6 +5,7 @@ use core::{
 
 use super::generated;
 
+#[cfg(not(feature = "qemu_testing"))]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn memcpy(
     dest: *mut ::core::ffi::c_void,
