@@ -9,7 +9,7 @@ use core::{
 /// we assume the structure is channels[LUNS[Planes[Blocks]]]
 use alloc::vec::Vec;
 
-use crate::{bindings::generated::wrapper::nvm_mmgr_geometry, println_i};
+use crate::{bindings::generated::nvm_mmgr_geometry, println_i};
 use crate::{println_s, shared::addresses::PhysicalBlockAddress};
 
 pub struct BadBlockTable<A: Allocator + 'static> {

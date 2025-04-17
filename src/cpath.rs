@@ -6,7 +6,7 @@ use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,
     bbt::bbt::{BadBlockStatus, BadBlockTable},
     bindings::{
-        generated::wrapper::{
+        generated::{
             lring, lring_entry, nvm_mmgr_geometry, pipeline, ssd_os_lring_create,
             ssd_os_lring_dequeue, ssd_os_lring_enqueue, volt_get_geometry,
         },
