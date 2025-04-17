@@ -1,11 +1,11 @@
 use core::{
-    ffi::CStr,
+    ffi::{c_void, CStr},
     fmt::{Error, Result, Write},
 };
 
 use super::generated;
 
-#[cfg(not(feature = "qemu_testing"))]
+#[cfg(not(feature = "test"))]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn memcpy(
     dest: *mut ::core::ffi::c_void,
@@ -35,8 +35,17 @@ pub fn ssd_os_this_cpu(name: &CStr) -> ::core::ffi::c_int {
     unsafe { generated::ssd_os_this_cpu(name.as_ptr().cast_mut()) }
 }
 
+
+
+
 pub fn ssd_os_mem_get(key: ::core::ffi::c_int) -> *mut ::core::ffi::c_void {
+    
+    if cfg!(feature = "test") {
+        return 0x80000000 as *mut c_void;
+    };
+    
     unsafe { generated::ssd_os_mem_get(key) }
+    
 }
 
 pub fn ssd_os_print_lock() {

@@ -1,2 +1,5 @@
 test:
-	cargo test --features qemu_testing --target riscv32imac-unknown-none-elf 
+	cargo test --features test --target riscv32imac-unknown-none-elf 
+
+build:
+	./compile.sh
