@@ -41,9 +41,8 @@
             env = {
               RUST_GDB =
                 "${rv32_pkgs.buildPackages.gdb}/bin/riscv32-none-elf-gdb";
-              # LIBCLANG_PATH = "${pkgs.llvmPackages.libclang}/lib";
               LIBCLANG_PATH = "${llvmPackages.libclang.lib}/lib";
-              # INCLUDE = "${llvmPackages.clang}/resource-root/include/";
+              GLIBC_PATH = "${rv32_pkgs.binutils.libc}";
             };
           };
       });

@@ -3,6 +3,9 @@ use core::cell::{Cell, OnceCell};
 use core::ptr::NonNull;
 use core::{mem, ptr};
 
+use crate::bindings::safe::ssd_os_mem_get;
+use crate::{println_i, println_s};
+
 // ISSUES: Dealloc does not work.
 // Dynamic allocator
 
@@ -31,6 +34,8 @@ impl SimpleAllocator {
 
     /// Initializes the allocator by setting up the initial free block.
     pub fn initialize(&self, start: *mut u8, end: *mut u8) {
+        let lowest_addr = ssd_os_mem_get(0);
+        assert!(lowest_addr <= start.cast());
         let Ok(()) = self.start.set(start) else {
             return;
         };
@@ -42,7 +47,7 @@ impl SimpleAllocator {
 
         // Only initialize if the region has enough space for a block
         if size >= mem::size_of::<FreeBlock>() {
-            let block_ptr = start as *mut FreeBlock;
+            let block_ptr = *self.start.get().unwrap() as *mut FreeBlock;
 
             // SAFETY: We're writing to memory we own
             unsafe {
@@ -105,6 +110,8 @@ unsafe impl Allocator for SimpleAllocator {
                 let ptr: NonNull<[u8]> = unsafe {
                     core::slice::from_raw_parts_mut(aligned_addr as *mut u8, size).into()
                 };
+                let lowest_addr = ssd_os_mem_get(0);
+                assert!(lowest_addr <= ptr.as_ptr().cast());
                 return Ok(ptr);
             }
 
@@ -117,6 +124,8 @@ unsafe impl Allocator for SimpleAllocator {
     }
 
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+        let lowest_addr = ssd_os_mem_get(0);
+        assert!(lowest_addr <= ptr.as_ptr().cast());
         crate::println_s!(c"DEALLOC!");
         return;
         let Some(start) = self.start.get() else {

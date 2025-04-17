@@ -1,9 +1,10 @@
 use core::{cell::OnceCell, ffi::CStr, mem::MaybeUninit};
 
-use crate::bindings::{lring, lring_entry, ssd_os_lring_create, ssd_os_lring_dequeue};
+use crate::bindings::generated::lring_entry;
+use crate::bindings::generated::{lring, ssd_os_lring_create, ssd_os_lring_dequeue};
 
 pub struct LRing<const Capacity: usize> {
-    ssd_os_lring: OnceCell<*mut lring>,
+    pub ssd_os_lring: OnceCell<*mut lring>,
     buffer: [MaybeUninit<u8>; Capacity],
 }
 

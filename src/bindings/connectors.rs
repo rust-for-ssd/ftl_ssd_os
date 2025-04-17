@@ -1,8 +1,11 @@
 use core::ffi::CStr;
 
-use bindings::{MAGIC_CONNECTOR, connector, lring_entry, pipeline};
+use bindings::generated::{MAGIC_CONNECTOR, lring_entry, pipeline};
 
 use crate::{bindings, println_s};
+
+pub use bindings::generated::connector;
+
 impl connector {
     pub const fn new(
         name: &CStr,
@@ -12,10 +15,15 @@ impl connector {
         ring_fn: unsafe extern "C" fn(*mut lring_entry) -> i32,
     ) -> Self {
         Self {
-            magic: *MAGIC_CONNECTOR,
+            magic: [
+                MAGIC_CONNECTOR.to_bytes_with_nul()[0],
+                MAGIC_CONNECTOR.to_bytes_with_nul()[1],
+                MAGIC_CONNECTOR.to_bytes_with_nul()[2],
+                MAGIC_CONNECTOR.to_bytes_with_nul()[3],
+            ],
             name: {
                 let mut buf = [0u8; 32];
-                let s = name.to_bytes();
+                let s = name.to_bytes_with_nul();
                 let mut i = 0;
                 while i < s.len() {
                     buf[i] = s[i];
@@ -27,6 +35,7 @@ impl connector {
             exit_fn: Some(exit_fn),
             conn_fn: Some(conn_fn),
             ring_fn: Some(ring_fn),
+            nosched: 0,
         }
     }
     pub fn get_name(&self) -> &CStr {
@@ -64,7 +73,7 @@ macro_rules! make_connector {
                 $ring_fn(entry)
             }
 
-            $crate::bindings::connector::new(
+            $crate::bindings::connectors::connector::new(
                 $name,
                 wrapped_init,
                 wrapped_exit,
@@ -79,7 +88,7 @@ macro_rules! make_connector {
 macro_rules! make_connector_static {
     ($ident:ident, $init:ident, $exit:ident, $conn:ident, $ring:ident) => {
         #[unsafe(no_mangle)]
-        pub static $ident: $crate::bindings::connector = $crate::make_connector!(
+        pub static $ident: $crate::bindings::connectors::connector = $crate::make_connector!(
             $crate::shared::macros::cstr!($ident),
             $init,
             $exit,
