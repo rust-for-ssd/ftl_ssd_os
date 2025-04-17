@@ -4,6 +4,8 @@
 #![reexport_test_harness_main = "test_main"]
 #![feature(custom_test_frameworks)]
 #![test_runner(rv_unit::test_runner)]
+#![feature(allocator_api)]
+#![feature(box_as_ptr)]
 
 use ftl_ssd_os;
 use riscv_rt::entry;
@@ -19,10 +21,6 @@ pub fn panic(info: &core::panic::PanicInfo) -> ! {
 
 #[entry]
 fn main() -> ! {
-    println!("--------------------------");
-    println!("TESTING!!!");
-    println!("--------------------------");
-
     test_main();
     loop {}
 }

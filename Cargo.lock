@@ -282,7 +282,7 @@ checksum = "357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d"
 [[package]]
 name = "rv_unit"
 version = "0.1.0"
-source = "git+https://github.com/rust-for-ssd/rv_unit.git#d15aff7845734a98646414a3054f5fd18fb68f9e"
+source = "git+https://github.com/rust-for-ssd/rv_unit.git#4062421a6ca6bcec604a22e8b7246beabec14e76"
 dependencies = [
  "riscv",
  "riscv-rt",
