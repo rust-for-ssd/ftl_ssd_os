@@ -13,6 +13,7 @@ pub mod allocator;
 mod bbt;
 pub mod bindings;
 mod cpath;
+mod provisioner;
 mod shared;
 
 #[cfg(not(feature = "test"))]
