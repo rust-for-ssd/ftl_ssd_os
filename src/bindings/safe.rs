@@ -3,6 +3,8 @@ use core::{
     fmt::{Error, Result, Write},
 };
 
+use semihosting::print;
+
 use super::generated;
 
 #[cfg(not(feature = "test"))]
@@ -52,12 +54,14 @@ pub fn ssd_os_mem_get(key: ::core::ffi::c_int) -> *mut ::core::ffi::c_void {
 }
 
 pub fn ssd_os_print_lock() {
+    #[cfg(not(feature = "test"))]
     unsafe {
         generated::ssd_os_print_lock();
     }
 }
 
 pub fn ssd_os_print_unlock() {
+    #[cfg(not(feature = "test"))]
     unsafe {
         generated::ssd_os_print_unlock();
     }
@@ -82,6 +86,11 @@ pub fn ssd_os_print_i(i: u32) {
 }
 
 pub fn ssd_os_print_s(s: &CStr) {
+    #[cfg(feature = "test")]
+    {
+        semihosting::print!("{}", s.to_str().unwrap());
+    }
+    #[cfg(not(feature = "test"))]
     unsafe {
         generated::ssd_os_print_s(s.as_ptr());
     }
@@ -95,7 +104,7 @@ pub struct SSD_OS_Printer {}
 impl Write for SSD_OS_Printer {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         // Write in chunks, using a fixed-size buffer with space for a null terminator
-        unsafe { generated::ssd_os_print_lock() };
+        ssd_os_print_lock();
         const BUF_SIZE: usize = 32;
         static mut buffer: [u8; BUF_SIZE] = [0u8; BUF_SIZE];
 
@@ -112,20 +121,27 @@ impl Write for SSD_OS_Printer {
             }
 
             // SAFETY: We ensure buffer is null-terminated and has no internal nulls
-            unsafe { generated::ssd_os_print_s(buffer.as_ptr()) };
+            ssd_os_print_s(unsafe { CStr::from_ptr(buffer.as_ptr()) });
 
             remaining = rest;
         }
-        unsafe { generated::ssd_os_print_unlock() };
+        ssd_os_print_unlock();
         Ok(())
     }
 }
 
 #[macro_export]
 macro_rules! println {
-    ($msg:expr) => {{
+    // Case where there's only one argument and it is a literal format string
+    ($arg:expr) => {{
         use core::fmt::Write;
         let mut printer = $crate::bindings::safe::SSD_OS_Printer {};
-        let _ = writeln!(printer, "{}", $msg);
+        let _ = writeln!(printer, "{}", $arg);
+    }};
+    // Case where there are multiple arguments, including format string and parameters
+    ($fmt:expr, $($args:tt)+) => {{
+        use core::fmt::Write;
+        let mut printer = $crate::bindings::safe::SSD_OS_Printer {};
+        let _ = writeln!(printer, $fmt, $($args)+);
     }};
 }

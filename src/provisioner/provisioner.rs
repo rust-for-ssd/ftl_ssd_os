@@ -8,9 +8,10 @@ use alloc::{collections::VecDeque, vec::Vec};
 
 use crate::bindings::generated::nvm_mmgr_geometry;
 
+#[derive(Debug)]
 pub struct GlobalProvisioner<A: Allocator + 'static> {
     pub channels: MaybeUninit<RefCell<Vec<Channel<A>, &'static A>>>,
-    alloc: OnceCell<&'static A>,
+    pub alloc: OnceCell<&'static A>,
 }
 
 pub struct Channel<A: Allocator + 'static> {
@@ -68,9 +69,6 @@ impl<A: Allocator + 'static> GlobalProvisioner<A> {
             .set(&alloc)
             .map_err(|_| ProvisionError::AlreadyInit)?;
 
-        let block_buffer_capacity: usize = geometry.blk_per_lun as usize;
-        let pages_buffer_capacity: usize = geometry.pg_per_blk as usize;
-
         let mut channels: Vec<Channel<A>, &A> =
             Vec::with_capacity_in(geometry.n_of_ch as usize, alloc);
 
@@ -78,14 +76,14 @@ impl<A: Allocator + 'static> GlobalProvisioner<A> {
             let mut luns: Vec<Lun<A>, &A> =
                 Vec::with_capacity_in(geometry.lun_per_ch as usize, alloc);
             for _ in 0..geometry.lun_per_ch {
-                let lun = Lun {
-                    free: VecDeque::with_capacity_in(block_buffer_capacity, alloc),
-                    used: VecDeque::with_capacity_in(block_buffer_capacity, alloc),
-                    partially_used: VecDeque::with_capacity_in(pages_buffer_capacity, alloc),
-                };
-                luns.push(lun);
+                // let lun = Lun {
+                //     free: VecDeque::with_capacity_in(geometry.blk_per_lun as usize, alloc),
+                //     used: VecDeque::with_capacity_in(geometry.blk_per_lun as usize, alloc),
+                //     partially_used: VecDeque::with_capacity_in(geometry.pg_per_blk as usize, alloc),
+                // };
+                // luns.push(lun);
             }
-            channels.push(Channel { luns });
+            // channels.push(Channel { luns });
         }
 
         *self.get_channel_cell().borrow_mut() = channels;

@@ -14,7 +14,7 @@ use crate::{bindings::generated::nvm_mmgr_geometry, println};
 
 pub struct BadBlockTable<A: Allocator + 'static> {
     pub channels: MaybeUninit<RefCell<Vec<Channel<A>, &'static A>>>,
-    alloc: OnceCell<&'static A>,
+    pub alloc: OnceCell<&'static A>,
 }
 pub struct Channel<A: Allocator + 'static> {
     pub luns: Vec<Lun<A>, &'static A>,

@@ -1,8 +1,15 @@
 use std::env;
 use std::fs;
 use std::path::Path;
+use std::path::PathBuf;
 
 fn main() {
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    fs::write(out_dir.join("memory.x"), include_bytes!("memory.x")).unwrap();
+    println!("cargo:rustc-link-search={}", out_dir.display());
+    println!("cargo:rerun-if-changed=memory.x");
+    println!("cargo:rerun-if-changed=build.rs");
+
     if std::env::var("CARGO_CFG_TEST").is_err() {
         println!("cargo:rustc-cdylib-link-arg=-nostartfiles");
         println!("cargo:rustc-cfg=build_staticlib");
