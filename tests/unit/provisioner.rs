@@ -10,12 +10,6 @@ use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-#[test_case]
-pub fn new_without_init() {
-    let prov: GlobalProvisioner<SimpleAllocator> = GlobalProvisioner::new();
-    assert_eq!(prov.alloc.into_inner(), None);
-}
-
 const GEOMETRY: nvm_mmgr_geometry = {
     let n_of_ch = 1;
     let lun_per_ch = 1;
@@ -88,30 +82,13 @@ pub fn init() {
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     ALLOCATOR.initialize(start, end);
 
-    let prov: GlobalProvisioner<SimpleAllocator> = GlobalProvisioner::new();
-    prov.init(&GEOMETRY, &ALLOCATOR);
+    let prov: GlobalProvisioner<SimpleAllocator> = GlobalProvisioner::new(&GEOMETRY, &ALLOCATOR);
 
-    assert_eq!(prov.alloc.into_inner(), Some(&ALLOCATOR));
-    unsafe {
-        assert_eq!(
-            prov.channels.assume_init_ref().borrow().len(),
-            GEOMETRY.n_of_ch as usize
-        );
-        assert_eq!(
-            prov.channels.assume_init_ref().borrow()[0].luns.len(),
-            GEOMETRY.lun_per_ch as usize
-        );
-        assert_eq!(
-            prov.channels.assume_init_ref().borrow()[0].luns[0]
-                .free
-                .capacity(),
-            GEOMETRY.blk_per_lun as usize
-        );
-        assert_eq!(
-            prov.channels.assume_init_ref().borrow()[0].luns[0]
-                .free
-                .len(),
-            0
-        );
-    }
+    assert_eq!(prov.channels.len(), GEOMETRY.n_of_ch as usize);
+    assert_eq!(prov.channels[0].luns.len(), GEOMETRY.lun_per_ch as usize);
+    assert_eq!(
+        prov.channels[0].luns[0].free.capacity(),
+        GEOMETRY.blk_per_lun as usize
+    );
+    assert_eq!(prov.channels[0].luns[0].free.len(), 0);
 }

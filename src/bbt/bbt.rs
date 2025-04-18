@@ -1,8 +1,4 @@
-use core::{
-    alloc::Allocator,
-    cell::{OnceCell, RefCell},
-    mem::MaybeUninit,
-};
+use core::alloc::Allocator;
 
 /// ASSUMPTIONS:
 /// We assume that bbt is static, as such we use static lifetimes.
@@ -13,8 +9,7 @@ use crate::shared::addresses::PhysicalBlockAddress;
 use crate::{bindings::generated::nvm_mmgr_geometry, println};
 
 pub struct BadBlockTable<A: Allocator + 'static> {
-    pub channels: MaybeUninit<RefCell<Vec<Channel<A>, &'static A>>>,
-    pub alloc: OnceCell<&'static A>,
+    pub channels: Vec<Channel<A>, &'static A>,
 }
 pub struct Channel<A: Allocator + 'static> {
     pub luns: Vec<Lun<A>, &'static A>,
@@ -33,23 +28,11 @@ pub enum BadBlockStatus {
     Reserved,
 }
 
-pub enum BBTError {
-    AlreadyInit,
-}
-
 // TODO: shoudl this reallt b sync???
 unsafe impl<A: Allocator> Sync for BadBlockTable<A> {}
 
 impl<A: Allocator> BadBlockTable<A> {
-    pub const fn new() -> Self {
-        BadBlockTable {
-            channels: MaybeUninit::zeroed(),
-            alloc: OnceCell::new(),
-        }
-    }
-
-    pub fn init(&self, geometry: &nvm_mmgr_geometry, alloc: &'static A) -> Result<(), BBTError> {
-        self.alloc.set(&alloc).map_err(|_| BBTError::AlreadyInit)?;
+    pub fn new(geometry: &nvm_mmgr_geometry, alloc: &'static A) -> Self {
         let mut channels: Vec<Channel<A>, &A> =
             Vec::with_capacity_in(geometry.n_of_ch as usize, alloc);
         for _ in 0..geometry.n_of_ch {
@@ -70,22 +53,16 @@ impl<A: Allocator> BadBlockTable<A> {
             }
             channels.push(Channel { luns });
         }
-        *self.get_channel_cell().borrow_mut() = channels;
-        return Ok(());
+        return Self { channels };
     }
 
-    fn get_channel_cell(&self) -> &RefCell<Vec<Channel<A>, &'static A>> {
-        unsafe { self.channels.assume_init_ref() }
-    }
-
-    pub fn set_bad_block(&self, pba: &PhysicalBlockAddress) {
+    pub fn set_bad_block(&mut self, pba: &PhysicalBlockAddress) {
         println!("SETTING PBA");
         println!(pba.channel as u32);
         println!(pba.lun as u32);
         println!(pba.plane as u32);
         println!(pba.block as u32);
-        self.get_channel_cell().borrow_mut()[pba.channel as usize].luns[pba.lun as usize].planes
-            [pba.plane as usize]
+        self.channels[pba.channel as usize].luns[pba.lun as usize].planes[pba.plane as usize]
             .blocks[pba.block as usize] = BadBlockStatus::Bad;
     }
 
@@ -95,8 +72,7 @@ impl<A: Allocator> BadBlockTable<A> {
         println!(pba.lun as u32);
         println!(pba.plane as u32);
         println!(pba.block as u32);
-        self.get_channel_cell().borrow()[pba.channel as usize].luns[pba.lun as usize].planes
-            [pba.plane as usize]
-            .blocks[pba.block as usize]
+        self.channels[pba.channel as usize].luns[pba.lun as usize].planes[pba.plane as usize].blocks
+            [pba.block as usize]
     }
 }
