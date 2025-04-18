@@ -139,7 +139,6 @@ pub fn deallocation_works() {
         let one: Box<u32, &SimpleAllocator> = Box::new_in(42, &allocator);
         let ptr = Box::into_raw(one); // extract the raw pointer
         unsafe {
-            // SAFETY: we still own the memory, we immediately reconstruct and drop it
             drop(Box::from_raw_in(ptr, &allocator));
         }
         ptr
@@ -159,7 +158,7 @@ pub fn coalescing_works() {
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
-    // Allocate two adjacent blocks (e.g., 8 bytes each)
+    // Allocate adjacent blocks (e.g., 8 bytes each)
     let a: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
     let b: Box<u32, &SimpleAllocator> = Box::new_in(2, &allocator);
     let c: Box<u32, &SimpleAllocator> = Box::new_in(3, &allocator);
@@ -202,12 +201,11 @@ pub fn coalescing_works_in_middle() {
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
-    // Allocate two adjacent blocks (e.g., 8 bytes each)
+    // Allocate adjacent blocks (e.g., 8 bytes each)
     let a: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
     let b: Box<u32, &SimpleAllocator> = Box::new_in(2, &allocator); // goal: coalese this
     let c: Box<u32, &SimpleAllocator> = Box::new_in(3, &allocator); // and this
     let d: Box<u32, &SimpleAllocator> = Box::new_in(4, &allocator);
-
 
 
     let a_ptr = Box::into_raw(a);
@@ -273,11 +271,6 @@ pub fn large_allocation_cannot_get_small_coalesed_block_in_middle() {
     let large: Box<[u32; 100], &SimpleAllocator> = Box::new_in([0; 100], &allocator);
     let large_ptr = Box::into_raw(large) as *mut u32;
     let should_be_here_ptr = unsafe { d_ptr.add(2) }; // 2x usize is the size of a free block (data + next pointer)
-
-    // println!("{:p}", a_ptr);
-    // println!("{:p}", b_ptr);
-    // println!("{:p}", c_ptr);
-    // println!("{:p}", d_ptr);
     
     assert_eq!(
         large_ptr, should_be_here_ptr
