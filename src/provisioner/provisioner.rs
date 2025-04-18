@@ -55,7 +55,7 @@ pub enum ProvisionError {
 impl<A: Allocator + 'static> GlobalProvisioner<A> {
     pub const fn new() -> Self {
         Self {
-            channels: MaybeUninit::uninit(),
+            channels: MaybeUninit::zeroed(),
             alloc: OnceCell::new(),
         }
     }

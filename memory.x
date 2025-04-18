@@ -4,7 +4,7 @@ MEMORY
   FLASH : ORIGIN = 0x20000000, LENGTH = 4M
 }
 
-_heap_size = 2K;
+_heap_size = 50M;
 _max_hart_id = 1;
 
 REGION_ALIAS("REGION_TEXT", FLASH);
