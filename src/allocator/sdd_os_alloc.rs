@@ -4,7 +4,6 @@ use core::ptr::NonNull;
 use core::{mem, ptr};
 
 use crate::bindings::safe::ssd_os_mem_get;
-use crate::{println_i, println_s};
 
 // ISSUES: Dealloc does not work.
 // Dynamic allocator

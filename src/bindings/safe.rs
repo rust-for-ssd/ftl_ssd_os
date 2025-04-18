@@ -21,11 +21,13 @@ pub unsafe extern "C" fn memcpy(
     unsafe { generated::ssd_os_mem_cpy(dest, src, n) }
 }
 
-pub fn ssd_os_get_connection(
-    connector_name: *mut ::core::ffi::c_char,
-    pipe_name: *mut ::core::ffi::c_char,
-) -> *mut generated::pipeline {
-    unsafe { generated::ssd_os_get_connection(connector_name, pipe_name) }
+pub fn ssd_os_get_connection(connector_name: &CStr, pipe_name: &CStr) -> *mut generated::pipeline {
+    unsafe {
+        generated::ssd_os_get_connection(
+            connector_name.as_ptr().cast_mut(),
+            pipe_name.as_ptr().cast_mut(),
+        )
+    }
 }
 
 pub fn ssd_os_this_cpu(name: &CStr) -> ::core::ffi::c_int {
