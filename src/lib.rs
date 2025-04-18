@@ -9,9 +9,9 @@
 
 extern crate alloc;
 
-mod allocator;
+pub mod allocator;
 mod bbt;
-mod bindings;
+pub mod bindings;
 mod cpath;
 mod shared;
 
@@ -53,6 +53,7 @@ fn panic_printer(info: &core::panic::PanicInfo) {
     }
 }
 
+#[cfg(not(feature = "test"))]
 #[panic_handler]
 pub fn panic(info: &core::panic::PanicInfo) -> ! {
     println_s!(c"PANIC!");
