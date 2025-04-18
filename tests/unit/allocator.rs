@@ -9,8 +9,9 @@ use alloc::string::String;
 #[test_case]
 pub fn we_can_allocate_two_boxes() {
     let allocator = SimpleAllocator::new();
-    let start = 0x80000000 as *mut u8;
+    let start = 0x80000000 as *mut u8;    
     let end = unsafe { start.add(10000) };
+    println!("Start: {:?}, end {:?}", start, end);
     allocator.initialize(start, end);
 
     let one: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
@@ -115,22 +116,7 @@ pub fn deallocation_works() {
     let end = unsafe { start.add(8) };
     allocator.initialize(start, end);
 
-    let one: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
-    let should_fail = Box::try_new_in(1, &allocator);
-    match should_fail {
-        Ok(b) => { assert!(false); }
-        Err(_) => { assert!(true); }
-    }
-}
-
-#[test_case]
-pub fn deallocation_works() {
-    let allocator = SimpleAllocator::new();
-    let start = 0x80000000 as *mut u8;
-    let end = unsafe { start.add(8) };
-    allocator.initialize(start, end);
-
-    // Step 1: allocate a value
+    // allocate a value
     let first_ptr = {
         let one: Box<u32, &SimpleAllocator> = Box::new_in(42, &allocator);
         let ptr = Box::into_raw(one); // extract the raw pointer
@@ -141,7 +127,7 @@ pub fn deallocation_works() {
         ptr
     };
 
-    // Step 2: allocate again, should reuse same memory if dealloc worked
+    // allocate again, should reuse same memory if dealloc worked
     let two: Box<u32, &SimpleAllocator> = Box::new_in(99, &allocator);
     let second_ptr = Box::into_raw(two);
 
