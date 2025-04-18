@@ -11,7 +11,6 @@ pub fn we_can_allocate_two_boxes() {
     let allocator = SimpleAllocator::new();
     let start = 0x80000000 as *mut u8;    
     let end = unsafe { start.add(10000) };
-    println!("Start: {:?}, end {:?}", start, end);
     allocator.initialize(start, end);
 
     let one: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
