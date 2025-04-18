@@ -95,7 +95,7 @@ pub struct SSD_OS_Printer {}
 impl Write for SSD_OS_Printer {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         // Write in chunks, using a fixed-size buffer with space for a null terminator
-        ssd_os_print_lock();
+        unsafe { generated::ssd_os_print_lock() };
         const BUF_SIZE: usize = 32;
         static mut buffer: [u8; BUF_SIZE] = [0u8; BUF_SIZE];
 
@@ -112,13 +112,11 @@ impl Write for SSD_OS_Printer {
             }
 
             // SAFETY: We ensure buffer is null-terminated and has no internal nulls
-            let cstr = unsafe { CStr::from_ptr(buffer.as_ptr() as *const _) };
-
-            ssd_os_print_s(cstr);
+            unsafe { generated::ssd_os_print_s(buffer.as_ptr()) };
 
             remaining = rest;
         }
-        ssd_os_print_unlock();
+        unsafe { generated::ssd_os_print_unlock() };
         Ok(())
     }
 }
