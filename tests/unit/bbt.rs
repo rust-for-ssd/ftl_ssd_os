@@ -92,4 +92,26 @@ pub fn init() {
     bbt.init(&GEOMETRY, &ALLOCATOR);
 
     assert_eq!(bbt.alloc.into_inner(), Some(&ALLOCATOR));
+    unsafe {
+        assert_eq!(
+            bbt.channels.assume_init_ref().borrow().len(),
+            GEOMETRY.n_of_ch as usize
+        );
+        assert_eq!(
+            bbt.channels.assume_init_ref().borrow()[0].luns.len(),
+            GEOMETRY.lun_per_ch as usize
+        );
+        assert_eq!(
+            bbt.channels.assume_init_ref().borrow()[0].luns[0]
+                .planes
+                .len(),
+            GEOMETRY.n_of_planes as usize
+        );
+        assert_eq!(
+            bbt.channels.assume_init_ref().borrow()[0].luns[0].planes[0]
+                .blocks
+                .len(),
+            GEOMETRY.blk_per_lun as usize
+        );
+    }
 }

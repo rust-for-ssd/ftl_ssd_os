@@ -76,14 +76,14 @@ impl<A: Allocator + 'static> GlobalProvisioner<A> {
             let mut luns: Vec<Lun<A>, &A> =
                 Vec::with_capacity_in(geometry.lun_per_ch as usize, alloc);
             for _ in 0..geometry.lun_per_ch {
-                // let lun = Lun {
-                //     free: VecDeque::with_capacity_in(geometry.blk_per_lun as usize, alloc),
-                //     used: VecDeque::with_capacity_in(geometry.blk_per_lun as usize, alloc),
-                //     partially_used: VecDeque::with_capacity_in(geometry.pg_per_blk as usize, alloc),
-                // };
-                // luns.push(lun);
+                let lun = Lun {
+                    free: VecDeque::with_capacity_in(geometry.blk_per_lun as usize, alloc),
+                    used: VecDeque::with_capacity_in(geometry.blk_per_lun as usize, alloc),
+                    partially_used: VecDeque::with_capacity_in(geometry.pg_per_blk as usize, alloc),
+                };
+                luns.push(lun);
             }
-            // channels.push(Channel { luns });
+            channels.push(Channel { luns });
         }
 
         *self.get_channel_cell().borrow_mut() = channels;
@@ -91,7 +91,7 @@ impl<A: Allocator + 'static> GlobalProvisioner<A> {
         Ok(())
     }
 
-    pub fn get_channel_cell(&self) -> &RefCell<Vec<Channel<A>, &'static A>> {
+    fn get_channel_cell(&self) -> &RefCell<Vec<Channel<A>, &'static A>> {
         unsafe { self.channels.assume_init_ref() }
     }
 }
