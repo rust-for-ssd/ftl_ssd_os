@@ -11,9 +11,10 @@
 extern crate alloc;
 
 pub mod allocator;
-mod bbt;
+pub mod bbt;
 pub mod bindings;
 mod cpath;
+pub mod provisioner;
 mod shared;
 
 #[cfg(not(feature = "test"))]
