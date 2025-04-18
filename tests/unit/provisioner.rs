@@ -84,9 +84,8 @@ const GEOMETRY: nvm_mmgr_geometry = {
 #[test_case]
 pub fn init() {
     static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
-    let start = 0x80000000 as *mut u8;
-    let end = unsafe { start.add(1024 * 1024 * 8) };
-    println!("{:p}", end);
+    let start = riscv_rt::heap_start() as *mut u8;
+    let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     ALLOCATOR.initialize(start, end);
 
     let prov: GlobalProvisioner<SimpleAllocator> = GlobalProvisioner::new();

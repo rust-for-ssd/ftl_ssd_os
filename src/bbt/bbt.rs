@@ -43,7 +43,7 @@ unsafe impl<A: Allocator> Sync for BadBlockTable<A> {}
 impl<A: Allocator> BadBlockTable<A> {
     pub const fn new() -> Self {
         BadBlockTable {
-            channels: MaybeUninit::uninit(),
+            channels: MaybeUninit::zeroed(),
             alloc: OnceCell::new(),
         }
     }
