@@ -5,7 +5,7 @@ MEMORY
 }
 
 _heap_size = 2K;
-_max_hart_id = 4;
+_max_hart_id = 1;
 
 REGION_ALIAS("REGION_TEXT", FLASH);
 REGION_ALIAS("REGION_RODATA", FLASH);

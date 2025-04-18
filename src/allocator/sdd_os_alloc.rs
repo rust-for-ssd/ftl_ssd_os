@@ -1,19 +1,20 @@
+use crate::bindings::safe::ssd_os_mem_get;
 use core::alloc::{AllocError, Allocator, Layout};
 use core::cell::{Cell, OnceCell};
-use core::panicking::panic;
 use core::ptr::NonNull;
 use core::{mem, ptr};
-use crate::bindings::safe::ssd_os_mem_get;
 
+#[derive(Debug, PartialEq)]
 pub struct SimpleAllocator {
     start: OnceCell<*mut u8>,
     end: OnceCell<*mut u8>,
     free_list_head: Cell<*mut FreeBlock>,
 }
 
-struct FreeBlock {         // Allocates at least 8 bytes for any sizes
-    size: usize,           // 4 bytes in 32 bit systems
-    next: *mut FreeBlock,  // 4 bytes in 32 bit systems 
+struct FreeBlock {
+    // Allocates at least 8 bytes for any sizes
+    size: usize,          // 4 bytes in 32 bit systems
+    next: *mut FreeBlock, // 4 bytes in 32 bit systems
 }
 
 unsafe impl Send for SimpleAllocator {}
@@ -56,13 +57,13 @@ impl SimpleAllocator {
             panic!("Not enough space for a block")
         }
     }
-    
+
     fn coalesce_blocks(&self) {
         let mut current = self.free_list_head.get();
-        
+
         while !current.is_null() && unsafe { (*current).next } != ptr::null_mut() {
             let next_block = unsafe { (*current).next };
-            
+
             // Check if blocks are adjacent
             if (current as usize) + unsafe { (*current).size } == next_block as usize {
                 // Merge blocks
@@ -147,45 +148,45 @@ unsafe impl Allocator for SimpleAllocator {
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
         let lowest_addr = ssd_os_mem_get(0);
         assert!(lowest_addr <= ptr.as_ptr().cast());
-        
+
         let Some(start) = self.start.get() else {
             panic!("Cannot get start region")
         };
-    
+
         let Some(end) = self.end.get() else {
             panic!("Cannot end start region")
         };
-    
+
         // Validate pointer is within our memory range
         if ptr.as_ptr() < *start {
             panic!("Deallocation attempted with pointer below allocator range");
         } else if ptr.as_ptr() >= *end {
             panic!("Deallocation attempted with pointer beyond allocator range");
         }
-        
+
         // Calculate the size to free (adjust for alignment if needed)
         let size = layout.size().max(mem::size_of::<FreeBlock>());
         let align = layout.align().max(mem::align_of::<FreeBlock>());
-        
+
         // Create a new free block
         let block_ptr = ptr.as_ptr() as *mut FreeBlock;
-        
+
         // Find the right place to insert the block in the free list (keep it sorted by address)
         let mut current = self.free_list_head.get();
         let mut prev: *mut FreeBlock = ptr::null_mut();
-        
+
         // Find where to insert the new free block (in address order)
         while !current.is_null() && current < block_ptr {
             prev = current;
             current = unsafe { (*current).next };
         }
-        
+
         // Initialize the new free block
         unsafe {
             (*block_ptr).size = size;
             (*block_ptr).next = current;
         }
-        
+
         // Link it to the free list
         if prev.is_null() {
             // Insert at the beginning
@@ -196,10 +197,8 @@ unsafe impl Allocator for SimpleAllocator {
                 (*prev).next = block_ptr;
             }
         }
-        
+
         // NOT TESTED YET!!
         self.coalesce_blocks();
     }
-    
 }
-    
