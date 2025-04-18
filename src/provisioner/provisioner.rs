@@ -1,6 +1,6 @@
 use core::{
     alloc::Allocator,
-    cell::{OnceCell, RefCell},
+    cell::{Cell, OnceCell, RefCell},
     mem::MaybeUninit,
 };
 
@@ -10,15 +10,21 @@ use crate::bindings::generated::nvm_mmgr_geometry;
 
 #[derive(Debug)]
 pub struct GlobalProvisioner<A: Allocator + 'static> {
-    pub channels: MaybeUninit<RefCell<Vec<Channel<A>, &'static A>>>,
-    pub alloc: OnceCell<&'static A>,
+    pub channels: Vec<Channel<A>, &'static A>,
+    last_picked_channel: usize,
+    alloc: &'static A,
 }
 
+#[derive(Debug)]
 pub struct Channel<A: Allocator + 'static> {
     pub luns: Vec<Lun<A>, &'static A>,
+    last_picked_lun: usize,
 }
 
+// ASSUMPTION: we assume the free list only contains block which are valid for writing,
+//  i.e. they are not reserved or bad
 // TODO: what about planes?
+#[derive(Debug)]
 pub struct Lun<A: Allocator + 'static> {
     pub free: VecDeque<Block, &'static A>,
     pub used: VecDeque<Block, &'static A>,
@@ -30,13 +36,13 @@ pub enum Page {
     InUse,
     Free,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Block {
     pub id: usize,
     pub plane_id: usize,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct BlockWithPageInfo {
     pub id: usize,
     pub plane_id: usize,
@@ -53,22 +59,7 @@ pub enum ProvisionError {
 }
 
 impl<A: Allocator + 'static> GlobalProvisioner<A> {
-    pub const fn new() -> Self {
-        Self {
-            channels: MaybeUninit::zeroed(),
-            alloc: OnceCell::new(),
-        }
-    }
-
-    pub fn init(
-        &self,
-        geometry: &nvm_mmgr_geometry,
-        alloc: &'static A,
-    ) -> Result<(), ProvisionError> {
-        self.alloc
-            .set(&alloc)
-            .map_err(|_| ProvisionError::AlreadyInit)?;
-
+    pub fn new(geometry: &nvm_mmgr_geometry, alloc: &'static A) -> Self {
         let mut channels: Vec<Channel<A>, &A> =
             Vec::with_capacity_in(geometry.n_of_ch as usize, alloc);
 
@@ -83,15 +74,30 @@ impl<A: Allocator + 'static> GlobalProvisioner<A> {
                 };
                 luns.push(lun);
             }
-            channels.push(Channel { luns });
+            channels.push(Channel {
+                luns,
+                last_picked_lun: 0,
+            });
         }
 
-        *self.get_channel_cell().borrow_mut() = channels;
-
-        Ok(())
+        Self {
+            channels,
+            last_picked_channel: 0,
+            alloc,
+        }
     }
 
-    fn get_channel_cell(&self) -> &RefCell<Vec<Channel<A>, &'static A>> {
-        unsafe { self.channels.assume_init_ref() }
-    }
+    // fn get_channel_rr(&self) -> &mut Channel<A> {
+    //    self.get_channel_cell()
+    //     self.last_picked_channel
+    // }
+
+    // pub fn provision_block(&self) -> Result<PhysicalBlockAddress, ProvisionError> {
+    //     // pick channel RR
+    //     // pick lun RR
+    //     // find free block
+    //     // move from free to used
+    //     // return pba
+    //     // let channel =
+    // }
 }

@@ -10,12 +10,6 @@ extern crate alloc;
 use alloc::boxed::Box;
 use alloc::string::String;
 
-#[test_case]
-pub fn new_without_init() {
-    let bbt: BadBlockTable<SimpleAllocator> = BadBlockTable::new();
-    assert_eq!(bbt.alloc.into_inner(), None);
-}
-
 const GEOMETRY: nvm_mmgr_geometry = {
     let n_of_ch = 1;
     let lun_per_ch = 1;
@@ -82,36 +76,22 @@ const GEOMETRY: nvm_mmgr_geometry = {
 };
 
 #[test_case]
-pub fn init() {
+pub fn new() {
     static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
     let start = heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     ALLOCATOR.initialize(start, end);
 
-    let bbt: BadBlockTable<SimpleAllocator> = BadBlockTable::new();
-    bbt.init(&GEOMETRY, &ALLOCATOR);
+    let bbt: BadBlockTable<SimpleAllocator> = BadBlockTable::new(&GEOMETRY, &ALLOCATOR);
 
-    assert_eq!(bbt.alloc.into_inner(), Some(&ALLOCATOR));
-    unsafe {
-        assert_eq!(
-            bbt.channels.assume_init_ref().borrow().len(),
-            GEOMETRY.n_of_ch as usize
-        );
-        assert_eq!(
-            bbt.channels.assume_init_ref().borrow()[0].luns.len(),
-            GEOMETRY.lun_per_ch as usize
-        );
-        assert_eq!(
-            bbt.channels.assume_init_ref().borrow()[0].luns[0]
-                .planes
-                .len(),
-            GEOMETRY.n_of_planes as usize
-        );
-        assert_eq!(
-            bbt.channels.assume_init_ref().borrow()[0].luns[0].planes[0]
-                .blocks
-                .len(),
-            GEOMETRY.blk_per_lun as usize
-        );
-    }
+    assert_eq!(bbt.channels.len(), GEOMETRY.n_of_ch as usize);
+    assert_eq!(bbt.channels[0].luns.len(), GEOMETRY.lun_per_ch as usize);
+    assert_eq!(
+        bbt.channels[0].luns[0].planes.len(),
+        GEOMETRY.n_of_planes as usize
+    );
+    assert_eq!(
+        bbt.channels[0].luns[0].planes[0].blocks.len(),
+        GEOMETRY.blk_per_lun as usize
+    );
 }
