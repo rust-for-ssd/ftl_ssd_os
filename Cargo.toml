@@ -20,9 +20,12 @@ codegen-units = 1
 [build-dependencies]
 bindgen = "0.71.1"
 
+[dependencies]
+semihosting = { version = "0.1.19", features = ["stdio"] }
+
+
 [dev-dependencies]
 rv_unit = { git = "https://github.com/rust-for-ssd/rv_unit.git", version = "0.1.0" }
-semihosting = { version = "0.1.19", features = ["stdio"] }
 riscv = "0.13.0"
 riscv-rt = "0.14.0"
 
