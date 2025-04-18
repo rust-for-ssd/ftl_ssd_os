@@ -14,7 +14,7 @@ use crate::{bindings::generated::nvm_mmgr_geometry, println};
 
 pub struct BadBlockTable<A: Allocator + 'static> {
     pub channels: MaybeUninit<RefCell<Vec<Channel<A>, &'static A>>>,
-    alloc: OnceCell<&'static A>,
+    pub alloc: OnceCell<&'static A>,
 }
 pub struct Channel<A: Allocator + 'static> {
     pub luns: Vec<Lun<A>, &'static A>,
@@ -43,7 +43,7 @@ unsafe impl<A: Allocator> Sync for BadBlockTable<A> {}
 impl<A: Allocator> BadBlockTable<A> {
     pub const fn new() -> Self {
         BadBlockTable {
-            channels: MaybeUninit::uninit(),
+            channels: MaybeUninit::zeroed(),
             alloc: OnceCell::new(),
         }
     }
@@ -74,7 +74,7 @@ impl<A: Allocator> BadBlockTable<A> {
         return Ok(());
     }
 
-    pub fn get_channel_cell(&self) -> &RefCell<Vec<Channel<A>, &'static A>> {
+    fn get_channel_cell(&self) -> &RefCell<Vec<Channel<A>, &'static A>> {
         unsafe { self.channels.assume_init_ref() }
     }
 

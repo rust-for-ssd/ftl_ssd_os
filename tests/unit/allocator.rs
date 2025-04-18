@@ -1,18 +1,20 @@
 use core::alloc::Allocator;
 use ftl_ssd_os::{allocator::sdd_os_alloc::SimpleAllocator, bindings::safe::ssd_os_mem_get};
 use semihosting::{print, println};
+use riscv_rt::heap_start;
+
 
 extern crate alloc;
 use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::vec::Vec;
 
 #[test_case]
 pub fn we_can_allocate_two_boxes() {
     let allocator = SimpleAllocator::new();
-    let start = 0x80000000 as *mut u8;    
-    let end = unsafe { start.add(10000) };
+    let start = heap_start() as *mut u8;
+    let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
-
     let one: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
     let two: Box<u32, &SimpleAllocator> = Box::new_in(2, &allocator);
 
@@ -24,8 +26,8 @@ pub fn we_can_allocate_two_boxes() {
 #[test_case]
 pub fn we_can_mutate_boxes() {
     let allocator = SimpleAllocator::new();
-    let start = 0x80000000 as *mut u8;
-    let end = unsafe { start.add(10000) };
+    let start = heap_start() as *mut u8;
+    let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
     let one: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
@@ -40,8 +42,8 @@ pub fn we_can_mutate_boxes() {
 #[test_case]
 pub fn boxes_gets_allocated_32bit_alligned() {
     let allocator = SimpleAllocator::new();
-    let start = 0x80000000 as *mut u8;
-    let end = unsafe { start.add(10000) };
+    let start = heap_start() as *mut u8;
+    let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
     let one: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
@@ -49,7 +51,7 @@ pub fn boxes_gets_allocated_32bit_alligned() {
     let three: Box<u8, &SimpleAllocator> = Box::new_in(1, &allocator);
     let four: Box<u8, &SimpleAllocator> = Box::new_in(1, &allocator);
 
-    let base = 0x80000000 as u32;
+    let base = start as u32;
 
     // Get integer addresses
     let addr_one = Box::as_ptr(&one) as u32;
@@ -67,8 +69,8 @@ pub fn boxes_gets_allocated_32bit_alligned() {
 #[test_case]
 pub fn we_can_allocate_structs() {
     let allocator = SimpleAllocator::new();
-    let start = 0x80000000 as *mut u8;
-    let end = unsafe { start.add(10000) };
+    let start = heap_start() as *mut u8;
+    let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
     
@@ -107,12 +109,29 @@ pub fn we_cannot_allocate_above_the_region() {
     }
 }
 
+#[test_case]
+pub fn we_can_allocate_huge_things() {
+    let allocator = SimpleAllocator::new();
+    let start = heap_start() as *mut u8;
+    let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
+    allocator.initialize(start, end);
+
+    // Create a large vector using the custom allocator
+    let mut vec: Vec<usize, &SimpleAllocator> = Vec::with_capacity_in(1024 * 1024, &allocator); // ~4 MiB
+
+    for i in 0..(1024 * 1024) { // usize (4) * 1024 * 1024 bytes ~4 MiB
+        vec.push(i); 
+    }
+    // let size_in_bytes = vec.len() * core::mem::size_of::<usize>();
+    assert_eq!(vec.len(), 1024*1024)
+}
+
 
 #[test_case]
 pub fn deallocation_works() {
     let allocator = SimpleAllocator::new();
-    let start = 0x80000000 as *mut u8;
-    let end = unsafe { start.add(8) };
+    let start = heap_start() as *mut u8;
+    let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
     // allocate a value
@@ -131,4 +150,136 @@ pub fn deallocation_works() {
     let second_ptr = Box::into_raw(two);
 
     assert_eq!(first_ptr, second_ptr, "Allocator did not reuse deallocated memory");
+}
+
+#[test_case]
+pub fn coalescing_works() {
+    let allocator = SimpleAllocator::new();
+    let start = heap_start() as *mut u8;
+    let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
+    allocator.initialize(start, end);
+
+    // Allocate two adjacent blocks (e.g., 8 bytes each)
+    let a: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
+    let b: Box<u32, &SimpleAllocator> = Box::new_in(2, &allocator);
+    let c: Box<u32, &SimpleAllocator> = Box::new_in(3, &allocator);
+
+
+    let a_ptr = Box::into_raw(a);
+    let b_ptr = Box::into_raw(b);
+    let c_ptr = Box::into_raw(c);
+
+    // Ensure they're adjacent
+    assert_eq!(unsafe { b_ptr.offset_from(a_ptr) }, 2); // two usize apart (1 for data, one for pointer)
+    assert_eq!(unsafe { c_ptr.offset_from(b_ptr) }, 2); // two usize apart (1 for data, one for pointer)
+    assert_eq!(unsafe { c_ptr.offset_from(a_ptr) }, 4); // two usize apart (1 for data, one for pointer)
+
+
+
+    // Drop all (deallocate)
+    unsafe {
+        drop(Box::from_raw_in(a_ptr, &allocator));
+        drop(Box::from_raw_in(b_ptr, &allocator));
+        drop(Box::from_raw_in(c_ptr, &allocator));
+
+    }
+
+    // Now try allocating a larger block that would only fit if coalesced
+    let large: Box<[u32; 10], &SimpleAllocator> = Box::new_in([0; 10], &allocator);
+    let large_ptr = Box::into_raw(large) as *mut u32;
+
+    assert_eq!(
+        large_ptr, a_ptr,
+        "Coalescing failed: expected allocation at start of freed region"
+    );
+}
+
+
+#[test_case]
+pub fn coalescing_works_in_middle() {
+    let allocator = SimpleAllocator::new();
+    let start = heap_start() as *mut u8;
+    let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
+    allocator.initialize(start, end);
+
+    // Allocate two adjacent blocks (e.g., 8 bytes each)
+    let a: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
+    let b: Box<u32, &SimpleAllocator> = Box::new_in(2, &allocator); // goal: coalese this
+    let c: Box<u32, &SimpleAllocator> = Box::new_in(3, &allocator); // and this
+    let d: Box<u32, &SimpleAllocator> = Box::new_in(4, &allocator);
+
+
+
+    let a_ptr = Box::into_raw(a);
+    let b_ptr = Box::into_raw(b);
+    let c_ptr = Box::into_raw(c);
+    let d_ptr = Box::into_raw(d);
+
+    // Ensure they're adjacent
+    assert_eq!(unsafe { b_ptr.offset_from(a_ptr) }, 2); // two usize apart (1 for data, one for pointer)
+    assert_eq!(unsafe { c_ptr.offset_from(b_ptr) }, 2); // two usize apart (1 for data, one for pointer)
+    assert_eq!(unsafe { c_ptr.offset_from(a_ptr) }, 4); // two usize apart (1 for data, one for pointer)
+    assert_eq!(unsafe { d_ptr.offset_from(a_ptr) }, 6); // two usize apart (1 for data, one for pointer)
+
+
+
+    // Only drop two in the middle
+    unsafe {
+        drop(Box::from_raw_in(b_ptr, &allocator));
+        drop(Box::from_raw_in(c_ptr, &allocator));
+    }
+
+    // Now try allocating a larger block that would only fit if coalesced
+    let large: Box<[u32; 3], &SimpleAllocator> = Box::new_in([0; 3], &allocator);
+    let large_ptr = Box::into_raw(large) as *mut u32;
+
+    assert_eq!(
+        large_ptr, b_ptr,
+        "Coalescing failed: expected allocation at start of freed region"
+    );
+}
+
+#[test_case]
+pub fn large_allocation_cannot_get_small_coalesed_block_in_middle() {
+    let allocator = SimpleAllocator::new();
+    let start = heap_start() as *mut u8;
+    let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
+    allocator.initialize(start, end);
+
+    // Allocate two adjacent blocks (e.g., 8 bytes each)
+    let a: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
+    let b: Box<u32, &SimpleAllocator> = Box::new_in(2, &allocator); // goal: coalese this
+    let c: Box<u32, &SimpleAllocator> = Box::new_in(3, &allocator); // and this
+    let d: Box<u32, &SimpleAllocator> = Box::new_in(4, &allocator);
+
+    let a_ptr = Box::into_raw(a);
+    let b_ptr = Box::into_raw(b);
+    let c_ptr = Box::into_raw(c);
+    let d_ptr = Box::into_raw(d);
+
+    // Ensure they're adjacent
+    assert_eq!(unsafe { b_ptr.offset_from(a_ptr) }, 2); // two usize apart (1 for data, one for pointer)
+    assert_eq!(unsafe { c_ptr.offset_from(b_ptr) }, 2); // two usize apart (1 for data, one for pointer)
+    assert_eq!(unsafe { c_ptr.offset_from(a_ptr) }, 4); // two usize apart (1 for data, one for pointer)
+    assert_eq!(unsafe { d_ptr.offset_from(a_ptr) }, 6); // two usize apart (1 for data, one for pointer)
+
+    // Only drop two in the middle
+    unsafe {
+        drop(Box::from_raw_in(b_ptr, &allocator));
+        drop(Box::from_raw_in(c_ptr, &allocator));
+    }
+
+    // Now try allocating a larger block that doesnt fit in the coalesed space in the middle
+    let large: Box<[u32; 100], &SimpleAllocator> = Box::new_in([0; 100], &allocator);
+    let large_ptr = Box::into_raw(large) as *mut u32;
+    let should_be_here_ptr = unsafe { d_ptr.add(2) }; // 2x usize is the size of a free block (data + next pointer)
+
+    // println!("{:p}", a_ptr);
+    // println!("{:p}", b_ptr);
+    // println!("{:p}", c_ptr);
+    // println!("{:p}", d_ptr);
+    
+    assert_eq!(
+        large_ptr, should_be_here_ptr
+    );
 }

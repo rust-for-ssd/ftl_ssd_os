@@ -1,11 +1,11 @@
 MEMORY
 {
-  RAM : ORIGIN = 0x80000000, LENGTH = 16M
+  RAM : ORIGIN = 0x80000000, LENGTH = 100M
   FLASH : ORIGIN = 0x20000000, LENGTH = 4M
 }
 
-_heap_size = 2K;
-_max_hart_id = 4;
+_heap_size = 50M;
+_max_hart_id = 1;
 
 REGION_ALIAS("REGION_TEXT", FLASH);
 REGION_ALIAS("REGION_RODATA", FLASH);
