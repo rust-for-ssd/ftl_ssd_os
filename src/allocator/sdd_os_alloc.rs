@@ -1,11 +1,9 @@
 use core::alloc::{AllocError, Allocator, Layout};
 use core::cell::{Cell, OnceCell};
+use core::panicking::panic;
 use core::ptr::NonNull;
 use core::{mem, ptr};
-
 use crate::bindings::safe::ssd_os_mem_get;
-// ISSUES: Dealloc does not work.
-// Dynamic allocator
 
 pub struct SimpleAllocator {
     start: OnceCell<*mut u8>,
@@ -13,10 +11,9 @@ pub struct SimpleAllocator {
     free_list_head: Cell<*mut FreeBlock>,
 }
 
-struct FreeBlock {
-    // Allocates at least 8 bytes for any sizes
-    size: usize,          // 4 bytes in 32 bit systems
-    next: *mut FreeBlock, // 4 bytes in 32 bit systems
+struct FreeBlock {         // Allocates at least 8 bytes for any sizes
+    size: usize,           // 4 bytes in 32 bit systems
+    next: *mut FreeBlock,  // 4 bytes in 32 bit systems 
 }
 
 unsafe impl Send for SimpleAllocator {}
@@ -36,10 +33,11 @@ impl SimpleAllocator {
         let lowest_addr = ssd_os_mem_get(0);
         assert!(lowest_addr <= start.cast());
         let Ok(()) = self.start.set(start) else {
-            return;
+            panic!("Cannot set start region")
         };
+
         let Ok(()) = self.end.set(end) else {
-            return;
+            panic!("Cannot set end region")
         };
 
         let size = end.addr() - start.addr();
@@ -54,6 +52,30 @@ impl SimpleAllocator {
                 (*block_ptr).next = core::ptr::null_mut();
             }
             self.free_list_head.set(block_ptr);
+        } else {
+            panic!("Not enough space for a block")
+        }
+    }
+    
+    fn coalesce_blocks(&self) {
+        let mut current = self.free_list_head.get();
+        
+        while !current.is_null() && unsafe { (*current).next } != ptr::null_mut() {
+            let next_block = unsafe { (*current).next };
+            
+            // Check if blocks are adjacent
+            if (current as usize) + unsafe { (*current).size } == next_block as usize {
+                // Merge blocks
+                unsafe {
+                    // Increase size of current block to include next block
+                    (*current).size += (*next_block).size;
+                    // Skip the next block in the list
+                    (*current).next = (*next_block).next;
+                }
+            } else {
+                // Move to next block if no merge happened
+                current = unsafe { (*current).next };
+            }
         }
     }
 }
@@ -125,62 +147,59 @@ unsafe impl Allocator for SimpleAllocator {
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
         let lowest_addr = ssd_os_mem_get(0);
         assert!(lowest_addr <= ptr.as_ptr().cast());
-        crate::println!("DEALLOC!");
-        return;
+        
         let Some(start) = self.start.get() else {
-            return;
+            panic!("Cannot get start region")
         };
-
+    
         let Some(end) = self.end.get() else {
-            return;
+            panic!("Cannot end start region")
         };
-
-        if ptr.as_mut() < start.as_mut().unwrap() {
-            return;
-        } else if ptr.as_mut() >= end.as_mut().unwrap() {
-            return;
+    
+        // Validate pointer is within our memory range
+        if ptr.as_ptr() < *start {
+            panic!("Deallocation attempted with pointer below allocator range");
+        } else if ptr.as_ptr() >= *end {
+            panic!("Deallocation attempted with pointer beyond allocator range");
         }
-
-        let ptr_addr = ptr.addr();
-
+        
+        // Calculate the size to free (adjust for alignment if needed)
         let size = layout.size().max(mem::size_of::<FreeBlock>());
-
-        let _adjusted_ptr = if layout.align() > mem::align_of::<FreeBlock>() {
-            // Ensure pointer is aligned for both the layout and FreeBlock
-            align_up(ptr.addr().into(), layout.align()) as *mut u8
-        } else {
-            ptr.as_mut()
-        };
-        // let block_ptr = adjusted_ptr as *mut FreeBlock;
-
-        let block_ptr: *mut FreeBlock = ptr.cast().as_mut();
-
+        let align = layout.align().max(mem::align_of::<FreeBlock>());
+        
+        // Create a new free block
+        let block_ptr = ptr.as_ptr() as *mut FreeBlock;
+        
+        // Find the right place to insert the block in the free list (keep it sorted by address)
+        let mut current = self.free_list_head.get();
+        let mut prev: *mut FreeBlock = ptr::null_mut();
+        
+        // Find where to insert the new free block (in address order)
+        while !current.is_null() && current < block_ptr {
+            prev = current;
+            current = unsafe { (*current).next };
+        }
+        
+        // Initialize the new free block
         unsafe {
             (*block_ptr).size = size;
+            (*block_ptr).next = current;
         }
-
-        // Insert the block at the beginning of the free list
-        loop {
-            let head = self.free_list_head.get();
+        
+        // Link it to the free list
+        if prev.is_null() {
+            // Insert at the beginning
+            self.free_list_head.set(block_ptr);
+        } else {
+            // Insert after prev
             unsafe {
-                (*block_ptr).next = head;
+                (*prev).next = block_ptr;
             }
-
-            if head == block_ptr {
-                self.free_list_head.set(block_ptr);
-                break;
-            };
         }
-
-        // Note: A production allocator would merge adjacent free blocks here
+        
+        // NOT TESTED YET!!
+        self.coalesce_blocks();
     }
+    
 }
-
-pub fn align_up(addr: usize, align: usize) -> usize {
-    // Check if align is a power of 2
-    debug_assert!(align.is_power_of_two());
-    // Calculate the alignment mask
-    let mask = align - 1;
-    // Align the address upward
-    (addr + mask) & !mask
-}
+    

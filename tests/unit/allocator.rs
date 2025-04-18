@@ -9,7 +9,7 @@ use alloc::string::String;
 #[test_case]
 pub fn we_can_allocate_two_boxes() {
     let allocator = SimpleAllocator::new();
-    let start = 0x80000000 as *mut u8;
+    let start = 0x80000000 as *mut u8;    
     let end = unsafe { start.add(10000) };
     allocator.initialize(start, end);
 
@@ -93,7 +93,6 @@ pub fn we_can_allocate_structs() {
 }
 
 #[test_case]
-#[should_panic]
 pub fn we_cannot_allocate_above_the_region() {
     let allocator = SimpleAllocator::new();
     let start = 0x80000000 as *mut u8;
@@ -106,6 +105,30 @@ pub fn we_cannot_allocate_above_the_region() {
         Ok(b) => { assert!(false); }
         Err(_) => { assert!(true); }
     }
-    
 }
 
+
+#[test_case]
+pub fn deallocation_works() {
+    let allocator = SimpleAllocator::new();
+    let start = 0x80000000 as *mut u8;
+    let end = unsafe { start.add(8) };
+    allocator.initialize(start, end);
+
+    // allocate a value
+    let first_ptr = {
+        let one: Box<u32, &SimpleAllocator> = Box::new_in(42, &allocator);
+        let ptr = Box::into_raw(one); // extract the raw pointer
+        unsafe {
+            // SAFETY: we still own the memory, we immediately reconstruct and drop it
+            drop(Box::from_raw_in(ptr, &allocator));
+        }
+        ptr
+    };
+
+    // allocate again, should reuse same memory if dealloc worked
+    let two: Box<u32, &SimpleAllocator> = Box::new_in(99, &allocator);
+    let second_ptr = Box::into_raw(two);
+
+    assert_eq!(first_ptr, second_ptr, "Allocator did not reuse deallocated memory");
+}

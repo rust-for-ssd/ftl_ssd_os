@@ -6,6 +6,7 @@
 #![allow(dead_code)]
 #![allow(static_mut_refs)]
 #![feature(allocator_api)]
+#![feature(panic_internals)]
 
 extern crate alloc;
 
