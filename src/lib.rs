@@ -9,13 +9,13 @@
 
 extern crate alloc;
 
-mod allocator;
+pub mod allocator;
 mod bbt;
-mod bindings;
+pub mod bindings;
 mod cpath;
 mod shared;
 
-#[cfg(not(feature = "qemu_testing"))]
+#[cfg(not(feature = "test"))]
 #[panic_handler]
 pub fn panic(info: &core::panic::PanicInfo) -> ! {
     bindings::safe::ssd_os_print_s(c"\nPANIC!\n");

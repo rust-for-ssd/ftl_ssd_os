@@ -2,14 +2,12 @@
 name = "ftl_ssd_os"
 version = "0.1.0"
 edition = "2024"
+build = "build.rs"
 
 [lib]
-crate-type = ["staticlib"]
+# crate-type = ["staticlib"]
 test = false
 harness = false
-
-[build]
-target = "./target.json"
 
 [profile.small]
 inherits = "release"
@@ -21,3 +19,14 @@ codegen-units = 1
 
 [build-dependencies]
 bindgen = "0.71.1"
+
+[dev-dependencies]
+rv_unit = { git = "https://github.com/rust-for-ssd/rv_unit.git", version = "0.1.0" }
+semihosting = { version = "0.1.19", features = ["stdio"] }
+riscv = "0.13.0"
+riscv-rt = "0.14.0"
+
+[features]
+default = []
+test = [] 
+
