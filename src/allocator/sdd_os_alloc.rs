@@ -14,8 +14,9 @@ pub struct SimpleAllocator {
 }
 
 struct FreeBlock {
-    size: usize,
-    next: *mut FreeBlock,
+    // Allocates at least 8 bytes for any sizes
+    size: usize,          // 4 bytes in 32 bit systems
+    next: *mut FreeBlock, // 4 bytes in 32 bit systems
 }
 
 unsafe impl Send for SimpleAllocator {}
