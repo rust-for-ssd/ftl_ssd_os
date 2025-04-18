@@ -4,7 +4,6 @@ use core::ptr::NonNull;
 use core::{mem, ptr};
 
 use crate::bindings::safe::ssd_os_mem_get;
-
 // ISSUES: Dealloc does not work.
 // Dynamic allocator
 
@@ -125,7 +124,7 @@ unsafe impl Allocator for SimpleAllocator {
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
         let lowest_addr = ssd_os_mem_get(0);
         assert!(lowest_addr <= ptr.as_ptr().cast());
-        crate::println_s!(c"DEALLOC!");
+        crate::println!("DEALLOC!");
         return;
         let Some(start) = self.start.get() else {
             return;
