@@ -5,19 +5,28 @@ use core::{
 
 use super::generated;
 
+#[cfg(not(feature = "qemu_testing"))]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn memcpy(
     dest: *mut ::core::ffi::c_void,
     src: *const ::core::ffi::c_void,
     n: u32,
 ) -> *mut ::core::ffi::c_void {
-    // We'll assume that the "word-sized" copy in ssd_os_mem_cpy requires the pointers to be aligned to usize.
     let alignment = ::core::mem::size_of::<usize>();
+    let dest_usize = dest as usize;
+    let src_usize = src as usize;
 
-    assert!(dest as usize % alignment == 0);
-    assert!(src as usize % alignment == 0);
+    if dest_usize % alignment != 0 || src_usize % alignment != 0 {
+        // Fallback: byte-by-byte safe copy
+        let dest_u8 = dest as *mut u8;
+        let src_u8 = src as *const u8;
+        for i in 0..n {
+            unsafe { *dest_u8.add(i as usize) = *src_u8.add(i as usize) };
+        }
+        return dest;
+    }
 
-    // Now that we know the pointers are properly aligned, call the underlying implementation.
+    // Safe to use optimized C function
     unsafe { generated::ssd_os_mem_cpy(dest, src, n) }
 }
 
@@ -78,66 +87,43 @@ pub fn ssd_os_mem_size(key: i32) -> ::core::ffi::c_int {
     unsafe { generated::ssd_os_mem_size(key) }
 }
 
-pub fn safe_print(s: &str) {
-    let Ok(()) = ssd_os_printer.write_str(s) else {
+pub struct SSD_OS_Printer {}
+impl Write for SSD_OS_Printer {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        // Write in chunks, using a fixed-size buffer with space for a null terminator
         ssd_os_print_lock();
-        ssd_os_print_s(c"Err\n");
-        ssd_os_print_unlock();
-        return ();
-    };
-    let _ = ssd_os_printer.write_fmt(format_args!("{}", s));
-}
+        const BUF_SIZE: usize = 32;
+        static mut buffer: [u8; BUF_SIZE] = [0u8; BUF_SIZE];
 
-pub struct ssd_os_printer;
+        let mut remaining = s.as_bytes();
 
-impl Write for ssd_os_printer {
-    fn write_str(&mut self, s: &str) -> Result {
-        let mut buffer: [u8; 32] = [0u8; 32];
+        while !remaining.is_empty() {
+            let len = core::cmp::min(BUF_SIZE - 1, remaining.len()); // Leave space for null terminator
+            let (chunk, rest) = remaining.split_at(len);
 
-        let mut i = 0;
-        for c in s.bytes() {
-            if i == 31 {
-                let Ok(cstr) = CStr::from_bytes_with_nul(&buffer) else {
-                    return Err(Error);
-                };
-                ssd_os_print_lock();
-                ssd_os_print_s(cstr);
-                ssd_os_print_unlock();
-                i = 0;
+            // Copy chunk into buffer and null-terminate
+            unsafe {
+                buffer[..len].copy_from_slice(chunk);
+                buffer[len] = 0; // null terminator
             }
-            buffer[i] = c;
-            buffer[i + 1] = 0;
-            i += 1;
-        }
-        if s.len() % 32 != 0 {
-            let Ok(cstr) = CStr::from_bytes_with_nul(&buffer) else {
-                return Err(Error);
-            };
-            ssd_os_print_lock();
-            ssd_os_print_s(cstr);
-            ssd_os_print_unlock();
-        }
 
+            // SAFETY: We ensure buffer is null-terminated and has no internal nulls
+            let cstr = unsafe { CStr::from_ptr(buffer.as_ptr() as *const _) };
+
+            ssd_os_print_s(cstr);
+
+            remaining = rest;
+        }
+        ssd_os_print_unlock();
         Ok(())
     }
 }
 
 #[macro_export]
-macro_rules! println_s {
+macro_rules! println {
     ($msg:expr) => {{
-        $crate::bindings::safe::ssd_os_print_lock();
-        $crate::bindings::safe::ssd_os_print_s($msg);
-        $crate::bindings::safe::ssd_os_print_s(c"\n");
-        $crate::bindings::safe::ssd_os_print_unlock();
-    }};
-}
-
-#[macro_export]
-macro_rules! println_i {
-    ($msg:expr) => {{
-        $crate::bindings::safe::ssd_os_print_lock();
-        $crate::bindings::safe::ssd_os_print_i($msg);
-        $crate::bindings::safe::ssd_os_print_s(c"\n");
-        $crate::bindings::safe::ssd_os_print_unlock();
+        use core::fmt::Write;
+        let mut printer = $crate::bindings::safe::SSD_OS_Printer {};
+        let _ = writeln!(printer, "{}", $msg);
     }};
 }

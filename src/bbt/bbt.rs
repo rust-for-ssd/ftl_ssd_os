@@ -9,8 +9,8 @@ use core::{
 /// we assume the structure is channels[LUNS[Planes[Blocks]]]
 use alloc::vec::Vec;
 
-use crate::{bindings::generated::nvm_mmgr_geometry, println_i};
-use crate::{println_s, shared::addresses::PhysicalBlockAddress};
+use crate::shared::addresses::PhysicalBlockAddress;
+use crate::{bindings::generated::nvm_mmgr_geometry, println};
 
 pub struct BadBlockTable<A: Allocator + 'static> {
     pub channels: MaybeUninit<RefCell<Vec<Channel<A>, &'static A>>>,
@@ -79,22 +79,22 @@ impl<A: Allocator> BadBlockTable<A> {
     }
 
     pub fn set_bad_block(&self, pba: &PhysicalBlockAddress) {
-        println_s!(c"SETTING PBA");
-        println_i!(pba.channel as u32);
-        println_i!(pba.lun as u32);
-        println_i!(pba.plane as u32);
-        println_i!(pba.block as u32);
+        println!("SETTING PBA");
+        println!(pba.channel as u32);
+        println!(pba.lun as u32);
+        println!(pba.plane as u32);
+        println!(pba.block as u32);
         self.get_channel_cell().borrow_mut()[pba.channel as usize].luns[pba.lun as usize].planes
             [pba.plane as usize]
             .blocks[pba.block as usize] = BadBlockStatus::Bad;
     }
 
     pub fn get_block_status(&self, pba: &PhysicalBlockAddress) -> BadBlockStatus {
-        println_s!(c"GETTING PBA");
-        println_i!(pba.channel as u32);
-        println_i!(pba.lun as u32);
-        println_i!(pba.plane as u32);
-        println_i!(pba.block as u32);
+        println!("GETTING PBA");
+        println!(pba.channel as u32);
+        println!(pba.lun as u32);
+        println!(pba.plane as u32);
+        println!(pba.block as u32);
         self.get_channel_cell().borrow()[pba.channel as usize].luns[pba.lun as usize].planes
             [pba.plane as usize]
             .blocks[pba.block as usize]
