@@ -6,7 +6,7 @@ use core::{
 
 use alloc::{collections::VecDeque, vec::Vec};
 
-use crate::bindings::generated::nvm_mmgr_geometry;
+use crate::{bindings::generated::nvm_mmgr_geometry, shared::addresses::PhysicalBlockAddress};
 
 #[derive(Debug)]
 pub struct GlobalProvisioner<A: Allocator + 'static> {
@@ -87,17 +87,36 @@ impl<A: Allocator + 'static> GlobalProvisioner<A> {
         }
     }
 
-    // fn get_channel_rr(&self) -> &mut Channel<A> {
-    //    self.get_channel_cell()
-    //     self.last_picked_channel
-    // }
+    pub fn provision_block(&mut self) -> Result<PhysicalBlockAddress, ProvisionError> {
+        // pick channel RR
+        self.last_picked_channel = (self.last_picked_channel + 1) % self.channels.len();
+        let channel: &mut Channel<A> = &mut self.channels[self.last_picked_channel];
+        // pick lun RR
 
-    // pub fn provision_block(&self) -> Result<PhysicalBlockAddress, ProvisionError> {
-    //     // pick channel RR
-    //     // pick lun RR
-    //     // find free block
-    //     // move from free to used
-    //     // return pba
-    //     // let channel =
-    // }
+        channel.last_picked_lun = (channel.last_picked_lun + 1) % channel.luns.len();
+        let lun: &mut Lun<A> = &mut channel.luns[channel.last_picked_lun];
+        // find free block
+        // move from free to used
+        let block = lun.provision_block()?;
+
+        // return pba
+        Ok(PhysicalBlockAddress {
+            channel: self.last_picked_channel as u64,
+            lun: channel.last_picked_lun as u64,
+            plane: block.plane_id as u64,
+            block: block.id as u64,
+        })
+    }
+}
+
+impl<A: Allocator + 'static> Lun<A> {
+    fn provision_block(&mut self) -> Result<Block, ProvisionError> {
+        let Some(block) = self.free.pop_front() else {
+            return Err(ProvisionError::NoFreeBlock);
+        };
+
+        self.used.push_back(block.clone());
+
+        return Ok(block);
+    }
 }
