@@ -11,7 +11,7 @@ use crate::{
         mem::MemoryRegion,
         safe::{ssd_os_get_connection, ssd_os_sleep},
     },
-    make_connector_static, make_stage_static, println_i, println_s,
+    make_connector_static, make_stage_static, println,
     shared::addresses::PhysicalBlockAddress,
 };
 
@@ -21,14 +21,14 @@ fn s1() -> ::core::ffi::c_int {
     0
 }
 fn stage_1_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    println_s!(c"STAGE_1");
-    println_i!(context as u32);
+    println!("STAGE_1");
+    println!(context as u32);
     context
 }
 
 fn stage_2_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    println_s!(c"STAGE_2");
-    println_i!(context as u32);
+    println!("STAGE_2");
+    println!(context as u32);
     context
 }
 static ALLOC_1: SimpleAllocator = SimpleAllocator::new();
@@ -66,19 +66,19 @@ static mut status_res: Vec<BadBlockStatus, &SimpleAllocator> = Vec::new_in(&ALLO
 make_connector_static!(conn_1, init_1, exit_1, conn_fn_1, ring_1);
 make_connector_static!(conn_2, init_2, exit_2, conn_fn_2, ring_2);
 fn init_1() -> ::core::ffi::c_int {
-    println_s!(c"INIT_1");
+    println!("INIT_1");
     let mem_region = MemoryRegion::new(c"conn_1");
     ALLOC_1.initialize(mem_region.free_start.cast(), mem_region.end.cast());
     let b: Box<u32, &SimpleAllocator> = Box::new_in(69, &ALLOC_1);
-    println_i!(*b);
+    println!(*b);
 
-    println_s!(c"INIT_1_DONE");
+    println!("INIT_1_DONE");
 
     0
 }
 
 fn init_2() -> ::core::ffi::c_int {
-    println_s!(c"INIT_2");
+    println!("INIT_2");
     let mut mem_region = MemoryRegion::new(c"conn_2");
     let Ok(()) = conn2_lring.init(c"CONN2_LRING", mem_region.free_start, 0) else {
         panic!("RING WAS ALREADY INITIALIZED!");
@@ -86,10 +86,10 @@ fn init_2() -> ::core::ffi::c_int {
     let ring = conn2_lring.get_lring().unwrap();
     mem_region.reserve(ring.alloc_mem as usize);
 
-    println_s!(c"INIT_2_ALLOC_INIT");
+    println!("INIT_2_ALLOC_INIT");
     ALLOC_2.initialize(mem_region.free_start.cast(), mem_region.end.cast());
     let b: Box<u32, &SimpleAllocator> = Box::new_in(69, &ALLOC_2);
-    println_i!(*b);
+    println!(*b);
 
     unsafe { status_res = Vec::with_capacity_in(3, &ALLOC_2) };
     let geo: MaybeUninit<nvm_mmgr_geometry> = MaybeUninit::uninit();
@@ -99,39 +99,39 @@ fn init_2() -> ::core::ffi::c_int {
     let geo = unsafe { geo.assume_init() };
     let _ = BBT.init(&geo, &ALLOC_2);
 
-    println_s!(c"INIT_2_DONE");
+    println!("INIT_2_DONE");
     0
 }
 
 fn exit_1() -> ::core::ffi::c_int {
-    println_s!(c"EXIT_1!");
+    println!("EXIT_1!");
     0
 }
 fn exit_2() -> ::core::ffi::c_int {
-    println_s!(c"EXIT_2!");
+    println!("EXIT_2!");
     0
 }
 
 fn ring_1(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    println_s!(c"RING_1");
+    println!("RING_1");
     let entry = lring_entry::new(entry).unwrap();
     let status = entry.get_ctx_as_ref().unwrap();
     match *status {
-        BadBlockStatus::Good => println_s!(c"RECIVED GOOD"),
-        BadBlockStatus::Bad => println_s!(c"RECIVED BAD"),
-        _ => println_s!(c"NO MATCH"),
+        BadBlockStatus::Good => println!("RECIVED GOOD"),
+        BadBlockStatus::Bad => println!("RECIVED BAD"),
+        _ => println!("NO MATCH"),
     }
-    println_i!(*status as u32);
+    println!(*status as u32);
     0
 }
 
 fn ring_2(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    println_s!(c"RING_2");
+    println!("RING_2");
     match conn2_lring.enqueue(entry) {
         Ok(()) => 0,
         Err(LRingErr::Enqueue(i)) => i,
         _ => {
-            println_s!(c"DID NOT MATCH RES FROM ENQUEUE!");
+            println!("DID NOT MATCH RES FROM ENQUEUE!");
             -1
         }
     }
@@ -139,18 +139,18 @@ fn ring_2(entry: *mut lring_entry) -> ::core::ffi::c_int {
 
 static mut idx: usize = 0;
 fn conn_fn_1(entry: *mut lring_entry) -> *mut pipeline {
-    println_s!(c"CON_FN_1");
+    println!("CON_FN_1");
     if unsafe { idx } == 0 {
         ssd_os_sleep(5);
     }
     ssd_os_sleep(1);
     unsafe {
-        println_i!(idx as u32);
+        println!(idx as u32);
     }
 
     if unsafe { idx } < 3 {
         let Some(entry) = lring_entry::new(entry) else {
-            println_s!(c"NULL PTR!");
+            println!("NULL PTR!");
             return null_mut();
         };
 
@@ -167,7 +167,7 @@ fn conn_fn_1(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn conn_fn_2(entry: *mut lring_entry) -> *mut pipeline {
-    println_s!(c"CON_FN_2");
+    println!("CON_FN_2");
     ssd_os_sleep(1);
     let Ok(res) = conn2_lring.dequeue_as_mut(entry) else {
         return null_mut();
@@ -180,9 +180,9 @@ fn conn_fn_2(entry: *mut lring_entry) -> *mut pipeline {
         BBTRequestType::Get => {
             let ctx = BBT.get_block_status(&req.pba);
             match ctx {
-                BadBlockStatus::Good => println_s!(c"SENDING GOOD"),
-                BadBlockStatus::Bad => println_s!(c"SENDING BAD"),
-                BadBlockStatus::Reserved => println_s!(c"SENDING RESERVED"),
+                BadBlockStatus::Good => println!("SENDING GOOD"),
+                BadBlockStatus::Bad => println!("SENDING BAD"),
+                BadBlockStatus::Reserved => println!("SENDING RESERVED"),
             }
             unsafe { status_res.push(ctx) };
             res.set_ctx(unsafe { status_res.get(status_res.len() - 1).unwrap() });

@@ -2,7 +2,7 @@ use core::ffi::CStr;
 
 use bindings::generated::{MAGIC_CONNECTOR, lring_entry, pipeline};
 
-use crate::{bindings, println_s};
+use crate::{bindings, println};
 
 pub use bindings::generated::connector;
 
@@ -40,7 +40,7 @@ impl connector {
     }
     pub fn get_name(&self) -> &CStr {
         let Ok(s) = CStr::from_bytes_until_nul(&self.name) else {
-            println_s!(c"ERROR!");
+            println!("ERROR!");
             return c"";
         };
         s

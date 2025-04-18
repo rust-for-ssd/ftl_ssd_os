@@ -13,9 +13,10 @@ pub struct SimpleAllocator {
     free_list_head: Cell<*mut FreeBlock>,
 }
 
-struct FreeBlock {         // Allocates at least 8 bytes for any sizes
-    size: usize,           // 4 bytes in 32 bit systems
-    next: *mut FreeBlock,  // 4 bytes in 32 bit systems 
+struct FreeBlock {
+    // Allocates at least 8 bytes for any sizes
+    size: usize,          // 4 bytes in 32 bit systems
+    next: *mut FreeBlock, // 4 bytes in 32 bit systems
 }
 
 unsafe impl Send for SimpleAllocator {}
@@ -122,9 +123,9 @@ unsafe impl Allocator for SimpleAllocator {
     }
 
     unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
-        // let lowest_addr = ssd_os_mem_get(0);
-        // assert!(lowest_addr <= ptr.as_ptr().cast());
-        // crate::println_s!(c"DEALLOC!");
+        let lowest_addr = ssd_os_mem_get(0);
+        assert!(lowest_addr <= ptr.as_ptr().cast());
+        crate::println!("DEALLOC!");
         return;
         let Some(start) = self.start.get() else {
             return;
