@@ -74,7 +74,7 @@ impl<A: Allocator> BadBlockTable<A> {
         return Ok(());
     }
 
-    pub fn get_channel_cell(&self) -> &RefCell<Vec<Channel<A>, &'static A>> {
+    fn get_channel_cell(&self) -> &RefCell<Vec<Channel<A>, &'static A>> {
         unsafe { self.channels.assume_init_ref() }
     }
 

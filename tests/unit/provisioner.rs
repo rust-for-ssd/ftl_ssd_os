@@ -92,4 +92,26 @@ pub fn init() {
     prov.init(&GEOMETRY, &ALLOCATOR);
 
     assert_eq!(prov.alloc.into_inner(), Some(&ALLOCATOR));
+    unsafe {
+        assert_eq!(
+            prov.channels.assume_init_ref().borrow().len(),
+            GEOMETRY.n_of_ch as usize
+        );
+        assert_eq!(
+            prov.channels.assume_init_ref().borrow()[0].luns.len(),
+            GEOMETRY.lun_per_ch as usize
+        );
+        assert_eq!(
+            prov.channels.assume_init_ref().borrow()[0].luns[0]
+                .free
+                .capacity(),
+            GEOMETRY.blk_per_lun as usize
+        );
+        assert_eq!(
+            prov.channels.assume_init_ref().borrow()[0].luns[0]
+                .free
+                .len(),
+            0
+        );
+    }
 }
