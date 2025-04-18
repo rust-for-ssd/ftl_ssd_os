@@ -19,6 +19,11 @@ pub fn panic(info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
+unsafe extern "C" {
+    static _heap_size: u8;
+
+}
+
 #[entry]
 fn main() -> ! {
     test_main();
