@@ -1,3 +1,5 @@
+use semihosting::println;
+
 use crate::allocator::sdd_os_alloc::SimpleAllocator;
 use crate::bindings::generated::nvm_mmgr_geometry;
 use crate::provisioner::provisioner::{Block, BlockWithPageInfo, ProvisionError, Provisioner};
@@ -5,10 +7,10 @@ use crate::shared::addresses::{PhysicalBlockAddress, PhysicalPageAddress};
 use crate::shared::core_local_cell::CoreLocalCell;
 
 const GEOMETRY: nvm_mmgr_geometry = {
-    let n_of_ch = 1;
-    let lun_per_ch = 1;
-    let blk_per_lun = 10;
-    let pg_per_blk = 1;
+    let n_of_ch = 8;
+    let lun_per_ch = 12;
+    let blk_per_lun = 16;
+    let pg_per_blk = 16;
     let sec_per_pg = 1;
     let n_of_planes = 1;
     let pg_size = 1;
@@ -196,7 +198,7 @@ pub fn provision_page_with_partially_used_blocks() {
     let block = BlockWithPageInfo {
         id: 3,
         plane_id: 0,
-        // pages: [Page::Free; config::PAGES_PER_BLOCK],
+        pages_reserved: 0,
     };
     prov.channels[0].luns[0].partially_used.push_back(block);
     let size = prov.channels[0].luns[0].free.len();
@@ -239,6 +241,7 @@ pub fn provision_page_with_partially_used_blocks() {
     }
     let size = prov.channels[0].luns[0].partially_used.len();
     assert_eq!(size, 0);
+    println!("{:?}", prov.channels[0].luns[0]);
     let size = prov.channels[0].luns[0].used.len();
     assert_eq!(size, 1);
     let res = prov.provision_page();
@@ -291,8 +294,7 @@ pub fn push_free_block() {
         plane: 0,
         block: 3,
     };
-    let res = prov.push_free_block(&pba);
-    assert!(res.is_ok());
+    prov.push_free_block(&pba);
 
     let size = prov.channels[0].luns[2].free.len();
     assert_eq!(size, 1);
@@ -323,8 +325,7 @@ pub fn multiple_push_free_block() {
         plane: 0,
         block: 3,
     };
-    let res = prov.push_free_block(&pba);
-    assert!(res.is_ok());
+    prov.push_free_block(&pba);
 
     let size = prov.channels[0].luns[2].free.len();
     assert_eq!(size, 1);
@@ -335,8 +336,7 @@ pub fn multiple_push_free_block() {
         plane: 0,
         block: 3,
     };
-    let res = prov.push_free_block(&pba);
-    assert!(res.is_ok());
+    prov.push_free_block(&pba);
 
     let size = prov.channels[2].luns[2].free.len();
     assert_eq!(size, 1);

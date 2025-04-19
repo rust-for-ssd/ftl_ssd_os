@@ -4,8 +4,12 @@ target = ["./target.json"]
 [unstable]
 build-std = ["core", "alloc"]
 
-[target.riscv32]
-runner = "qemu-system-riscv32 -machine virt -serial mon:stdio -semihosting-config enable=on,target=native -nographic -bios "
+
+[alias]
+qemu_test = "test --features test --target riscv32imac-unknown-none-elf"
+qt = "test --features test --target riscv32imac-unknown-none-elf"
+build_small = "build --profile small"
+bs = "build --profile small"
 
 [target.riscv32imac-unknown-none-elf]
 runner = "qemu-system-riscv32 -machine virt -serial mon:stdio -semihosting-config enable=on,target=native -nographic -bios "

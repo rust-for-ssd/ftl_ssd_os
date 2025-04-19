@@ -4,6 +4,7 @@ use alloc::{collections::VecDeque, vec::Vec};
 
 use crate::{
     bindings::generated::nvm_mmgr_geometry,
+    println,
     shared::addresses::{PhysicalBlockAddress, PhysicalPageAddress},
 };
 
@@ -28,24 +29,27 @@ pub struct Lun<A: Allocator + 'static> {
     pub free: VecDeque<Block, &'static A>,
     pub used: VecDeque<Block, &'static A>,
     pub partially_used: VecDeque<BlockWithPageInfo, &'static A>,
+    pages_per_block: u16,
 }
 
-#[derive(Copy, Clone, PartialEq)]
-pub enum Page {
-    InUse,
-    Free,
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct Page {
+    pub id: usize,
+    pub plane_id: usize,
+    pub block_id: usize,
 }
+
 #[derive(Copy, Clone, Debug)]
 pub struct Block {
     pub id: usize,
     pub plane_id: usize,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct BlockWithPageInfo {
     pub id: usize,
     pub plane_id: usize,
-    // pub pages: [Page; config::PAGES_PER_BLOCK],
+    pub pages_reserved: u16,
 }
 
 #[derive(Debug, PartialEq)]
@@ -70,6 +74,7 @@ impl<A: Allocator + 'static> Provisioner<A> {
                     free: VecDeque::with_capacity_in(geometry.blk_per_lun as usize, alloc),
                     used: VecDeque::with_capacity_in(geometry.blk_per_lun as usize, alloc),
                     partially_used: VecDeque::with_capacity_in(geometry.pg_per_blk as usize, alloc),
+                    pages_per_block: geometry.pg_per_blk,
                 };
                 luns.push(lun);
             }
@@ -113,10 +118,40 @@ impl<A: Allocator + 'static> Provisioner<A> {
         Err(ProvisionError::NoFreeBlock)
     }
     pub fn provision_page(&mut self) -> Result<PhysicalPageAddress, ProvisionError> {
-        todo!()
+        // pick channel RR
+        for ch_i in 0..self.channels.len() {
+            let ch_idx = (self.last_picked_channel + ch_i) % self.channels.len();
+            let channel = &mut self.channels[ch_idx];
+
+            // pick lun RR
+            for lun_i in 0..channel.luns.len() {
+                let lun_idx = (channel.last_picked_lun + lun_i) % channel.luns.len();
+
+                // find free block
+                // move from free to used
+                if let Ok(page) = channel.luns[lun_idx].provision_page() {
+                    // self.last_picked_channel = ch_idx;
+                    // channel.last_picked_lun = lun_idx;
+                    return Ok(PhysicalPageAddress {
+                        channel: ch_idx as u64,
+                        lun: lun_idx as u64,
+                        plane: page.plane_id as u64,
+                        block: page.block_id as u64,
+                        page: page.id as u64,
+                    });
+                };
+            }
+        }
+
+        Err(ProvisionError::NoFreePage)
     }
-    pub fn push_free_block(&mut self, pba: &PhysicalBlockAddress) -> Result<(), ProvisionError> {
-        todo!()
+    pub fn push_free_block(&mut self, pba: &PhysicalBlockAddress) {
+        self.channels[pba.channel as usize].luns[pba.lun as usize]
+            .free
+            .push_back(Block {
+                id: pba.block as usize,
+                plane_id: pba.plane as usize,
+            });
     }
 }
 
@@ -129,5 +164,39 @@ impl<A: Allocator + 'static> Lun<A> {
         self.used.push_back(block.clone());
 
         return Ok(block);
+    }
+
+    fn provision_page(&mut self) -> Result<Page, ProvisionError> {
+        if self.partially_used.is_empty() {
+            let Some(block) = self.free.pop_front() else {
+                return Err(ProvisionError::NoFreePage);
+            };
+            self.partially_used.push_back(BlockWithPageInfo {
+                id: block.id,
+                plane_id: block.plane_id,
+                pages_reserved: 0,
+            });
+        }
+
+        let page = {
+            let block = self.partially_used.front_mut().unwrap();
+            let page_id = block.pages_reserved;
+            block.pages_reserved += 1;
+            Page {
+                id: page_id.into(),
+                plane_id: block.plane_id,
+                block_id: block.id,
+            }
+        };
+
+        if page.id == (self.pages_per_block - 1).into() {
+            self.partially_used.pop_front();
+            self.used.push_back(Block {
+                id: page.block_id,
+                plane_id: page.plane_id,
+            });
+        }
+
+        return Ok(page);
     }
 }
