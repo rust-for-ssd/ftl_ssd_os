@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct GlobalProvisioner<A: Allocator + 'static> {
+pub struct Provisioner<A: Allocator + 'static> {
     pub channels: Vec<Channel<A>, &'static A>,
     last_picked_channel: usize,
     alloc: &'static A,
@@ -57,7 +57,7 @@ pub enum ProvisionError {
     // FreeList(&'s str),
 }
 
-impl<A: Allocator + 'static> GlobalProvisioner<A> {
+impl<A: Allocator + 'static> Provisioner<A> {
     pub fn new(geometry: &nvm_mmgr_geometry, alloc: &'static A) -> Self {
         let mut channels: Vec<Channel<A>, &A> =
             Vec::with_capacity_in(geometry.n_of_ch as usize, alloc);

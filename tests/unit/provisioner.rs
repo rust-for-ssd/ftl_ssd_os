@@ -1,8 +1,6 @@
 use ftl_ssd_os::allocator::sdd_os_alloc::SimpleAllocator;
 use ftl_ssd_os::bindings::generated::nvm_mmgr_geometry;
-use ftl_ssd_os::provisioner::provisioner::{
-    Block, BlockWithPageInfo, GlobalProvisioner, ProvisionError,
-};
+use ftl_ssd_os::provisioner::provisioner::{Block, BlockWithPageInfo, ProvisionError, Provisioner};
 use ftl_ssd_os::shared::addresses::{PhysicalBlockAddress, PhysicalPageAddress};
 use ftl_ssd_os::shared::core_local_cell::CoreLocalCell;
 
@@ -84,7 +82,7 @@ fn alloc_init() -> &'static SimpleAllocator {
 #[test_case]
 fn init() {
     let allocator = alloc_init();
-    let prov: GlobalProvisioner<SimpleAllocator> = GlobalProvisioner::new(&GEOMETRY, &allocator);
+    let prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     assert_eq!(prov.channels.len(), GEOMETRY.n_of_ch as usize);
     assert_eq!(prov.channels[0].luns.len(), GEOMETRY.lun_per_ch as usize);
@@ -99,8 +97,7 @@ fn init() {
 pub fn provision_block() {
     let allocator = alloc_init();
 
-    let mut prov: GlobalProvisioner<SimpleAllocator> =
-        GlobalProvisioner::new(&GEOMETRY, &allocator);
+    let mut prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     // No free blocks when creating new
     let res = prov.provision_block();
@@ -134,8 +131,7 @@ pub fn provision_block() {
 pub fn provision_page() {
     let allocator = alloc_init();
 
-    let mut prov: GlobalProvisioner<SimpleAllocator> =
-        GlobalProvisioner::new(&GEOMETRY, &allocator);
+    let mut prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     // No free blocks, meaning no free pages when creating new
     let res = prov.provision_page();
@@ -191,8 +187,7 @@ pub fn provision_page() {
 pub fn provision_page_with_partially_used_blocks() {
     let allocator = alloc_init();
 
-    let mut prov: GlobalProvisioner<SimpleAllocator> =
-        GlobalProvisioner::new(&GEOMETRY, &allocator);
+    let mut prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     // No free blocks, meaning no free pages when creating new
     let res = prov.provision_page();
@@ -254,8 +249,7 @@ pub fn provision_page_with_partially_used_blocks() {
 pub fn provision_block_from_different_channels() {
     let allocator = alloc_init();
 
-    let mut prov: GlobalProvisioner<SimpleAllocator> =
-        GlobalProvisioner::new(&GEOMETRY, &allocator);
+    let mut prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     // No free blocks when creating new
     let res = prov.provision_block();
@@ -285,8 +279,7 @@ pub fn provision_block_from_different_channels() {
 pub fn push_free_block() {
     let allocator = alloc_init();
 
-    let mut prov: GlobalProvisioner<SimpleAllocator> =
-        GlobalProvisioner::new(&GEOMETRY, &allocator);
+    let mut prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     // No free blocks when creating new
     let res = prov.provision_block();
@@ -318,8 +311,7 @@ pub fn push_free_block() {
 pub fn multiple_push_free_block() {
     let allocator = alloc_init();
 
-    let mut prov: GlobalProvisioner<SimpleAllocator> =
-        GlobalProvisioner::new(&GEOMETRY, &allocator);
+    let mut prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     // No free blocks when creating new
     let res = prov.provision_block();
