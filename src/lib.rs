@@ -6,6 +6,7 @@
 #![allow(dead_code)]
 #![allow(static_mut_refs)]
 #![feature(allocator_api)]
+#![feature(btreemap_alloc)]
 
 extern crate alloc;
 
@@ -15,6 +16,7 @@ mod bindings;
 mod cpath;
 pub mod provisioner;
 pub mod shared;
+pub mod l2p;
 
 #[panic_handler]
 pub fn panic(info: &core::panic::PanicInfo) -> ! {
