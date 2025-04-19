@@ -6,18 +6,16 @@
 #![allow(dead_code)]
 #![allow(static_mut_refs)]
 #![feature(allocator_api)]
-#![feature(panic_internals)]
 
 extern crate alloc;
 
 pub mod allocator;
 pub mod bbt;
-pub mod bindings;
+mod bindings;
 mod cpath;
 pub mod provisioner;
-mod shared;
+pub mod shared;
 
-#[cfg(not(feature = "test"))]
 #[panic_handler]
 pub fn panic(info: &core::panic::PanicInfo) -> ! {
     bindings::safe::ssd_os_print_s(c"\nPANIC!\n");

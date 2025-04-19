@@ -1,20 +1,14 @@
+use crate::bbt::bbt::BadBlockTable;
+use crate::bindings::generated::nvm_mmgr_geometry;
+use crate::provisioner::provisioner::Provisioner;
+use crate::{allocator::sdd_os_alloc::SimpleAllocator, bindings::safe::ssd_os_mem_get};
 use core::alloc::Allocator;
-use ftl_ssd_os::bbt::bbt::BadBlockTable;
-use ftl_ssd_os::bindings::generated::nvm_mmgr_geometry;
-use ftl_ssd_os::provisioner::provisioner::GlobalProvisioner;
-use ftl_ssd_os::{allocator::sdd_os_alloc::SimpleAllocator, bindings::safe::ssd_os_mem_get};
+use riscv_rt::heap_start;
 use semihosting::{print, println};
 
 extern crate alloc;
 use alloc::boxed::Box;
 use alloc::string::String;
-use alloc::vec::Vec;
-
-#[test_case]
-pub fn new_without_init() {
-    let prov: GlobalProvisioner<SimpleAllocator> = GlobalProvisioner::new();
-    assert_eq!(prov.alloc.into_inner(), None);
-}
 
 const GEOMETRY: nvm_mmgr_geometry = {
     let n_of_ch = 1;
@@ -82,36 +76,22 @@ const GEOMETRY: nvm_mmgr_geometry = {
 };
 
 #[test_case]
-pub fn init() {
+pub fn new() {
     static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
-    let start = riscv_rt::heap_start() as *mut u8;
+    let start = heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     ALLOCATOR.initialize(start, end);
 
-    let prov: GlobalProvisioner<SimpleAllocator> = GlobalProvisioner::new();
-    prov.init(&GEOMETRY, &ALLOCATOR);
+    let bbt: BadBlockTable<SimpleAllocator> = BadBlockTable::new(&GEOMETRY, &ALLOCATOR);
 
-    assert_eq!(prov.alloc.into_inner(), Some(&ALLOCATOR));
-    unsafe {
-        assert_eq!(
-            prov.channels.assume_init_ref().borrow().len(),
-            GEOMETRY.n_of_ch as usize
-        );
-        assert_eq!(
-            prov.channels.assume_init_ref().borrow()[0].luns.len(),
-            GEOMETRY.lun_per_ch as usize
-        );
-        assert_eq!(
-            prov.channels.assume_init_ref().borrow()[0].luns[0]
-                .free
-                .capacity(),
-            GEOMETRY.blk_per_lun as usize
-        );
-        assert_eq!(
-            prov.channels.assume_init_ref().borrow()[0].luns[0]
-                .free
-                .len(),
-            0
-        );
-    }
+    assert_eq!(bbt.channels.len(), GEOMETRY.n_of_ch as usize);
+    assert_eq!(bbt.channels[0].luns.len(), GEOMETRY.lun_per_ch as usize);
+    assert_eq!(
+        bbt.channels[0].luns[0].planes.len(),
+        GEOMETRY.n_of_planes as usize
+    );
+    assert_eq!(
+        bbt.channels[0].luns[0].planes[0].blocks.len(),
+        GEOMETRY.blk_per_lun as usize
+    );
 }

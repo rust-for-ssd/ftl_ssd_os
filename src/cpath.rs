@@ -12,7 +12,7 @@ use crate::{
         safe::{ssd_os_get_connection, ssd_os_sleep},
     },
     make_connector_static, make_stage_static, println,
-    shared::addresses::PhysicalBlockAddress,
+    shared::{addresses::PhysicalBlockAddress, core_local_cell::CoreLocalCell},
 };
 
 make_stage_static!(stage_1, s1, s1, stage_1_fn);
@@ -33,7 +33,7 @@ fn stage_2_fn(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
 }
 static ALLOC_1: SimpleAllocator = SimpleAllocator::new();
 static ALLOC_2: SimpleAllocator = SimpleAllocator::new();
-static BBT: BadBlockTable<SimpleAllocator> = BadBlockTable::new();
+static BBT: CoreLocalCell<BadBlockTable<SimpleAllocator>> = CoreLocalCell::new();
 static mut pipe_1: *mut pipeline = null_mut();
 static mut pipe_2: *mut pipeline = null_mut();
 static conn2_lring: LRing<128> = LRing::new();
@@ -97,7 +97,7 @@ fn init_2() -> ::core::ffi::c_int {
     unsafe { volt_get_geometry(geo.as_ptr().cast_mut()) };
 
     let geo = unsafe { geo.assume_init() };
-    let _ = BBT.init(&geo, &ALLOC_2);
+    let _ = BBT.set(BadBlockTable::new(&geo, &ALLOC_2));
 
     println!("INIT_2_DONE");
     0
@@ -178,7 +178,7 @@ fn conn_fn_2(entry: *mut lring_entry) -> *mut pipeline {
 
     match req.req_type {
         BBTRequestType::Get => {
-            let ctx = BBT.get_block_status(&req.pba);
+            let ctx = BBT.get().get_block_status(&req.pba);
             match ctx {
                 BadBlockStatus::Good => println!("SENDING GOOD"),
                 BadBlockStatus::Bad => println!("SENDING BAD"),
@@ -194,7 +194,7 @@ fn conn_fn_2(entry: *mut lring_entry) -> *mut pipeline {
             return unsafe { pipe_2 };
         }
         BBTRequestType::Set => {
-            BBT.set_bad_block(&req.pba);
+            BBT.get_mut().set_bad_block(&req.pba);
             null_mut()
         }
     }
