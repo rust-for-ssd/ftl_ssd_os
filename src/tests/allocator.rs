@@ -1,5 +1,5 @@
+use crate::{allocator::sdd_os_alloc::SimpleAllocator, bindings::safe::ssd_os_mem_get};
 use core::alloc::Allocator;
-use ftl_ssd_os::{allocator::sdd_os_alloc::SimpleAllocator, bindings::safe::ssd_os_mem_get};
 use riscv_rt::heap_start;
 use semihosting::{print, println};
 
