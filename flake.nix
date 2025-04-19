@@ -15,7 +15,10 @@
         rv32_pkgs = nixpkgs.legacyPackages.${system}.pkgsCross.riscv32-embedded;
         rv64_pkgs = nixpkgs.legacyPackages.${system}.pkgsCross.riscv64-embedded;
         rust_nightly = pkgs.rust-bin.selectLatestNightlyWith (toolchain:
-          toolchain.default.override { extensions = [ "rust-src" ]; });
+          toolchain.default.override {
+            extensions = [ "rust-src" "rust-analyzer" ];
+            targets = [ "riscv32imac-unknown-none-elf" ];
+             });
       in {
         devShells.default = with pkgs;
           mkShell {
@@ -24,21 +27,15 @@
               rv32_pkgs.buildPackages.gdb
               rv32_pkgs.buildPackages.gcc
               rv32_pkgs.buildPackages.binutils
-              # rv64_pkgs.buildPackages.gdb
-              # rv64_pkgs.buildPackages.binutils
               rust-bindgen
-              # llvmPackages.libclang
-              # libclang
-
               llvmPackages.clang
               qemu
               bacon
-              rust-analyzer
             ];
 
-            shellHook = "";
-
             env = {
+              RISCV_RT_LLVM_ARCH_PATCH="riscv32imac-unknown-none-elf"; # Needed by riscv-rt
+              RISCV_RT_BASE_ISA="rv32i"; # Needed by riscv-rt
               RUST_GDB =
                 "${rv32_pkgs.buildPackages.gdb}/bin/riscv32-none-elf-gdb";
               LIBCLANG_PATH = "${llvmPackages.libclang.lib}/lib";

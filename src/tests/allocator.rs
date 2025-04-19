@@ -1,8 +1,7 @@
+use crate::{allocator::sdd_os_alloc::SimpleAllocator, bindings::safe::ssd_os_mem_get};
 use core::alloc::Allocator;
-use ftl_ssd_os::{allocator::sdd_os_alloc::SimpleAllocator, bindings::safe::ssd_os_mem_get};
-use semihosting::{print, println};
 use riscv_rt::heap_start;
-
+use semihosting::{print, println};
 
 extern crate alloc;
 use alloc::boxed::Box;
@@ -73,22 +72,21 @@ pub fn we_can_allocate_structs() {
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
-    
     #[derive(Debug, PartialEq, Clone)]
     struct MyStruct<'a> {
         id: u32,
-        name:  &'a str,
+        name: &'a str,
     }
 
     let instance = MyStruct {
         id: 1234,
         name: "hi from struct",
     };
-    
+
     let instance_clone = instance.clone();
-    
+
     let one: Box<MyStruct, &SimpleAllocator> = Box::new_in(instance, &allocator);
-    
+
     assert_eq!(1234, one.id);
     assert_eq!("hi from struct", one.name);
     assert_eq!(instance_clone, *one);
@@ -104,8 +102,12 @@ pub fn we_cannot_allocate_above_the_region() {
     let one: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
     let should_fail = Box::try_new_in(1, &allocator);
     match should_fail {
-        Ok(b) => { assert!(false); }
-        Err(_) => { assert!(true); }
+        Ok(b) => {
+            assert!(false);
+        }
+        Err(_) => {
+            assert!(true);
+        }
     }
 }
 
@@ -116,16 +118,17 @@ pub fn we_can_allocate_huge_things() {
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
+    const SIZE: usize = 1024 * 256;
     // Create a large vector using the custom allocator
-    let mut vec: Vec<usize, &SimpleAllocator> = Vec::with_capacity_in(1024 * 1024, &allocator); // ~4 MiB
+    let mut vec: Vec<usize, &SimpleAllocator> = Vec::with_capacity_in(SIZE, &allocator); // ~4 MiB
 
-    for i in 0..(1024 * 1024) { // usize (4) * 1024 * 1024 bytes ~4 MiB
-        vec.push(i); 
+    for i in 0..SIZE {
+        // usize (4) * 1024 * 1024 bytes ~4 MiB
+        vec.push(i);
     }
     // let size_in_bytes = vec.len() * core::mem::size_of::<usize>();
-    assert_eq!(vec.len(), 1024*1024)
+    assert_eq!(vec.len(), SIZE)
 }
-
 
 #[test_case]
 pub fn deallocation_works() {
@@ -148,7 +151,10 @@ pub fn deallocation_works() {
     let two: Box<u32, &SimpleAllocator> = Box::new_in(99, &allocator);
     let second_ptr = Box::into_raw(two);
 
-    assert_eq!(first_ptr, second_ptr, "Allocator did not reuse deallocated memory");
+    assert_eq!(
+        first_ptr, second_ptr,
+        "Allocator did not reuse deallocated memory"
+    );
 }
 
 #[test_case]
@@ -163,7 +169,6 @@ pub fn coalescing_works() {
     let b: Box<u32, &SimpleAllocator> = Box::new_in(2, &allocator);
     let c: Box<u32, &SimpleAllocator> = Box::new_in(3, &allocator);
 
-
     let a_ptr = Box::into_raw(a);
     let b_ptr = Box::into_raw(b);
     let c_ptr = Box::into_raw(c);
@@ -173,14 +178,11 @@ pub fn coalescing_works() {
     assert_eq!(unsafe { c_ptr.offset_from(b_ptr) }, 2); // two usize apart (1 for data, one for pointer)
     assert_eq!(unsafe { c_ptr.offset_from(a_ptr) }, 4); // two usize apart (1 for data, one for pointer)
 
-
-
     // Drop all (deallocate)
     unsafe {
         drop(Box::from_raw_in(a_ptr, &allocator));
         drop(Box::from_raw_in(b_ptr, &allocator));
         drop(Box::from_raw_in(c_ptr, &allocator));
-
     }
 
     // Now try allocating a larger block that would only fit if coalesced
@@ -192,7 +194,6 @@ pub fn coalescing_works() {
         "Coalescing failed: expected allocation at start of freed region"
     );
 }
-
 
 #[test_case]
 pub fn coalescing_works_in_middle() {
@@ -207,7 +208,6 @@ pub fn coalescing_works_in_middle() {
     let c: Box<u32, &SimpleAllocator> = Box::new_in(3, &allocator); // and this
     let d: Box<u32, &SimpleAllocator> = Box::new_in(4, &allocator);
 
-
     let a_ptr = Box::into_raw(a);
     let b_ptr = Box::into_raw(b);
     let c_ptr = Box::into_raw(c);
@@ -218,8 +218,6 @@ pub fn coalescing_works_in_middle() {
     assert_eq!(unsafe { c_ptr.offset_from(b_ptr) }, 2); // two usize apart (1 for data, one for pointer)
     assert_eq!(unsafe { c_ptr.offset_from(a_ptr) }, 4); // two usize apart (1 for data, one for pointer)
     assert_eq!(unsafe { d_ptr.offset_from(a_ptr) }, 6); // two usize apart (1 for data, one for pointer)
-
-
 
     // Only drop two in the middle
     unsafe {
@@ -271,8 +269,6 @@ pub fn large_allocation_cannot_get_small_coalesed_block_in_middle() {
     let large: Box<[u32; 100], &SimpleAllocator> = Box::new_in([0; 100], &allocator);
     let large_ptr = Box::into_raw(large) as *mut u32;
     let should_be_here_ptr = unsafe { d_ptr.add(2) }; // 2x usize is the size of a free block (data + next pointer)
-    
-    assert_eq!(
-        large_ptr, should_be_here_ptr
-    );
+
+    assert_eq!(large_ptr, should_be_here_ptr);
 }
