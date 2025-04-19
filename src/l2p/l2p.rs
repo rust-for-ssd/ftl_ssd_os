@@ -4,6 +4,10 @@ use core::alloc::Allocator;
 pub type LogicalAddr = u64;
 pub type PhysicalAddr = u64;
 
+
+// Tried this: https://github.com/rust-lang/hashbrown
+// But was not successfull with the allocator
+
 #[derive(Debug)]
 pub struct L2pMapper<A: Allocator + 'static> {
     entries: BTreeMap<LogicalAddr, PhysicalAddr, &'static A>,
