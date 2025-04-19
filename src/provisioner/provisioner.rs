@@ -1,8 +1,4 @@
-use core::{
-    alloc::Allocator,
-    cell::{Cell, OnceCell, RefCell},
-    mem::MaybeUninit,
-};
+use core::alloc::Allocator;
 
 use alloc::{collections::VecDeque, vec::Vec};
 
@@ -89,23 +85,29 @@ impl<A: Allocator + 'static> GlobalProvisioner<A> {
 
     pub fn provision_block(&mut self) -> Result<PhysicalBlockAddress, ProvisionError> {
         // pick channel RR
-        self.last_picked_channel = (self.last_picked_channel + 1) % self.channels.len();
-        let channel: &mut Channel<A> = &mut self.channels[self.last_picked_channel];
-        // pick lun RR
+        for ch_i in 0..self.channels.len() {
+            let ch_idx = (self.last_picked_channel + ch_i) % self.channels.len();
+            let channel = &mut self.channels[ch_idx];
 
-        channel.last_picked_lun = (channel.last_picked_lun + 1) % channel.luns.len();
-        let lun: &mut Lun<A> = &mut channel.luns[channel.last_picked_lun];
-        // find free block
-        // move from free to used
-        let block = lun.provision_block()?;
+            // pick lun RR
+            for lun_i in 0..channel.luns.len() {
+                let lun_idx = (channel.last_picked_lun + lun_i) % channel.luns.len();
 
-        // return pba
-        Ok(PhysicalBlockAddress {
-            channel: self.last_picked_channel as u64,
-            lun: channel.last_picked_lun as u64,
-            plane: block.plane_id as u64,
-            block: block.id as u64,
-        })
+                // find free block
+                // move from free to used
+                if let Ok(block) = channel.luns[lun_idx].provision_block() {
+                    self.last_picked_channel = ch_idx;
+                    channel.last_picked_lun = lun_idx;
+                    return Ok(PhysicalBlockAddress {
+                        channel: ch_idx as u64,
+                        lun: lun_idx as u64,
+                        plane: block.plane_id as u64,
+                        block: block.id as u64,
+                    });
+                };
+            }
+        }
+        Err(ProvisionError::NoFreeBlock)
     }
 }
 
