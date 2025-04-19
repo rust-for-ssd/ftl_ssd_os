@@ -12,7 +12,7 @@
   "llvm-target": "riscv32",
   "max-atomic-width": 32,
   "metadata": {
-    "description": "Bare RISC-V (RV32IMAC ISA)",
+    "description": "Bare RISC-V (RV32IMAFD ISA)",
     "host_tools": false,
     "std": false,
     "tier": 3
