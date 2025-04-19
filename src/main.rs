@@ -18,7 +18,6 @@ pub fn panic(info: &core::panic::PanicInfo) -> ! {
         use rv_unit::test_panic_handler;
 
         test_panic_handler(info);
-        #[cfg(feature = "test")]
         test_main();
     }
     loop {}
