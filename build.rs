@@ -12,10 +12,6 @@ fn main() {
     println!("cargo:rerun-if-changed=memory.x");
     println!("cargo:rerun-if-changed=build.rs");
 
-    if std::env::var("CARGO_CFG_TEST").is_err() {
-        println!("cargo:rustc-cfg=build_staticlib");
-        println!("cargo:rustc-crate-type=staticlib");
-    }
     let libclang_include =
         env::var("LIBCLANG_PATH").expect("LIBCLANG_PATH environment variable not set");
 

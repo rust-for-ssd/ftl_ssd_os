@@ -1,8 +1,8 @@
+use crate::bbt::bbt::BadBlockTable;
+use crate::bindings::generated::nvm_mmgr_geometry;
+use crate::provisioner::provisioner::Provisioner;
+use crate::{allocator::sdd_os_alloc::SimpleAllocator, bindings::safe::ssd_os_mem_get};
 use core::alloc::Allocator;
-use ftl_ssd_os::bbt::bbt::BadBlockTable;
-use ftl_ssd_os::bindings::generated::nvm_mmgr_geometry;
-use ftl_ssd_os::provisioner::provisioner::Provisioner;
-use ftl_ssd_os::{allocator::sdd_os_alloc::SimpleAllocator, bindings::safe::ssd_os_mem_get};
 use riscv_rt::heap_start;
 use semihosting::{print, println};
 

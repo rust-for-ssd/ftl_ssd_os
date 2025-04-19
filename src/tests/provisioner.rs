@@ -1,8 +1,8 @@
-use ftl_ssd_os::allocator::sdd_os_alloc::SimpleAllocator;
-use ftl_ssd_os::bindings::generated::nvm_mmgr_geometry;
-use ftl_ssd_os::provisioner::provisioner::{Block, BlockWithPageInfo, ProvisionError, Provisioner};
-use ftl_ssd_os::shared::addresses::{PhysicalBlockAddress, PhysicalPageAddress};
-use ftl_ssd_os::shared::core_local_cell::CoreLocalCell;
+use crate::allocator::sdd_os_alloc::SimpleAllocator;
+use crate::bindings::generated::nvm_mmgr_geometry;
+use crate::provisioner::provisioner::{Block, BlockWithPageInfo, ProvisionError, Provisioner};
+use crate::shared::addresses::{PhysicalBlockAddress, PhysicalPageAddress};
+use crate::shared::core_local_cell::CoreLocalCell;
 
 const GEOMETRY: nvm_mmgr_geometry = {
     let n_of_ch = 1;
