@@ -10,6 +10,7 @@
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(rv_unit::test_runner)]
 #![feature(box_as_ptr)]
+#![feature(btreemap_alloc)]
 
 #[panic_handler]
 pub fn panic(info: &core::panic::PanicInfo) -> ! {
