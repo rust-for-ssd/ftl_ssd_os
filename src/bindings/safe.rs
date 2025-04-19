@@ -1,9 +1,7 @@
 use core::{
     ffi::{CStr, c_void},
-    fmt::{Error, Result, Write},
+    fmt::Write,
 };
-
-use semihosting::print;
 
 use super::generated;
 

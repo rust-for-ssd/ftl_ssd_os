@@ -1,6 +1,6 @@
 use core::{mem::MaybeUninit, ptr::null_mut};
 
-use alloc::{borrow::ToOwned, boxed::Box, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 
 use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,

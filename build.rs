@@ -3,6 +3,8 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
+use bindgen::Formatter;
+
 fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     fs::write(out_dir.join("memory.x"), include_bytes!("memory.x")).unwrap();
@@ -11,7 +13,6 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
 
     if std::env::var("CARGO_CFG_TEST").is_err() {
-        println!("cargo:rustc-cdylib-link-arg=-nostartfiles");
         println!("cargo:rustc-cfg=build_staticlib");
         println!("cargo:rustc-crate-type=staticlib");
     }
@@ -27,13 +28,6 @@ fn main() {
     if path.extension().map_or(false, |ext| ext == "h") {
         println!("cargo:rerun-if-changed={}", path.display());
 
-        // Get filename without extension
-        let file_stem = path
-            .file_stem()
-            .unwrap_or_else(|| panic!("Failed to get file stem for {:?}", path))
-            .to_str()
-            .unwrap_or_else(|| panic!("Invalid UTF-8 in filename {:?}", path));
-
         let out_path = out_dir.join("generated.rs");
 
         let bindings = bindgen::Builder::default()
@@ -46,6 +40,7 @@ fn main() {
                 "--target=riscv32-unknown-none",
                 &format!("-I{}", libclang_include),
             ])
+            .formatter(Formatter::Prettyplease)
             .generate()
             .expect(&format!("Failed to generate bindings for {:?}", path));
 
