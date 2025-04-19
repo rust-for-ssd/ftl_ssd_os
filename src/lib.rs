@@ -14,7 +14,7 @@ pub mod bbt;
 pub mod bindings;
 mod cpath;
 pub mod provisioner;
-mod shared;
+pub mod shared;
 
 #[cfg(not(feature = "test"))]
 #[panic_handler]

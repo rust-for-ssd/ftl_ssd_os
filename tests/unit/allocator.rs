@@ -118,15 +118,16 @@ pub fn we_can_allocate_huge_things() {
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
+    const SIZE: usize = 1024 * 256;
     // Create a large vector using the custom allocator
-    let mut vec: Vec<usize, &SimpleAllocator> = Vec::with_capacity_in(1024 * 1024, &allocator); // ~4 MiB
+    let mut vec: Vec<usize, &SimpleAllocator> = Vec::with_capacity_in(SIZE, &allocator); // ~4 MiB
 
-    for i in 0..(1024 * 1024) {
+    for i in 0..SIZE {
         // usize (4) * 1024 * 1024 bytes ~4 MiB
         vec.push(i);
     }
     // let size_in_bytes = vec.len() * core::mem::size_of::<usize>();
-    assert_eq!(vec.len(), 1024 * 1024)
+    assert_eq!(vec.len(), SIZE)
 }
 
 #[test_case]

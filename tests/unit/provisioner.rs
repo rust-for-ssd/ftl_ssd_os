@@ -1,19 +1,15 @@
-use core::alloc::Allocator;
-use ftl_ssd_os::bbt::bbt::BadBlockTable;
+use ftl_ssd_os::allocator::sdd_os_alloc::SimpleAllocator;
 use ftl_ssd_os::bindings::generated::nvm_mmgr_geometry;
-use ftl_ssd_os::provisioner::provisioner::GlobalProvisioner;
-use ftl_ssd_os::{allocator::sdd_os_alloc::SimpleAllocator, bindings::safe::ssd_os_mem_get};
-use semihosting::{print, println};
-
-extern crate alloc;
-use alloc::boxed::Box;
-use alloc::string::String;
-use alloc::vec::Vec;
+use ftl_ssd_os::provisioner::provisioner::{
+    Block, BlockWithPageInfo, GlobalProvisioner, ProvisionError,
+};
+use ftl_ssd_os::shared::addresses::{PhysicalBlockAddress, PhysicalPageAddress};
+use ftl_ssd_os::shared::core_local_cell::CoreLocalCell;
 
 const GEOMETRY: nvm_mmgr_geometry = {
     let n_of_ch = 1;
     let lun_per_ch = 1;
-    let blk_per_lun = 1;
+    let blk_per_lun = 10;
     let pg_per_blk = 1;
     let sec_per_pg = 1;
     let n_of_planes = 1;
@@ -75,14 +71,20 @@ const GEOMETRY: nvm_mmgr_geometry = {
     }
 };
 
-#[test_case]
-pub fn init() {
-    static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
+fn alloc_init() -> &'static SimpleAllocator {
+    static ALLOCATOR: CoreLocalCell<SimpleAllocator> = CoreLocalCell::new();
+    let alloc = SimpleAllocator::new();
     let start = riscv_rt::heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
-    ALLOCATOR.initialize(start, end);
+    alloc.initialize(start, end);
+    ALLOCATOR.set(alloc);
+    return ALLOCATOR.get();
+}
 
-    let prov: GlobalProvisioner<SimpleAllocator> = GlobalProvisioner::new(&GEOMETRY, &ALLOCATOR);
+#[test_case]
+fn init() {
+    let allocator = alloc_init();
+    let prov: GlobalProvisioner<SimpleAllocator> = GlobalProvisioner::new(&GEOMETRY, &allocator);
 
     assert_eq!(prov.channels.len(), GEOMETRY.n_of_ch as usize);
     assert_eq!(prov.channels[0].luns.len(), GEOMETRY.lun_per_ch as usize);
@@ -91,4 +93,268 @@ pub fn init() {
         GEOMETRY.blk_per_lun as usize
     );
     assert_eq!(prov.channels[0].luns[0].free.len(), 0);
+}
+
+#[test_case]
+pub fn provision_block() {
+    let allocator = alloc_init();
+
+    let mut prov: GlobalProvisioner<SimpleAllocator> =
+        GlobalProvisioner::new(&GEOMETRY, &allocator);
+
+    // No free blocks when creating new
+    let res = prov.provision_block();
+    assert_eq!(res, Err(ProvisionError::NoFreeBlock));
+
+    let block = Block { id: 3, plane_id: 0 };
+    prov.channels[0].luns[0].free.push_front(block);
+
+    let size = prov.channels[0].luns[0].free.len();
+    assert_eq!(size, 1);
+
+    let res = prov.provision_block();
+    assert_eq!(
+        res,
+        Ok(PhysicalBlockAddress {
+            channel: 0,
+            lun: 0,
+            plane: 0,
+            block: 3
+        })
+    );
+
+    let size = prov.channels[0].luns[0].free.len();
+    assert_eq!(size, 0);
+
+    let res = prov.provision_block();
+    assert_eq!(res, Err(ProvisionError::NoFreeBlock));
+}
+
+#[test_case]
+pub fn provision_page() {
+    let allocator = alloc_init();
+
+    let mut prov: GlobalProvisioner<SimpleAllocator> =
+        GlobalProvisioner::new(&GEOMETRY, &allocator);
+
+    // No free blocks, meaning no free pages when creating new
+    let res = prov.provision_page();
+    assert_eq!(res, Err(ProvisionError::NoFreePage));
+
+    let block = Block { id: 3, plane_id: 0 };
+    prov.channels[0].luns[0].free.push_back(block);
+    let size = prov.channels[0].luns[0].free.len();
+    assert_eq!(size, 1);
+
+    let res = prov.provision_page();
+    assert_eq!(
+        res,
+        Ok(PhysicalPageAddress {
+            channel: 0,
+            lun: 0,
+            plane: 0,
+            block: 3,
+            page: 0
+        })
+    );
+    let size = prov.channels[0].luns[0].free.len();
+    assert_eq!(size, 0);
+    let size = prov.channels[0].luns[0].partially_used.len();
+    assert_eq!(size, 1);
+    let size = prov.channels[0].luns[0].used.len();
+    assert_eq!(size, 0);
+
+    for i in 1..GEOMETRY.pg_per_blk {
+        let size = prov.channels[0].luns[0].partially_used.len();
+        assert_eq!(size, 1);
+        let res = prov.provision_page();
+        assert_eq!(
+            res,
+            Ok(PhysicalPageAddress {
+                channel: 0,
+                lun: 0,
+                plane: 0,
+                block: 3,
+                page: i as u64
+            })
+        );
+    }
+    let size = prov.channels[0].luns[0].partially_used.len();
+    assert_eq!(size, 0);
+    let size = prov.channels[0].luns[0].used.len();
+    assert_eq!(size, 1);
+    let res = prov.provision_page();
+    assert_eq!(res, Err(ProvisionError::NoFreePage));
+}
+
+#[test_case]
+pub fn provision_page_with_partially_used_blocks() {
+    let allocator = alloc_init();
+
+    let mut prov: GlobalProvisioner<SimpleAllocator> =
+        GlobalProvisioner::new(&GEOMETRY, &allocator);
+
+    // No free blocks, meaning no free pages when creating new
+    let res = prov.provision_page();
+    assert_eq!(res, Err(ProvisionError::NoFreePage));
+
+    let block = BlockWithPageInfo {
+        id: 3,
+        plane_id: 0,
+        // pages: [Page::Free; config::PAGES_PER_BLOCK],
+    };
+    prov.channels[0].luns[0].partially_used.push_back(block);
+    let size = prov.channels[0].luns[0].free.len();
+    assert_eq!(size, 0);
+    let size = prov.channels[0].luns[0].partially_used.len();
+    assert_eq!(size, 1);
+
+    let res = prov.provision_page();
+    assert_eq!(
+        res,
+        Ok(PhysicalPageAddress {
+            channel: 0,
+            lun: 0,
+            plane: 0,
+            block: 3,
+            page: 0
+        })
+    );
+    let size = prov.channels[0].luns[0].free.len();
+    assert_eq!(size, 0);
+    let size = prov.channels[0].luns[0].partially_used.len();
+    assert_eq!(size, 1);
+    let size = prov.channels[0].luns[0].used.len();
+    assert_eq!(size, 0);
+
+    for i in 1..GEOMETRY.pg_per_blk {
+        let size = prov.channels[0].luns[0].partially_used.len();
+        assert_eq!(size, 1);
+        let res = prov.provision_page();
+        assert_eq!(
+            res,
+            Ok(PhysicalPageAddress {
+                channel: 0,
+                lun: 0,
+                plane: 0,
+                block: 3,
+                page: i as u64
+            })
+        );
+    }
+    let size = prov.channels[0].luns[0].partially_used.len();
+    assert_eq!(size, 0);
+    let size = prov.channels[0].luns[0].used.len();
+    assert_eq!(size, 1);
+    let res = prov.provision_page();
+    assert_eq!(res, Err(ProvisionError::NoFreePage));
+}
+
+#[test_case]
+pub fn provision_block_from_different_channels() {
+    let allocator = alloc_init();
+
+    let mut prov: GlobalProvisioner<SimpleAllocator> =
+        GlobalProvisioner::new(&GEOMETRY, &allocator);
+
+    // No free blocks when creating new
+    let res = prov.provision_block();
+    assert_eq!(res, Err(ProvisionError::NoFreeBlock));
+
+    let block = Block { id: 3, plane_id: 0 };
+    prov.channels[0].luns[0].free.push_back(block);
+    prov.channels[2].luns[3].free.push_back(block);
+
+    let size = prov.channels[0].luns[0].free.len();
+    assert_eq!(size, 1);
+
+    let res = prov.provision_block();
+    assert!(res.is_ok());
+
+    let res = prov.provision_block();
+    assert!(res.is_ok());
+
+    let size = prov.channels[0].luns[0].free.len();
+    assert_eq!(size, 0);
+
+    let res = prov.provision_block();
+    assert_eq!(res, Err(ProvisionError::NoFreeBlock));
+}
+
+#[test_case]
+pub fn push_free_block() {
+    let allocator = alloc_init();
+
+    let mut prov: GlobalProvisioner<SimpleAllocator> =
+        GlobalProvisioner::new(&GEOMETRY, &allocator);
+
+    // No free blocks when creating new
+    let res = prov.provision_block();
+    assert_eq!(res, Err(ProvisionError::NoFreeBlock));
+
+    let pba = PhysicalBlockAddress {
+        channel: 0,
+        lun: 2,
+        plane: 0,
+        block: 3,
+    };
+    let res = prov.push_free_block(&pba);
+    assert!(res.is_ok());
+
+    let size = prov.channels[0].luns[2].free.len();
+    assert_eq!(size, 1);
+
+    let res = prov.provision_block();
+    assert!(res.is_ok());
+
+    let size = prov.channels[0].luns[2].free.len();
+    assert_eq!(size, 0);
+
+    let res = prov.provision_block();
+    assert_eq!(res, Err(ProvisionError::NoFreeBlock));
+}
+
+#[test_case]
+pub fn multiple_push_free_block() {
+    let allocator = alloc_init();
+
+    let mut prov: GlobalProvisioner<SimpleAllocator> =
+        GlobalProvisioner::new(&GEOMETRY, &allocator);
+
+    // No free blocks when creating new
+    let res = prov.provision_block();
+    assert_eq!(res, Err(ProvisionError::NoFreeBlock));
+
+    let pba = PhysicalBlockAddress {
+        channel: 0,
+        lun: 2,
+        plane: 0,
+        block: 3,
+    };
+    let res = prov.push_free_block(&pba);
+    assert!(res.is_ok());
+
+    let size = prov.channels[0].luns[2].free.len();
+    assert_eq!(size, 1);
+
+    let pba = PhysicalBlockAddress {
+        channel: 2,
+        lun: 2,
+        plane: 0,
+        block: 3,
+    };
+    let res = prov.push_free_block(&pba);
+    assert!(res.is_ok());
+
+    let size = prov.channels[2].luns[2].free.len();
+    assert_eq!(size, 1);
+
+    let res = prov.provision_block();
+    assert!(res.is_ok());
+
+    let res = prov.provision_block();
+    assert!(res.is_ok());
+
+    let res = prov.provision_block();
+    assert_eq!(res, Err(ProvisionError::NoFreeBlock));
 }

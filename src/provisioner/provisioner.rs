@@ -2,7 +2,10 @@ use core::alloc::Allocator;
 
 use alloc::{collections::VecDeque, vec::Vec};
 
-use crate::{bindings::generated::nvm_mmgr_geometry, shared::addresses::PhysicalBlockAddress};
+use crate::{
+    bindings::generated::nvm_mmgr_geometry,
+    shared::addresses::{PhysicalBlockAddress, PhysicalPageAddress},
+};
 
 #[derive(Debug)]
 pub struct GlobalProvisioner<A: Allocator + 'static> {
@@ -108,6 +111,12 @@ impl<A: Allocator + 'static> GlobalProvisioner<A> {
             }
         }
         Err(ProvisionError::NoFreeBlock)
+    }
+    pub fn provision_page(&mut self) -> Result<PhysicalPageAddress, ProvisionError> {
+        todo!()
+    }
+    pub fn push_free_block(&mut self, pba: &PhysicalBlockAddress) -> Result<(), ProvisionError> {
+        todo!()
     }
 }
 
