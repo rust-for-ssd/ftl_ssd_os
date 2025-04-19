@@ -6,6 +6,7 @@
 #![allow(dead_code)]
 #![allow(static_mut_refs)]
 #![feature(allocator_api)]
+#![feature(btreemap_alloc)]
 
 extern crate alloc;
 
