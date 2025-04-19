@@ -45,6 +45,7 @@ mod bindings;
 mod cpath;
 pub mod provisioner;
 pub mod shared;
+pub mod l2p;
 
 #[cfg(test)]
 mod tests;

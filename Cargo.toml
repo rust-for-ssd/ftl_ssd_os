@@ -30,3 +30,6 @@ semihosting = { version = "0.1.19", features = ["stdio"] }
 default = []
 test = [] 
 
+[dependencies]
+hashbrown = "0.15.2"
+
