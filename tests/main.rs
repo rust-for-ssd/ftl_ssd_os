@@ -7,11 +7,14 @@
 #![feature(allocator_api)]
 #![feature(box_as_ptr)]
 
+extern crate alloc;
+
 use ftl_ssd_os;
 use riscv_rt::entry;
 use semihosting::println;
 
 // -- Custom panic handler
+#[cfg(feature = "test")]
 #[panic_handler]
 pub fn panic(info: &core::panic::PanicInfo) -> ! {
     rv_unit::test_panic_handler(info);
