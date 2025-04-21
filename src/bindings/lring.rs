@@ -96,6 +96,12 @@ impl lring_entry {
         // SAFETY: as_ref() returns None if the ptr is Null
         unsafe { self.ctx.cast::<T>().as_ref() }
     }
+    
+    pub fn get_ctx_as_mut<T>(&mut self) -> Option<&mut T> {
+        // SAFETY: as_ref() returns None if the ptr is Null
+        unsafe { self.ctx.cast::<T>().as_mut() }
+    }
+    
     pub fn set_ctx<T>(&mut self, new_ctx: &T) {
         let new_ctx_ptr: *const T = new_ctx;
         self.ctx = new_ctx_ptr.cast_mut().cast();

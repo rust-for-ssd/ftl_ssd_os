@@ -1,1 +1,4 @@
+volt_spipe volt_submit_stage
+volt_cpipe volt_complete_stage
 requester_l2p requester_l2p_stage
+l2p_media_manager l2p_media_manager_stage
