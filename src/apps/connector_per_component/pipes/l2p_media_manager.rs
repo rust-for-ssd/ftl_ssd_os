@@ -22,12 +22,12 @@ fn context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_voi
         Ok(ref mut request) => {
             println!("L2P_MM_STAGE: {:?}", request);
             // TRANSFORM TO CMD THAT MM UNDERSTANDS
+            
         }
         Err(ref err) => {
-            println!("REQUESTER TO L2P STAGE ERROR: {:?}", err);
+            println!("L2P_MM_STAGE ERROR: {:?}", err);
         }
     }
 
-    println!("REQUESTER TO L2P STAGE: {:?}", unsafe { *req });
     context
 }
