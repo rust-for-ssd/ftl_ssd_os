@@ -1,8 +1,8 @@
 use alloc::collections::BTreeMap;
 use core::alloc::Allocator;
 
-pub type LogicalAddr = u64;
-pub type PhysicalAddr = u64;
+pub type LogicalAddr = u32;
+pub type PhysicalAddr = u32;
 
 
 #[derive(Debug)]

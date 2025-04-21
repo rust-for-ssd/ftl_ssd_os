@@ -12,7 +12,9 @@ static l2p_mapper: CoreLocalCell<L2pMapper<SimpleAllocator>> = CoreLocalCell::ne
 
 fn init() -> ::core::ffi::c_int {
     println!("L2P_INIT");
-    let mut mem_region = MemoryRegion::new(c"l2p");
+    let mut mem_region = MemoryRegion::new_from_cpu(2);
+    println!("{:?}", mem_region.free_start);
+    println!("{:?}", mem_region.end);
     let Ok(()) = lring.init(c"L2P_LRING", mem_region.free_start, 0) else {
         panic!("L2P_LRING WAS ALREADY INITIALIZED!");
     };
@@ -21,9 +23,8 @@ fn init() -> ::core::ffi::c_int {
 
     println!("L2P_LRING_INIT");
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-    println!("{:?}", mem_region.free_start);
-    println!("{:?}", mem_region.end);
-    l2p_mapper.set(L2pMapper::new(&ALLOC));    
+    l2p_mapper.set(L2pMapper::new(&ALLOC));  
+    l2p_mapper.get_mut().map(0x1, 0x1234);  
     0
 }
 
@@ -34,6 +35,7 @@ fn exit() -> ::core::ffi::c_int {
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     println!("L2P_PIPE_START");
+    // println!("L2P_PIPE_START: {:?}", l2p_mapper.get_mut().lookup(0x100));
     ssd_os_sleep(1);
     return null_mut();
 }
