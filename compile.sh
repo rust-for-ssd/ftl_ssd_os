@@ -2,6 +2,8 @@
 
 # Set default path if not provided
 SSD_OS_PATH=${SSD_OS_PATH:-../ssd_os}
+APP_NAME=${APP_NAME:-"connector_per_component"}
+
 
 rm *.o
 # cargo clean
@@ -14,5 +16,5 @@ if riscv32-none-elf-nm ftl_ssd_os*.o | grep -q "this_doesnt_exist"; then
 fi
 
 find . -type f -name "ftl_ssd_os*.o" -exec cp {} "$SSD_OS_PATH/app/programs/build_rs/rs_ftl.o" \;
-cp ftl_ssd_os.conn "$SSD_OS_PATH/app/programs/rs_ftl.conn"
-cp ftl_ssd_os.pipe "$SSD_OS_PATH/app/programs/rs_ftl.pipe"
+cp "src/apps/$APP_NAME/$APP_NAME.conn" "$SSD_OS_PATH/app/programs/rs_ftl.conn"
+cp "src/apps/$APP_NAME/$APP_NAME.pipe" "$SSD_OS_PATH/app/programs/rs_ftl.pipe"

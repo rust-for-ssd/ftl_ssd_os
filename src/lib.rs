@@ -13,10 +13,10 @@ extern crate alloc;
 pub mod allocator;
 pub mod bbt;
 mod bindings;
-mod cpath;
 pub mod provisioner;
 pub mod shared;
 pub mod l2p;
+pub mod apps;
 
 #[panic_handler]
 pub fn panic(info: &core::panic::PanicInfo) -> ! {
