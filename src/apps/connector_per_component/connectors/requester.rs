@@ -9,8 +9,23 @@ make_connector_static!(requester, init, exit, pipe_start, ring);
 
 static lring: LRing<128> = LRing::new();
 static ALLOC: SimpleAllocator = SimpleAllocator::new();
-static requests: CoreLocalCell<Vec<i32, &SimpleAllocator>> = CoreLocalCell::new();
+static requests: CoreLocalCell<Vec<Request, &SimpleAllocator>> = CoreLocalCell::new();
+static mut requestIdx : usize = 0; 
 
+#[derive(Debug)]
+enum CommandType {
+    READ,
+    WRITE,
+    ERASE
+}
+
+#[derive(Debug)]
+struct Request {
+    id: u32, 
+    cmd: CommandType, 
+    logical_addr: u32,
+    physical_addr: Option<u32>,
+}
 
 fn init() -> ::core::ffi::c_int {
     println!("REQUESTER_INIT");
@@ -28,7 +43,19 @@ fn init() -> ::core::ffi::c_int {
 
     
     requests.set(Vec::new_in(&ALLOC));
-    requests.get_mut().push(99);
+    requests.get_mut().push(Request {
+        id: 0,
+        cmd: CommandType::READ,
+        logical_addr: 0x1,
+        physical_addr: None
+    });
+    
+    requests.get_mut().push(Request {
+        id: 0,
+        cmd: CommandType::READ,
+        logical_addr: 0x2,
+        physical_addr: None
+    });
     
     0
 }
@@ -42,12 +69,20 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     println!("REQUESTER_PIPE_START");
     ssd_os_sleep(1);
     
-    let req_1 = requests.get_mut().pop();
-    match req_1 {
-        Some(req_1) => {
-            println!("REQUESTER_PIPE_START: {:?}", req_1);
+    let Some(entry) = lring_entry::new(entry) else {
+               println!("NULL PTR!");
+               return null_mut();
+           };
+    
+    let cur_req = requests.get_mut().get(unsafe { requestIdx });
+    unsafe { requestIdx += 1 };
+    
+    match cur_req {
+        Some(req) => {
+            println!("REQUEST: {:?}", req);
             let pipe_1 = ssd_os_get_connection(c"requester", c"requester_l2p");
-            // TODO: SET THE CTX
+            //SET THE CTX
+            entry.set_ctx(req);
             return pipe_1;
         },
         None => {
@@ -55,6 +90,9 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
             return null_mut();
         }
     }
+    
+   
+    
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {

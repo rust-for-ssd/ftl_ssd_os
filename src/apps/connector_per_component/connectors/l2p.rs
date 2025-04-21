@@ -25,6 +25,8 @@ fn init() -> ::core::ffi::c_int {
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
     l2p_mapper.set(L2pMapper::new(&ALLOC));  
     l2p_mapper.get_mut().map(0x1, 0x1234);  
+    l2p_mapper.get_mut().map(0x2, 0x1111);  
+
     0
 }
 
@@ -36,6 +38,7 @@ fn exit() -> ::core::ffi::c_int {
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     println!("L2P_PIPE_START");
     println!("L2P_PIPE_START: {:?}", l2p_mapper.get_mut().lookup(0x1));
+    println!("Endtry: {:?}", entry);
     ssd_os_sleep(1);
     return null_mut();
 }
