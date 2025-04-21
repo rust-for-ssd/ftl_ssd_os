@@ -14,7 +14,7 @@ static requests: CoreLocalCell<Vec<i32, &SimpleAllocator>> = CoreLocalCell::new(
 
 fn init() -> ::core::ffi::c_int {
     println!("REQUESTER_INIT");
-    let mut mem_region = MemoryRegion::new(c"requester");
+    let mut mem_region = MemoryRegion::new_from_cpu(1);
     let Ok(()) = lring.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
         panic!("REQUESTER_LRING WAS ALREADY INITIALIZED!");
     };
