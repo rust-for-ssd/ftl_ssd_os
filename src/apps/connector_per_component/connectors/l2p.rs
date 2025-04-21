@@ -1,6 +1,6 @@
 use core::ptr::null_mut;
 
-use crate::{allocator::sdd_os_alloc::SimpleAllocator, apps::connector_per_component::connectors::requester::{Request, RequestError}, bindings::{generated::{lring_entry, pipeline}, lring::{LRing, LRingErr}, mem::MemoryRegion, safe::ssd_os_sleep, symbols::memmove}, l2p::l2p::L2pMapper, make_connector_static, println, shared::core_local_cell::CoreLocalCell};
+use crate::{allocator::sdd_os_alloc::SimpleAllocator, apps::connector_per_component::connectors::requester::{Request, RequestError}, bindings::{generated::{lring_entry, pipeline}, lring::{LRing, LRingErr}, mem::MemoryRegion, safe::{ssd_os_get_connection, ssd_os_sleep}, symbols::memmove}, l2p::l2p::L2pMapper, make_connector_static, println, shared::core_local_cell::CoreLocalCell};
 
 
 make_connector_static!(l2p, init, exit, pipe_start, ring);
@@ -51,6 +51,10 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     // Update the physical address in the request
     req.physical_addr = Some(l2p_mapper.get_mut().lookup(req.logical_addr).unwrap());
     
+    let pipe_1 = ssd_os_get_connection(c"l2p", c"l2p_media_manager");
+    //SET THE CTX
+    // entry.set_ctx(req);
+    return pipe_1;
     
     println!("L2P_PIPE_START: {:?}", l2p_mapper.get_mut().lookup(req.logical_addr));
     println!("Endtry: {:?}", entry);
