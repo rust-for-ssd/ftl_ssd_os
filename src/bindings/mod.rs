@@ -5,3 +5,4 @@ pub mod lring;
 pub mod mem;
 pub mod safe;
 pub mod stages;
+pub mod symbols;
