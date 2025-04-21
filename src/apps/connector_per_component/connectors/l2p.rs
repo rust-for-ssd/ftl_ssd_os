@@ -1,6 +1,6 @@
 use core::ptr::null_mut;
 
-use crate::{allocator::sdd_os_alloc::SimpleAllocator, bindings::{generated::{lring_entry, pipeline}, lring::{LRing, LRingErr}, mem::MemoryRegion, safe::ssd_os_sleep, symbols::memmove}, l2p::l2p::L2pMapper, make_connector_static, println, shared::core_local_cell::CoreLocalCell};
+use crate::{allocator::sdd_os_alloc::SimpleAllocator, apps::connector_per_component::connectors::requester::Request, bindings::{generated::{lring_entry, pipeline}, lring::{LRing, LRingErr}, mem::MemoryRegion, safe::ssd_os_sleep, symbols::memmove}, l2p::l2p::L2pMapper, make_connector_static, println, shared::core_local_cell::CoreLocalCell};
 
 
 make_connector_static!(l2p, init, exit, pipe_start, ring);
@@ -37,9 +37,18 @@ fn exit() -> ::core::ffi::c_int {
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     println!("L2P_PIPE_START");
-    println!("L2P_PIPE_START: {:?}", l2p_mapper.get_mut().lookup(0x1));
-    println!("Endtry: {:?}", entry);
+    // println!("L2P_PIPE_START: {:?}", l2p_mapper.get_mut().lookup(0x1));
     ssd_os_sleep(1);
+
+    let Ok(res) = lring.dequeue_as_mut(entry) else {
+        return null_mut();
+    };
+    let Some(req) = res.get_ctx_as_ref::<Request>() else {
+        return null_mut();
+    };
+    
+    println!("L2P_PIPE_START: {:?}", l2p_mapper.get_mut().lookup(req.logical_addr));
+    println!("Endtry: {:?}", entry);
     return null_mut();
 }
 
