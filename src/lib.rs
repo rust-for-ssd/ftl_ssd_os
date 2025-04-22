@@ -17,6 +17,7 @@ pub mod provisioner;
 pub mod shared;
 pub mod l2p;
 pub mod apps;
+pub mod media_manager;
 
 #[panic_handler]
 pub fn panic(info: &core::panic::PanicInfo) -> ! {

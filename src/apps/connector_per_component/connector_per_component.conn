@@ -1,4 +1,2 @@
-volt_cpipe volt_conn,slicer_conn
-volt_spipe slicer_conn,volt_conn
 requester_l2p requester,l2p
-l2p_media_manager l2p,volt_conn
+l2p_media_manager l2p,mm
