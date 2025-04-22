@@ -38,6 +38,11 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     println!("MM_PIPE_START");
     // println!("MM_PIPE_START: {:?}", MM_mapper.get_mut().lookup(0x1));
     ssd_os_sleep(1);
+    
+    let Some(entry) = lring_entry::new(entry) else {
+               println!("NULL PTR!");
+               return null_mut();
+           };
 
     let Ok(res) = lring.dequeue_as_mut(entry) else {
         return null_mut();
@@ -45,14 +50,15 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
         return null_mut();
     };
+        
+    req.data = MM.get_mut().execute_request(req.to_owned(), None).unwrap();
     
-    Some(MM.get_mut().execute_request(req.to_owned(), None));
-    
-    // let pipe_1 = ssd_os_get_connection(c"MM", c"MM_media_manager");
+    let pipe_1 = ssd_os_get_connection(c"mm", c"media_manager_requester");
     //SET THE CTX
-    // entry.set_ctx(req);
-    // return pipe_1;
-    return null_mut();
+    entry.set_ctx(req);
+    return pipe_1;
+    
+    // return null_mut();
     
 }
 

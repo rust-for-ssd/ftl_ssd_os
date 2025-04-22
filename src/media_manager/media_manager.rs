@@ -14,29 +14,22 @@ impl<A: Allocator + 'static> MediaManager<A> {
         }
     }
     
-    pub fn execute_request(&mut self, request: Request, data: Option<Vec<u8>>) -> () {
+    pub fn execute_request(&mut self, request: Request, data: Option<Vec<u8>>) -> Result<Option<*mut u8>, ()> {
         match request.cmd {
             CommandType::READ => {
-                self.read(request);
+                println!("READ DATA SUCESSFULLY");
+                Ok(Some(self.data_buffer.as_mut_ptr()))
             }
             CommandType::WRITE => {
-                self.write(request, data);
+                println!("WROTE DATA SUCESSFULLY");
+                self.data_buffer.push(99);
+                Ok(None)
             }
             CommandType::ERASE => {
-                self.erase(request);
+                println!("WROTE DATA SUCESSFULLY");
+                Ok(None)
             }            
         }
     }
     
-    fn read(&self, request: Request) {
-        println!("READ SUCCESSFUL")
-    }
-    
-    fn write(&mut self, request: Request, data: Option<Vec<u8>>) {
-        println!("WRITE SUCCESSFUL")
-    }
-    
-    fn erase(&self, request: Request) {
-        println!("ERASE SUCCESSFUL")
-    }
 }

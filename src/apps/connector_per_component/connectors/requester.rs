@@ -28,6 +28,7 @@ pub struct Request {
     pub cmd: CommandType, 
     pub logical_addr: u32,
     pub physical_addr: Option<u32>,
+    pub data: Option<*mut u8>
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -56,23 +57,34 @@ fn init() -> ::core::ffi::c_int {
     requests.set(Vec::new_in(&ALLOC));
     requests.get_mut().push(Ok(Request {
         id: 0,
-        cmd: CommandType::READ,
+        cmd: CommandType::WRITE,
         logical_addr: 0x1,
-        physical_addr: None
+        physical_addr: None,
+        data: None
     }));
     
     requests.get_mut().push(Ok(Request {
-        id: 0,
+        id: 1,
         cmd: CommandType::READ,
         logical_addr: 0x2,
-        physical_addr: None
+        physical_addr: None,
+        data: None
     }));
     
     requests.get_mut().push(Ok(Request {
-        id: 0,
+        id: 2,
         cmd: CommandType::WRITE,
         logical_addr: 0x2,
-        physical_addr: None
+        physical_addr: None,
+        data: None
+    }));
+    
+    requests.get_mut().push(Ok(Request {
+        id: 3,
+        cmd: CommandType::READ,
+        logical_addr: 0x2,
+        physical_addr: None,
+        data: None
     }));
     
     0
@@ -86,30 +98,42 @@ fn exit() -> ::core::ffi::c_int {
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     println!("REQUESTER_PIPE_START");
     ssd_os_sleep(1);
+
     
-    let Some(entry) = lring_entry::new(entry) else {
-               println!("NULL PTR!");
-               return null_mut();
-           };
-    
-    let cur_req = requests.get_mut().get(unsafe { requestIdx });
-    unsafe { requestIdx += 1 };
-    
-    match cur_req {
-        Some(req) => {
-            println!("REQUEST: {:?}", req);
-            let pipe_1 = ssd_os_get_connection(c"requester", c"requester_l2p");
-            //SET THE CTX
-            entry.set_ctx(req);
-            return pipe_1;
-        },
-        None => {
-            println!("REQUESTER_PIPE_START: No request found");
-            return null_mut();
+    // 1 if there is a request in the ring, it means it's back around
+    let Ok(res) = lring.dequeue_as_mut(entry) else {
+        
+        // Else we make a new request to get things started
+        let Some(entry) = lring_entry::new(entry) else {
+                   println!("NULL PTR!");
+                   return null_mut();
+               };
+        
+        
+        let cur_req = requests.get_mut().get(unsafe { requestIdx });
+        unsafe { requestIdx += 1 };
+        
+        match cur_req {
+            Some(req) => {
+                println!("REQUEST: {:?}", req);
+                let pipe_1 = ssd_os_get_connection(c"requester", c"requester_l2p");
+                //SET THE CTX
+                entry.set_ctx(req);
+                return pipe_1;
+            },
+            None => {
+                println!("REQUESTER_PIPE_START: No request found");
+                return null_mut();
+            }
         }
-    }
-    
-   
+    };
+    let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
+        return null_mut();
+    };
+
+    // We read the result!
+    println!("RESULT ARRIVED BACK AROUNG: {:?}", req.data);
+    return null_mut();
     
 }
 
