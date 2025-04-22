@@ -2,9 +2,8 @@ use core::ptr::null_mut;
 
 use alloc::borrow::ToOwned;
 
-use crate::{allocator::sdd_os_alloc::SimpleAllocator, apps::connector_per_component::connectors::requester::{Request, RequestError}, bindings::{generated::{lring_entry, pipeline}, lring::{LRing, LRingErr}, mem::MemoryRegion, safe::{ssd_os_get_connection, ssd_os_sleep}, symbols::memmove}, make_connector_static, media_manager::media_manager::MediaManager, println, shared::core_local_cell::CoreLocalCell};
-
-
+use crate::{allocator::sdd_os_alloc::SimpleAllocator, bindings::{generated::{lring_entry, pipeline}, lring::{LRing, LRingErr}, mem::MemoryRegion, safe::{ssd_os_get_connection, ssd_os_sleep}, symbols::memmove}, make_connector_static, media_manager::media_manager::MediaManager, println, shared::core_local_cell::CoreLocalCell};
+use crate::requester::requester::{Request, RequestError};
 make_connector_static!(mm, init, exit, pipe_start, ring);
 
 static lring: LRing<128> = LRing::new();
