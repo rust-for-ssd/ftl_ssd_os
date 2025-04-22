@@ -14,12 +14,7 @@ impl stage {
         ) -> *mut ::core::ffi::c_void,
     ) -> Self {
         stage {
-            magic: [
-                MAGIC_STAGE.to_bytes_with_nul()[0],
-                MAGIC_STAGE.to_bytes_with_nul()[1],
-                MAGIC_STAGE.to_bytes_with_nul()[2],
-                MAGIC_STAGE.to_bytes_with_nul()[3],
-            ],
+            magic: *MAGIC_STAGE.first_chunk::<4>().unwrap(),
             name: {
                 let mut buf = [0u8; 32];
                 let s = name.to_bytes();

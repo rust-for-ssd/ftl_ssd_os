@@ -15,12 +15,7 @@ impl connector {
         ring_fn: unsafe extern "C" fn(*mut lring_entry) -> i32,
     ) -> Self {
         Self {
-            magic: [
-                MAGIC_CONNECTOR.to_bytes_with_nul()[0],
-                MAGIC_CONNECTOR.to_bytes_with_nul()[1],
-                MAGIC_CONNECTOR.to_bytes_with_nul()[2],
-                MAGIC_CONNECTOR.to_bytes_with_nul()[3],
-            ],
+            magic: *MAGIC_CONNECTOR.first_chunk::<4>().unwrap(),
             name: {
                 let mut buf = [0u8; 32];
                 let s = name.to_bytes_with_nul();

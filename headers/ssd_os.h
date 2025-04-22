@@ -7,9 +7,9 @@
 #define NULL ((void*)0)
 #endif
 
-#define MAGIC_EXTENSION "ext"
-#define MAGIC_STAGE     "stg"
-#define MAGIC_CONNECTOR "con"
+#define MAGIC_EXTENSION "ext\0"
+#define MAGIC_STAGE     "stg\0"
+#define MAGIC_CONNECTOR "con\0"
 
 #ifndef LRE
 #define LRE
@@ -103,6 +103,9 @@ void *ssd_os_mem_get      (int key);
 int   ssd_os_mem_size     (int key);
 int   ssd_os_mem_nregions (void);
 void *ssd_os_mem_cpy (void *dest, const void *src, uint32_t n);
+void ssd_os_semaphore_init (int *sem);
+void ssd_os_semaphore_lock (int *sem);
+void ssd_os_semaphore_unlock (int *sem);
 
 /* Timing */
 void ssd_os_sleep  (int sec);
