@@ -1,4 +1,4 @@
-use core::alloc::Allocator;
+use core::{alloc::Allocator, ptr::null_mut};
 use alloc::vec::Vec;
 use crate::println;
 use super::super::apps::connector_per_component::connectors::requester::{Request, CommandType};
@@ -14,20 +14,20 @@ impl<A: Allocator + 'static> MediaManager<A> {
         }
     }
     
-    pub fn execute_request(&mut self, request: Request, data: Option<Vec<u8>>) -> Result<Option<*mut u8>, ()> {
+    pub fn execute_request(&mut self, request: Request, data: Option<Vec<u8>>) -> Result<*mut u8, ()> {
         match request.cmd {
             CommandType::READ => {
                 println!("READ DATA SUCESSFULLY");
-                Ok(Some(self.data_buffer.as_mut_ptr()))
+                Ok(self.data_buffer.as_mut_ptr())
             }
             CommandType::WRITE => {
                 println!("WROTE DATA SUCESSFULLY");
                 self.data_buffer.push(99);
-                Ok(None)
+                Ok(null_mut())
             }
             CommandType::ERASE => {
                 println!("WROTE DATA SUCESSFULLY");
-                Ok(None)
+                Ok(null_mut())
             }            
         }
     }

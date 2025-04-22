@@ -1,4 +1,4 @@
-use core::ptr::null_mut;
+use core::ptr::{null, null_mut};
 
 use alloc::vec::Vec;
 
@@ -28,7 +28,7 @@ pub struct Request {
     pub cmd: CommandType, 
     pub logical_addr: u32,
     pub physical_addr: Option<u32>,
-    pub data: Option<*mut u8>
+    pub data: *mut u8
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -60,7 +60,7 @@ fn init() -> ::core::ffi::c_int {
         cmd: CommandType::WRITE,
         logical_addr: 0x1,
         physical_addr: None,
-        data: None
+        data: null_mut()
     }));
     
     requests.get_mut().push(Ok(Request {
@@ -68,7 +68,7 @@ fn init() -> ::core::ffi::c_int {
         cmd: CommandType::READ,
         logical_addr: 0x2,
         physical_addr: None,
-        data: None
+        data: null_mut()
     }));
     
     requests.get_mut().push(Ok(Request {
@@ -76,7 +76,7 @@ fn init() -> ::core::ffi::c_int {
         cmd: CommandType::WRITE,
         logical_addr: 0x2,
         physical_addr: None,
-        data: None
+        data: null_mut()
     }));
     
     requests.get_mut().push(Ok(Request {
@@ -84,7 +84,7 @@ fn init() -> ::core::ffi::c_int {
         cmd: CommandType::READ,
         logical_addr: 0x2,
         physical_addr: None,
-        data: None
+        data: null_mut()
     }));
     
     0
@@ -132,7 +132,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     };
 
     // We read the result!
-    println!("RESULT ARRIVED BACK AROUNG: {:?}", req.data);
+    println!("REQUESTER: RESULT ARRIVED BACK: {:?}", req.data);
     return null_mut();
     
 }
