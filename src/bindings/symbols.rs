@@ -7,7 +7,6 @@ pub unsafe extern "C" fn memcpy(
     src: *const ::core::ffi::c_void,
     n: u32,
 ) -> *mut ::core::ffi::c_void {
-    
     let alignment = ::core::mem::size_of::<usize>();
     let dest_usize = dest as usize;
     let src_usize = src as usize;
@@ -28,7 +27,11 @@ pub unsafe extern "C" fn memcpy(
 
 #[cfg(not(feature = "test"))]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn memmove(dst: *mut ::core::ffi::c_void, src: *const ::core::ffi::c_void, size: usize) -> *mut ::core::ffi::c_void {
+pub unsafe extern "C" fn memmove(
+    dst: *mut ::core::ffi::c_void,
+    src: *const ::core::ffi::c_void,
+    size: usize,
+) -> *mut ::core::ffi::c_void {
     use core::ptr;
 
     if dst == src.cast_mut() || size == 0 {
@@ -48,3 +51,24 @@ pub unsafe extern "C" fn memmove(dst: *mut ::core::ffi::c_void, src: *const ::co
     dst
 }
 
+#[cfg(not(feature = "test"))]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn memset(
+    dst: *mut ::core::ffi::c_void,
+    value: ::core::ffi::c_int,
+    size: usize,
+) -> *mut ::core::ffi::c_void {
+    use core::ptr;
+
+    let mut ptr = dst as *mut u8;
+    let byte = value as u8;
+
+    for _ in 0..size {
+        unsafe {
+            ptr::write(ptr, byte);
+            ptr = ptr.add(1);
+        }
+    }
+
+    dst
+}

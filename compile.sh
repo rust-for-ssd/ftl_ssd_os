@@ -16,5 +16,10 @@ if riscv32-none-elf-nm ftl_ssd_os*.o | grep -q "this_doesnt_exist"; then
 fi
 
 find . -type f -name "ftl_ssd_os*.o" -exec cp {} "$SSD_OS_PATH/app/programs/build_rs/rs_ftl.o" \;
+
+./conn_checker.sh "src/apps/$APP_NAME/connectors.conn" || exit 1
+./pipe_checker.sh "src/apps/$APP_NAME/pipelines.pipe" || exit 1
+./pipe_name_checker.sh "src/apps/$APP_NAME/connectors.conn" "src/apps/$APP_NAME/pipelines.pipe" || exit 1
+
 cp "src/apps/$APP_NAME/connectors.conn" "$SSD_OS_PATH/app/programs/rs_ftl.conn"
 cp "src/apps/$APP_NAME/pipelines.pipe" "$SSD_OS_PATH/app/programs/rs_ftl.pipe"
