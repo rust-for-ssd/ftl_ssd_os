@@ -2,6 +2,7 @@ use core::ffi::{CStr, c_void};
 
 use super::generated::{ssd_os_mem_get, ssd_os_mem_size, ssd_os_this_cpu};
 
+#[derive(Debug)]
 pub struct MemoryRegion {
     start: *mut c_void,
     pub end: *mut c_void,
@@ -11,6 +12,16 @@ pub struct MemoryRegion {
 impl MemoryRegion {
     pub fn new(owner: &CStr) -> Self {
         let cpu = unsafe { ssd_os_this_cpu(owner.as_ptr().cast_mut()) };
+        let start = unsafe { ssd_os_mem_get(cpu) };
+        let end = unsafe { start.byte_add(ssd_os_mem_size(cpu) as usize) };
+        Self {
+            start,
+            end,
+            free_start: start,
+        }
+    }
+    
+    pub fn new_from_cpu(cpu: i32) -> Self {
         let start = unsafe { ssd_os_mem_get(cpu) };
         let end = unsafe { start.byte_add(ssd_os_mem_size(cpu) as usize) };
         Self {
