@@ -31,25 +31,30 @@ fn context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_voi
         Ok(ref mut request) => {
             println!("L2P_MM_STAGE: {:?}", request);
             // TRANSFORM TO CMD THAT MM UNDERSTANDS
-            ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
+            // ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
             
-            let geo: MaybeUninit<nvm_mmgr_geometry> = MaybeUninit::uninit();
+            // let geo: MaybeUninit<nvm_mmgr_geometry> = MaybeUninit::uninit();
            
-            unsafe { volt_get_geometry(geo.as_ptr().cast_mut()) };
+            // unsafe { volt_get_geometry(geo.as_ptr().cast_mut()) };
            
-            let geo = unsafe { geo.assume_init() };
+            // let geo = unsafe { geo.assume_init() };
             
-            println!("GEO: {:?}", geo);
+            // println!("GEO: {:?}", geo);
             
+            // TODO WHEN IVAN ANSWERS 
             // let b = Box::new_in(nvm_mmgr_io_cmd { 
-            //     nvm_io: todo!(), 
-            //     ppa: nvm_ppa_addr{ __bindgen_anon_1: nvm_ppa_addr__bindgen_ty_1{ppa: 0x1}  }, ch: todo!(), 
-            //     callback: todo!(), prp: todo!(), 
-            //     md_prp: todo!(), status: 0x2,
-            //     cmdtype: todo!(), pg_index: 0, 
-            //     pg_sz: todo!(), n_sectors: todo!(), 
-            //     sec_sz: todo!(), md_sz: todo!(), 
-            //     sec_offset: todo!(), 
+            //     nvm_io: null_mut(), 
+            //     ppa: nvm_ppa_addr{ __bindgen_anon_1: nvm_ppa_addr__bindgen_ty_1{ppa: request.physical_addr.unwrap()}  },
+            //     ch: todo!(), 
+            //     callback: todo!(),
+            //     prp: todo!(), 
+            //     md_prp: todo!(),
+            //     status: 0x2,
+            //     cmdtype: 1, //todo
+            //     pg_index: 0, 
+            //     pg_sz: geo.pg_size, n_sectors: (geo.pg_size / geo.sec_size) as u16, 
+            //     sec_sz: geo.sec_size, md_sz: geo.pg_oob_sz, 
+            //     sec_offset: 0, 
             //     force_sync_md: todo!(), 
             //     force_sync_data: todo!(), 
             //     sync_count: todo!(), 
@@ -58,6 +63,8 @@ fn context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_voi
             // CMD.set(b);
             // let ptr = Box::into_raw(*CMD.get()) as *mut ::core::ffi::c_void;
             // ptr
+            println!("Just propagates for now....");
+
             context
         }
         Err(ref err) => {

@@ -68,6 +68,13 @@ fn init() -> ::core::ffi::c_int {
         physical_addr: None
     }));
     
+    requests.get_mut().push(Ok(Request {
+        id: 0,
+        cmd: CommandType::WRITE,
+        logical_addr: 0x2,
+        physical_addr: None
+    }));
+    
     0
 }
 
