@@ -1,2 +1,3 @@
 requester_l2p requester,l2p
 l2p_media_manager l2p,mm
+media_manager_requester mm,requester
