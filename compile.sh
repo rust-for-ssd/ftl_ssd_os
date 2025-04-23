@@ -5,6 +5,7 @@ SSD_OS_PATH=${SSD_OS_PATH:-../ssd_os}
 APP_NAME=${APP_NAME:-"connector_per_component"}
 
 
+
 rm *.o
 # cargo clean
 cargo b --profile small
@@ -23,3 +24,5 @@ find . -type f -name "ftl_ssd_os*.o" -exec cp {} "$SSD_OS_PATH/app/programs/buil
 
 cp "src/apps/$APP_NAME/connectors.conn" "$SSD_OS_PATH/app/programs/rs_ftl.conn"
 cp "src/apps/$APP_NAME/pipelines.pipe" "$SSD_OS_PATH/app/programs/rs_ftl.pipe"
+
+echo "$APP_NAME"
