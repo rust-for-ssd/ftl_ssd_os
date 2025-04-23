@@ -40,14 +40,8 @@ fn init_mm() -> ::core::ffi::c_int {
     println!("{:?}", mem_region.end);
 
     MM_ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-    let geo = Geometry{
-        n_pages: 2,
-        n_of_ch: 44,
-        lun_per_ch: 44,
-        blk_per_lun: 44,
-        pg_per_blk: 44,
-    };
-    MM.set(MediaManager::new(&MM_ALLOC, geo));
+
+    MM.set(MediaManager::new(&MM_ALLOC));
 
     0
 }
