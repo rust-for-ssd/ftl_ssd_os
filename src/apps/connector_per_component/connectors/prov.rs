@@ -1,28 +1,33 @@
-use core::ptr::null_mut;
+use core::{mem::MaybeUninit, ptr::null_mut};
 
 use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,
     bindings::{
-        generated::{lring_entry, pipeline},
+        generated::{
+            lring_entry, nvm_mmgr_geometry, nvm_mmgr_set_ch_info, nvm_ppa_addr, pipeline,
+            volt_get_geometry,
+        },
         lring::{LRing, LRingErr},
         mem::MemoryRegion,
         safe::{ssd_os_get_connection, ssd_os_sleep},
     },
     l2p::l2p::L2pMapper,
     make_connector_static, println,
+    provisioner::provisioner::Provisioner,
     requester::requester::{CommandType, Request, RequestError},
     shared::core_local_cell::CoreLocalCell,
 };
 
-make_connector_static!(l2p, init, exit, pipe_start, ring);
+make_connector_static!(prov, init, exit, pipe_start, ring);
 
 static lring: LRing<128> = LRing::new();
 static ALLOC: SimpleAllocator = SimpleAllocator::new();
-static l2p_mapper: CoreLocalCell<L2pMapper<SimpleAllocator>> = CoreLocalCell::new();
+static provisioner: CoreLocalCell<Provisioner<SimpleAllocator>> = CoreLocalCell::new();
+// static l2p_mapper: CoreLocalCell<L2pMapper<SimpleAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
     println!("L2P_INIT");
-    let mut mem_region = MemoryRegion::new_from_cpu(2);
+    let mut mem_region = MemoryRegion::new_from_cpu(3);
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
     let Ok(()) = lring.init(c"L2P_LRING", mem_region.free_start, 0) else {
@@ -33,9 +38,13 @@ fn init() -> ::core::ffi::c_int {
 
     println!("L2P_LRING_INIT");
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-    l2p_mapper.set(L2pMapper::new(&ALLOC));
-    l2p_mapper.get_mut().map(0x1, 0x1234);
-    l2p_mapper.get_mut().map(0x2, 0x1111);
+
+    let geo: MaybeUninit<nvm_mmgr_geometry> = MaybeUninit::zeroed();
+    unsafe {
+        volt_get_geometry(geo.as_ptr().cast_mut());
+    }
+    let geo = unsafe { geo.assume_init() };
+    provisioner.set(Provisioner::new(&geo, &ALLOC));
 
     0
 }
@@ -47,7 +56,6 @@ fn exit() -> ::core::ffi::c_int {
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     println!("L2P_PIPE_START");
-    // println!("L2P_PIPE_START: {:?}", l2p_mapper.get_mut().lookup(0x1));
     ssd_os_sleep(1);
 
     println!("A");
@@ -59,28 +67,17 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
         return null_mut();
     };
 
-    println!("C");
-    match req.cmd {
-        CommandType::READ => {
-            req.physical_addr = l2p_mapper.get_mut().lookup(req.logical_addr);
-            return ssd_os_get_connection(c"l2p", c"l2p_media_manager");
-        }
-        CommandType::WRITE if req.physical_addr.is_some() => {
-            // WARNING: ASSUMING that the physical addr is only set from the provisioner in the write path.
-            l2p_mapper
-                .get_mut()
-                .map(req.logical_addr, req.physical_addr.unwrap());
+    let Ok(ppa) = provisioner.get_mut().provision_page() else {
+        println!("COULD NOT PROVISION!");
+        return null_mut();
+    };
 
-            return ssd_os_get_connection(c"l2p", c"l2p_media_manager");
-        }
-        CommandType::WRITE if req.physical_addr.is_none() => {
-            return ssd_os_get_connection(c"l2p", c"l2p_prov");
-        }
-        _ => {
-            println!("UNEXPECTED MATCH IN L2P");
-            return null_mut();
-        }
-    }
+    let nvm_ppa: nvm_ppa_addr = ppa.into();
+
+    // TODO: problem because we cannot work with u64 as per 23/5
+    req.physical_addr = Some(unsafe { nvm_ppa.__bindgen_anon_1.ppa } as u32);
+
+    return ssd_os_get_connection(c"prov", c"prov_l2p");
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
