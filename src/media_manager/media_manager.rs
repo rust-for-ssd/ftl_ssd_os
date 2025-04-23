@@ -29,30 +29,34 @@ impl<A: Allocator + 'static> MediaManager<A> {
     pub fn execute_request(&mut self, request: &Request) -> Result<*mut mm_page, MM_ERR> {
         match request.cmd {
             CommandType::READ => {
-                println!("READ DATA SUCESSFULLY");
                 let Some(ppa) = request.physical_addr else {
                     return Err(MM_ERR::NoPPAInReq);
                 };
                 let Some(res) = self.data_buffer.get(&ppa) else {
                     return Err(MM_ERR::PPANotFound);
                 };
+                println!("READ DATA SUCESSFULLY");
                 Ok(res.as_ptr().cast_mut().cast())
             }
             CommandType::WRITE => {
-                println!("WROTE DATA SUCESSFULLY");
+                
+                let Some(ppa) = request.physical_addr else {
+                    return Err(MM_ERR::NoPPAInReq);
+                };
 
                 self.data_buffer
-                    .insert(request.physical_addr.unwrap(), unsafe {
+                    .insert(ppa, unsafe {
                         *request.data.clone()
                     });
+                println!("WROTE DATA SUCESSFULLY");
                 Ok(null_mut())
             }
             CommandType::ERASE => {
-                println!("WROTE DATA SUCESSFULLY");
                 let Some(ppa) = request.physical_addr else {
                     return Err(MM_ERR::NoPPAInReq);
                 };
                 self.data_buffer.remove(&ppa);
+                println!("ERASED DATA SUCESSFULLY");
                 Ok(null_mut())
             }
         }
