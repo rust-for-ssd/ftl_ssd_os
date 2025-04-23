@@ -65,3 +65,9 @@ impl From<PhysicalPageAddress> for nvm_ppa_addr {
         ppa
     }
 }
+
+impl From<PhysicalPageAddress> for u32 {
+    fn from(ppa: PhysicalPageAddress) -> Self {
+        ppa.channel as u32 + ppa.lun as u32 + ppa.plane as u32 + ppa.block as u32 + ppa.page as u32
+    }
+}

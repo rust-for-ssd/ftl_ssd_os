@@ -10,11 +10,13 @@ use crate::{
         mem::MemoryRegion,
         safe::{ssd_os_get_connection, ssd_os_sleep},
     },
-    make_connector_static, println,
+    make_connector_static,
+    media_manager::media_manager::mm_page,
+    println,
     shared::core_local_cell::CoreLocalCell,
 };
 
-use crate::requester::requester::{Request, RequestError, CommandType};
+use crate::requester::requester::{CommandType, Request, RequestError};
 
 make_connector_static!(requester, init, exit, pipe_start, ring);
 
@@ -23,6 +25,9 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static requests: CoreLocalCell<Vec<Result<Request, RequestError>, &SimpleAllocator>> =
     CoreLocalCell::new();
 static mut requestIdx: usize = 0;
+
+static write_arr_1: mm_page = [42, 69];
+static write_arr_2: mm_page = [66, 13];
 
 fn init() -> ::core::ffi::c_int {
     println!("REQUESTER_INIT");
@@ -44,21 +49,21 @@ fn init() -> ::core::ffi::c_int {
         cmd: CommandType::WRITE,
         logical_addr: 0x1,
         physical_addr: None,
-        data: null_mut(),
+        data: write_arr_1.as_ptr().cast_mut().cast(),
     }));
 
     requests.get_mut().push(Ok(Request {
         id: 1,
-        cmd: CommandType::READ,
+        cmd: CommandType::WRITE,
         logical_addr: 0x2,
         physical_addr: None,
-        data: null_mut(),
+        data: write_arr_2.as_ptr().cast_mut().cast(),
     }));
 
     requests.get_mut().push(Ok(Request {
         id: 2,
-        cmd: CommandType::WRITE,
-        logical_addr: 0x2,
+        cmd: CommandType::READ,
+        logical_addr: 0x1,
         physical_addr: None,
         data: null_mut(),
     }));
@@ -113,21 +118,35 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     };
 
     // We read the result!
-    println!("REQUESTER: RESULT ARRIVED BACK DATA POINTER: {:?}", req.data);
-    
+    println!(
+        "REQUESTER: RESULT ARRIVED BACK DATA POINTER: {:?}",
+        req.data
+    );
+
     if (req.data.is_null()) {
         return null_mut();
     }
-    
-    println!("REQUESTER: RESULT ARRIVED BACK DATA VALUE: {:?}", unsafe {req.data});
-    
+
+    println!("REQUESTER: RESULT ARRIVED BACK DATA VALUE: {:?}", unsafe {
+        req.data.as_ref().unwrap()
+    });
+
     return null_mut();
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
     println!("REQUESTER_LRING");
     match lring.enqueue(entry) {
-        Ok(()) => 0,
+        Ok(()) => {
+            let res = lring_entry::new(entry).unwrap();
+            let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
+                return 0;
+            };
+            unsafe {
+                println!("request data is: {:?}", req.data.as_ref());
+            }
+            0
+        }
         Err(LRingErr::Enqueue(i)) => i,
         _ => {
             println!("DID NOT MATCH RES FROM ENQUEUE!");

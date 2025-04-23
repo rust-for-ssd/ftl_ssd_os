@@ -2,6 +2,7 @@ use core::ptr::null_mut;
 
 use alloc::borrow::ToOwned;
 
+use crate::media_manager::media_manager::Geometry;
 use crate::requester::requester::{Request, RequestError};
 use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,
@@ -62,7 +63,11 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
         return null_mut();
     };
 
-    req.data = MM.get_mut().execute_request(req).unwrap();
+    let Ok(res) = MM.get_mut().execute_request(req) else {
+        println!("MM ERROR!: {:?}", MM.get_mut().execute_request(req));
+        return null_mut();
+    };
+    req.data = res;
 
     let pipe_1 = ssd_os_get_connection(c"mm", c"media_manager_requester");
     //SET THE CTX
