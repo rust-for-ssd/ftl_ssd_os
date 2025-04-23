@@ -2,7 +2,6 @@ use core::ptr::{null, null_mut};
 
 use alloc::vec::Vec;
 
-<<<<<<< HEAD
 use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,
     bindings::{
@@ -16,10 +15,9 @@ use crate::{
     println,
     shared::core_local_cell::CoreLocalCell,
 };
-=======
-use crate::{allocator::sdd_os_alloc::SimpleAllocator, bindings::{generated::{lring_entry, pipeline}, lring::{LRing, LRingErr}, mem::MemoryRegion, safe::{ssd_os_get_connection, ssd_os_sleep}}, make_connector_static, println, shared::core_local_cell::CoreLocalCell};
-use crate::media_manager::media_manager::mm_page;
->>>>>>> fd5ac8a (work on write path)
+
+use crate::requester::requester::{Request, RequestError, CommandType};
+
 
 make_connector_static!(requester1, init, exit, pipe_start, ring);
 
@@ -28,32 +26,6 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static requests: CoreLocalCell<Vec<Result<Request, RequestError>, &SimpleAllocator>> =
     CoreLocalCell::new();
 static mut requestIdx: usize = 0;
-
-#[derive(Debug, Clone, Copy)]
-pub enum CommandType {
-    READ,
-    WRITE,
-    ERASE,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Request {
-    pub id: u32,
-    pub cmd: CommandType,
-    pub logical_addr: u32,
-    pub physical_addr: Option<u32>,
-<<<<<<< HEAD
-    pub data: *mut mm_page,
-=======
-    pub data: *mut mm_page
->>>>>>> fd5ac8a (work on write path)
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum RequestError {
-    ConnectorError,
-    StageError,
-}
 
 fn init() -> ::core::ffi::c_int {
     println!("REQUESTER_INIT");
