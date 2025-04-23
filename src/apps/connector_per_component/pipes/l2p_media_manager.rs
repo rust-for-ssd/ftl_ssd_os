@@ -4,7 +4,6 @@ use alloc::boxed::Box;
 
 use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,
-    apps::connector_per_component::connectors::requester::{Request, RequestError},
     bindings::{
         generated::{
             NVM_IO_PROCESS, nvm_callback, nvm_channel, nvm_mmgr_geometry, nvm_mmgr_io_cmd,
@@ -13,6 +12,7 @@ use crate::{
         mem::MemoryRegion,
     },
     make_stage_static, println,
+    requester::requester::{Request, RequestError},
     shared::core_local_cell::CoreLocalCell,
 };
 
