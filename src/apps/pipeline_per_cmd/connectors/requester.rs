@@ -72,7 +72,7 @@ fn init() -> ::core::ffi::c_int {
     requests.get_mut().push(Ok(Request {
         id: 1,
         cmd: CommandType::READ,
-        logical_addr: 0x2,
+        logical_addr: 0x1,
         physical_addr: None,
         data: null_mut(),
     }));
@@ -135,7 +135,14 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     };
 
     // We read the result!
-    println!("REQUESTER: RESULT ARRIVED BACK: {:?}", req.data);
+    println!("REQUESTER: RESULT ARRIVED BACK POINTER: {:?}", req.data);
+    
+    if (req.data.is_null()) {
+        return null_mut();
+    }
+    
+    println!("REQUESTER: RESULT ARRIVED BACK DATA: {:?}", unsafe {*req.data});
+
     return null_mut();
 }
 
