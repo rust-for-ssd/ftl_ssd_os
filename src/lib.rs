@@ -10,15 +10,15 @@
 
 extern crate alloc;
 
-pub mod requester;
-pub mod media_manager;
-pub mod allocator;
-pub mod bbt;
-pub mod bindings;
-pub mod provisioner;
-pub mod shared;
-pub mod l2p;
+pub(crate) mod allocator;
 pub mod apps;
+pub(crate) mod bbt;
+pub(crate) mod bindings;
+pub(crate) mod l2p;
+// pub(crate) mod media_manager;
+pub(crate) mod provisioner;
+pub(crate) mod requester;
+pub(crate) mod shared;
 
 #[panic_handler]
 pub fn panic(info: &core::panic::PanicInfo) -> ! {

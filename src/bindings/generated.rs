@@ -169,9 +169,9 @@ pub const NVM_IO_NORMAL: u32 = 0;
 pub const NVM_IO_RESERVED: u32 = 1;
 pub const NVM_CMD_ADMIN: u32 = 0;
 pub const NVM_CMD_IO: u32 = 1;
-pub const MAGIC_EXTENSION: &::core::ffi::CStr = c"ext";
-pub const MAGIC_STAGE: &::core::ffi::CStr = c"stg";
-pub const MAGIC_CONNECTOR: &::core::ffi::CStr = c"con";
+pub const MAGIC_EXTENSION: &[u8; 5] = b"ext\0\0";
+pub const MAGIC_STAGE: &[u8; 5] = b"stg\0\0";
+pub const MAGIC_CONNECTOR: &[u8; 5] = b"con\0\0";
 pub const TICKS_SEC: u32 = 10000000;
 pub const TICKS_MSEC: u32 = 10000;
 pub const TICKS_USEC: u32 = 10;
@@ -1291,6 +1291,9 @@ unsafe extern "C" {
         src: *const ::core::ffi::c_void,
         n: u32,
     ) -> *mut ::core::ffi::c_void;
+    pub fn ssd_os_semaphore_init(sem: *mut ::core::ffi::c_int);
+    pub fn ssd_os_semaphore_lock(sem: *mut ::core::ffi::c_int);
+    pub fn ssd_os_semaphore_unlock(sem: *mut ::core::ffi::c_int);
     pub fn ssd_os_sleep(sec: ::core::ffi::c_int);
     pub fn ssd_os_msleep(msec: ::core::ffi::c_int);
     pub fn ssd_os_usleep(usec: ::core::ffi::c_int);
