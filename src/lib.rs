@@ -10,12 +10,12 @@
 
 extern crate alloc;
 
+pub(crate) mod media_manager;
 pub(crate) mod allocator;
 pub mod apps;
 pub(crate) mod bbt;
 pub(crate) mod bindings;
 pub(crate) mod l2p;
-pub(crate) mod media_manager;
 pub(crate) mod provisioner;
 pub(crate) mod requester;
 pub(crate) mod shared;

@@ -2,11 +2,11 @@ use core::alloc::Allocator;
 
 use alloc::{collections::VecDeque, vec::Vec};
 
-use crate::{
-    bindings::generated::nvm_mmgr_geometry,
-    println,
-    shared::addresses::{PhysicalBlockAddress, PhysicalPageAddress},
+use crate::{shared::addresses::{PhysicalBlockAddress, PhysicalPageAddress}
 };
+
+use crate::media_manager::media_manager::Geometry;
+
 
 #[derive(Debug)]
 pub struct Provisioner<A: Allocator + 'static> {
@@ -62,7 +62,7 @@ pub enum ProvisionError {
 }
 
 impl<A: Allocator + 'static> Provisioner<A> {
-    pub fn new(geometry: &nvm_mmgr_geometry, alloc: &'static A) -> Self {
+    pub fn new(geometry: &Geometry, alloc: &'static A) -> Self {
         let mut channels: Vec<Channel<A>, &A> =
             Vec::with_capacity_in(geometry.n_of_ch as usize, alloc);
 
