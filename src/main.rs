@@ -40,12 +40,15 @@ fn main() -> ! {
 
 extern crate alloc;
 
-pub mod allocator;
-pub mod bbt;
-mod bindings;
-pub mod provisioner;
-pub mod shared;
-pub mod l2p;
+pub(crate) mod media_manager;
+pub(crate) mod allocator;
+pub mod apps;
+pub(crate) mod bbt;
+pub(crate) mod bindings;
+pub(crate) mod l2p;
+pub(crate) mod provisioner;
+pub(crate) mod requester;
+pub(crate) mod shared;
 
 #[cfg(test)]
 mod tests;
