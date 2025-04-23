@@ -74,7 +74,7 @@ fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_
     if let Ok(request) = req {
         // println!("L2P_READ_STAGE: {:?}", request);
         // Modify the value behind the context pointer 
-        request.data = MM.get_mut().execute_request(request, None).unwrap();
+        request.data = MM.get_mut().execute_request(request).unwrap();
     }
 
     // println!("REQUESTER TO L2P STAGE: {:?}", unsafe {*req});

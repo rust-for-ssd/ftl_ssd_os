@@ -6,7 +6,7 @@ use crate::{
 use alloc::{collections::BTreeMap, vec::Vec};
 use core::{alloc::Allocator, ptr::null_mut};
 
-pub type mm_page = [u8; 64];
+pub type mm_page = [u8; 2];
 
 pub struct MediaManager<A: Allocator + 'static> {
     data_buffer: BTreeMap<PhysicalAddr, mm_page, &'static A>,
@@ -26,7 +26,7 @@ impl<A: Allocator + 'static> MediaManager<A> {
         }
     }
 
-    pub fn execute_request(&mut self, request: &Request) -> Result<*mut u8, MM_ERR> {
+    pub fn execute_request(&mut self, request: &Request) -> Result<*mut mm_page, MM_ERR> {
         match request.cmd {
             CommandType::READ => {
                 println!("READ DATA SUCESSFULLY");
@@ -36,7 +36,7 @@ impl<A: Allocator + 'static> MediaManager<A> {
                 let Some(res) = self.data_buffer.get(&ppa) else {
                     return Err(MM_ERR::PPANotFound);
                 };
-                Ok(res.as_ptr().cast_mut())
+                Ok(res.as_ptr().cast_mut().cast())
             }
             CommandType::WRITE => {
                 println!("WROTE DATA SUCESSFULLY");

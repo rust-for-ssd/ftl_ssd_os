@@ -14,6 +14,8 @@ use crate::{
     shared::core_local_cell::CoreLocalCell,
 };
 
+use crate::requester::requester::{Request, RequestError, CommandType};
+
 make_connector_static!(requester, init, exit, pipe_start, ring);
 
 static lring: LRing<128> = LRing::new();
@@ -21,28 +23,6 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static requests: CoreLocalCell<Vec<Result<Request, RequestError>, &SimpleAllocator>> =
     CoreLocalCell::new();
 static mut requestIdx: usize = 0;
-
-#[derive(Debug, Clone, Copy)]
-pub enum CommandType {
-    READ,
-    WRITE,
-    ERASE,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Request {
-    pub id: u32,
-    pub cmd: CommandType,
-    pub logical_addr: u32,
-    pub physical_addr: Option<u32>,
-    pub data: *mut u8,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum RequestError {
-    ConnectorError,
-    StageError,
-}
 
 fn init() -> ::core::ffi::c_int {
     println!("REQUESTER_INIT");
