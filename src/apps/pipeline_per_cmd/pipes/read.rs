@@ -19,7 +19,7 @@ make_stage_static!(read_mm, init_mm, exit, mm_context_handler);
 
 fn init_l2p() -> ::core::ffi::c_int {
     ssd_os_sleep(1);
-    println!("INIT: L2P STAGE");
+    println!("READ: INIT: L2P STAGE");
     let mem_region = MemoryRegion::new_from_cpu(1);
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
@@ -34,7 +34,7 @@ fn init_l2p() -> ::core::ffi::c_int {
 
 fn init_mm() -> ::core::ffi::c_int {
     ssd_os_sleep(1);
-    println!("INIT: MM STAGE");
+    println!("READ: INIT: MM STAGE");
     let mem_region = MemoryRegion::new_from_cpu(2);
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
