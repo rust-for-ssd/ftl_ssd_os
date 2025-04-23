@@ -1,9 +1,11 @@
+use core::ptr::null_mut;
+
 use crate::allocator::sdd_os_alloc::SimpleAllocator;
 use crate::bindings::generated::nvm_mmgr_geometry;
 use crate::bindings::mem::MemoryRegion;
 use crate::bindings::safe::ssd_os_sleep;
 use crate::l2p::l2p::L2pMapper;
-use crate::media_manager::media_manager::MediaManager;
+use crate::media_manager::media_manager::{Geometry, MediaManager};
 use crate::provisioner::provisioner::Provisioner;
 use crate::shared::addresses::PhysicalBlockAddress;
 use crate::shared::core_local_cell::CoreLocalCell;
@@ -38,9 +40,15 @@ fn init_prov() -> ::core::ffi::c_int {
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
     PROV_ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-
     
-    PROVISIONER.set(Provisioner::new(&MM.get().geometry, &PROV_ALLOC));
+    
+    PROVISIONER.set(Provisioner::new(&Geometry {
+        n_pages: 16,
+        n_of_ch: 4,
+        lun_per_ch: 8,
+        blk_per_lun: 16,
+        pg_per_blk: 8,
+    }, &PROV_ALLOC));
     
     let example_free_block = PhysicalBlockAddress { channel: 1, lun: 1, plane: 1, block: 1 };
     
@@ -69,7 +77,14 @@ fn prov_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::
     if let Ok(request) = req {
         // println!("L2P_WRITE_STAGE: {:?}", request);
         // Modify the value behind the context pointer
-        request.physical_addr = Some(PROVISIONER.get_mut().provision_page().unwrap().into());
+        // request.physical_addr = PROVISIONER.get_mut().provision_page().unwrap().into();
+        
+        let Ok(ppa) = PROVISIONER.get_mut().provision_page() else {
+            println!("COULD NOT PROVISION!");
+            return null_mut();
+        };
+        
+        request.physical_addr = Some(ppa.into());
     }
     context
 }
@@ -81,11 +96,20 @@ fn l2p_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c
 
     // TEST WE CAN GET IT
     // let res = L2P_MAPPER.get_mut().lookup(0x1);
-    let Some(res) = L2P_MAPPER.get_mut().lookup(0x1) else {
-        return context;
-    };
+    let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
 
-    println!("RES {:?}", res);
+    if let Ok(request) = req {
+        // println!("L2P_WRITE_STAGE: {:?}", request);
+        // Modify the value behind the context pointer
+        L2P_MAPPER.get_mut().map(request.logical_addr, request.physical_addr.unwrap());
+    }
+    
+    
+    // let Some(res) = L2P_MAPPER.get_mut().map() else {
+    //     return context;
+    // };
+
+    // println!("RES {:?}", res);
 
     // let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
 
@@ -113,5 +137,14 @@ fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_
     // println!("REQUESTER TO L2P STAGE: {:?}", unsafe {*req});
 
     // We just propagete the context here.
+    
+    let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
+    
+    if let Ok(request) = req {
+        // println!("L2P_READ_STAGE: {:?}", request);
+        // Modify the value behind the context pointer 
+        request.data = MM.get_mut().execute_request(request).unwrap();
+    }
+    
     context
 }

@@ -51,13 +51,13 @@ fn init() -> ::core::ffi::c_int {
         data: data_to_write.as_ptr().cast_mut().cast(),
     }));
 
-    // requests.get_mut().push(Ok(Request {
-    //     id: 1,
-    //     cmd: CommandType::READ,
-    //     logical_addr: 0x1,
-    //     physical_addr: None,
-    //     data: null_mut(),
-    // }));
+    requests.get_mut().push(Ok(Request {
+        id: 1,
+        cmd: CommandType::READ,
+        logical_addr: 0x1,
+        physical_addr: None,
+        data: null_mut(),
+    }));
 
     // requests.get_mut().push(Ok(Request {
     //     id: 2,
