@@ -59,6 +59,21 @@ fn exit() -> ::core::ffi::c_int {
     0
 }
 
+fn prov_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
+    ssd_os_sleep(1);
+    println!("WRITE: PROV STAGE");
+    // We just propagete the context here.
+
+    let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
+
+    if let Ok(request) = req {
+        // println!("L2P_WRITE_STAGE: {:?}", request);
+        // Modify the value behind the context pointer
+        request.physical_addr = Some(PROVISIONER.get_mut().provision_page().unwrap().into());
+    }
+    context
+}
+
 fn l2p_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     ssd_os_sleep(1);
     println!("WRITE: L2P STAGE");
@@ -71,21 +86,6 @@ fn l2p_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c
     };
 
     println!("RES {:?}", res);
-
-    // let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
-
-    // if let Ok(request) = req {
-    //     // println!("L2P_WRITE_STAGE: {:?}", request);
-    //     // Modify the value behind the context pointer
-    //     request.physical_addr = Some(L2P_MAPPER.get_mut().lookup(request.logical_addr).unwrap());
-    // }
-    context
-}
-
-fn prov_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ssd_os_sleep(1);
-    println!("WRITE: PROV STAGE");
-    // We just propagete the context here.
 
     // let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
 
