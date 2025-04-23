@@ -133,7 +133,14 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     };
 
     // We read the result!
-    println!("REQUESTER: RESULT ARRIVED BACK: {:?}", req.data);
+    println!("REQUESTER: RESULT ARRIVED BACK DATA POINTER: {:?}", req.data);
+    
+    if (req.data.is_null()) {
+        return null_mut();
+    }
+    
+    println!("REQUESTER: RESULT ARRIVED BACK DATA VALUE: {:?}", unsafe {req.data});
+    
     return null_mut();
 }
 
