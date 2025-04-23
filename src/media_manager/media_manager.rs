@@ -12,6 +12,7 @@ pub struct MediaManager<A: Allocator + 'static> {
     data_buffer: BTreeMap<PhysicalAddr, mm_page, &'static A>,
 }
 
+#[derive(Debug)]
 pub enum MM_ERR {
     NoPPAInReq,
     PPANotFound,
