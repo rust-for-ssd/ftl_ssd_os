@@ -2,40 +2,49 @@ use core::ptr::{null, null_mut};
 
 use alloc::vec::Vec;
 
-use crate::{allocator::sdd_os_alloc::SimpleAllocator, bindings::{generated::{lring_entry, pipeline}, lring::{LRing, LRingErr}, mem::MemoryRegion, safe::{ssd_os_get_connection, ssd_os_sleep}}, make_connector_static, println, shared::core_local_cell::CoreLocalCell};
-
+use crate::{
+    allocator::sdd_os_alloc::SimpleAllocator,
+    bindings::{
+        generated::{lring_entry, pipeline},
+        lring::{LRing, LRingErr},
+        mem::MemoryRegion,
+        safe::{ssd_os_get_connection, ssd_os_sleep},
+    },
+    make_connector_static,
+    media_manager::media_manager::mm_page,
+    println,
+    shared::core_local_cell::CoreLocalCell,
+};
 
 make_connector_static!(requester1, init, exit, pipe_start, ring);
 
 static lring: LRing<128> = LRing::new();
 static ALLOC: SimpleAllocator = SimpleAllocator::new();
-static requests: CoreLocalCell<Vec<Result<Request, RequestError>, &SimpleAllocator>> = CoreLocalCell::new();
-static mut requestIdx : usize = 0; 
-
+static requests: CoreLocalCell<Vec<Result<Request, RequestError>, &SimpleAllocator>> =
+    CoreLocalCell::new();
+static mut requestIdx: usize = 0;
 
 #[derive(Debug, Clone, Copy)]
 pub enum CommandType {
     READ,
     WRITE,
-    ERASE
+    ERASE,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct Request {
-    pub id: u32, 
-    pub cmd: CommandType, 
+    pub id: u32,
+    pub cmd: CommandType,
     pub logical_addr: u32,
     pub physical_addr: Option<u32>,
-    pub data: *mut u8
+    pub data: *mut mm_page,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum RequestError {
-    ConnectorError, 
+    ConnectorError,
     StageError,
-} 
-
-
+}
 
 fn init() -> ::core::ffi::c_int {
     println!("REQUESTER_INIT");
@@ -51,40 +60,39 @@ fn init() -> ::core::ffi::c_int {
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
 
-    
     requests.set(Vec::new_in(&ALLOC));
     requests.get_mut().push(Ok(Request {
         id: 0,
         cmd: CommandType::WRITE,
         logical_addr: 0x1,
         physical_addr: None,
-        data: null_mut()
+        data: null_mut(),
     }));
-    
+
     requests.get_mut().push(Ok(Request {
         id: 1,
         cmd: CommandType::READ,
         logical_addr: 0x2,
         physical_addr: None,
-        data: null_mut()
+        data: null_mut(),
     }));
-    
+
     requests.get_mut().push(Ok(Request {
         id: 2,
         cmd: CommandType::WRITE,
         logical_addr: 0x2,
         physical_addr: None,
-        data: null_mut()
+        data: null_mut(),
     }));
-    
+
     requests.get_mut().push(Ok(Request {
         id: 3,
         cmd: CommandType::READ,
         logical_addr: 0x2,
         physical_addr: None,
-        data: null_mut()
+        data: null_mut(),
     }));
-    
+
     0
 }
 
@@ -97,20 +105,17 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     println!("REQUESTER_PIPE_START");
     ssd_os_sleep(1);
 
-    
     // 1 if there is a request in the ring, it means it's back around
     let Ok(res) = lring.dequeue_as_mut(entry) else {
-        
         // Else we make a new request to get things started
         let Some(entry) = lring_entry::new(entry) else {
-                   println!("NULL PTR!");
-                   return null_mut();
-               };
-        
-        
+            println!("NULL PTR!");
+            return null_mut();
+        };
+
         let cur_req = requests.get_mut().get(unsafe { requestIdx });
         unsafe { requestIdx += 1 };
-        
+
         match cur_req {
             Some(req) => {
                 println!("REQUEST: {:?}", req);
@@ -118,7 +123,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
                 //SET THE CTX
                 entry.set_ctx(req);
                 return pipe_1;
-            },
+            }
             None => {
                 println!("REQUESTER_PIPE_START: No request found");
                 return null_mut();
@@ -132,7 +137,6 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     // We read the result!
     println!("REQUESTER: RESULT ARRIVED BACK: {:?}", req.data);
     return null_mut();
-    
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
