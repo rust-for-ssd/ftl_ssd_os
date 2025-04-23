@@ -141,7 +141,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
         return null_mut();
     }
     
-    println!("REQUESTER: RESULT ARRIVED BACK DATA: {:?}", unsafe {*req.data});
+    println!("REQUESTER: RESULT ARRIVED BACK DATA VALUE: {:?}", unsafe {*req.data});
 
     return null_mut();
 }
