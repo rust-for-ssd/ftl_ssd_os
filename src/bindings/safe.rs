@@ -79,7 +79,7 @@ impl Write for SSD_OS_Printer {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         // Write in chunks, using a fixed-size buffer with space for a null terminator
         ssd_os_print_lock();
-        const BUF_SIZE: usize = 32;
+        const BUF_SIZE: usize = 256;
         static mut buffer: [u8; BUF_SIZE] = [0u8; BUF_SIZE];
 
         let mut remaining = s.as_bytes();
