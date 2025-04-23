@@ -26,6 +26,7 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static requests: CoreLocalCell<Vec<Result<Request, RequestError>, &SimpleAllocator>> =
     CoreLocalCell::new();
 static mut requestIdx: usize = 0;
+static data_to_write : [u8; 2] = [1,2];
 
 fn init() -> ::core::ffi::c_int {
     println!("REQUESTER_INIT");
@@ -47,7 +48,7 @@ fn init() -> ::core::ffi::c_int {
         cmd: CommandType::WRITE,
         logical_addr: 0x1,
         physical_addr: None,
-        data: null_mut(),
+        data: data_to_write.as_ptr().cast_mut().cast(),
     }));
 
     requests.get_mut().push(Ok(Request {
@@ -58,21 +59,21 @@ fn init() -> ::core::ffi::c_int {
         data: null_mut(),
     }));
 
-    requests.get_mut().push(Ok(Request {
-        id: 2,
-        cmd: CommandType::WRITE,
-        logical_addr: 0x2,
-        physical_addr: None,
-        data: null_mut(),
-    }));
+    // requests.get_mut().push(Ok(Request {
+    //     id: 2,
+    //     cmd: CommandType::WRITE,
+    //     logical_addr: 0x2,
+    //     physical_addr: None,
+    //     data: null_mut(),
+    // }));
 
-    requests.get_mut().push(Ok(Request {
-        id: 3,
-        cmd: CommandType::READ,
-        logical_addr: 0x2,
-        physical_addr: None,
-        data: null_mut(),
-    }));
+    // requests.get_mut().push(Ok(Request {
+    //     id: 3,
+    //     cmd: CommandType::READ,
+    //     logical_addr: 0x2,
+    //     physical_addr: None,
+    //     data: null_mut(),
+    // }));
 
     0
 }

@@ -25,4 +25,4 @@ find . -type f -name "ftl_ssd_os*.o" -exec cp {} "$SSD_OS_PATH/app/programs/buil
 cp "src/apps/$APP_NAME/connectors.conn" "$SSD_OS_PATH/app/programs/rs_ftl.conn"
 cp "src/apps/$APP_NAME/pipelines.pipe" "$SSD_OS_PATH/app/programs/rs_ftl.pipe"
 
-echo "$APP_NAME"
+echo "Built app: $APP_NAME"

@@ -57,7 +57,7 @@ fn l2p_read_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::f
     let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
     
     if let Ok(request) = req {
-        // println!("L2P_READ_STAGE: {:?}", request);
+        println!("L2P_READ_STAGE: {:?}", request);
         // Modify the value behind the context pointer 
         request.physical_addr = Some(L2P_MAPPER.get_mut().lookup(request.logical_addr).unwrap());
     }
