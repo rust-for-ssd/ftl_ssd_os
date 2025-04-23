@@ -30,4 +30,7 @@ semihosting = { version = "0.1.19", features = ["stdio"] }
 [features]
 default = []
 test = [] 
+pipeline_per_cmd = []
+connector_per_component = []
+
 
