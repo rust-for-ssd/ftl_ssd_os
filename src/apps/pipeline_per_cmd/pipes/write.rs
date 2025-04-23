@@ -8,11 +8,15 @@ use crate::{make_stage_static, println};
 
 use crate::requester::requester::{CommandType, Request, RequestError};
 
-pub static L2P_ALLOC: SimpleAllocator = SimpleAllocator::new();
-pub static L2P_MAPPER: CoreLocalCell<L2pMapper<SimpleAllocator>> = CoreLocalCell::new();
+// pub static L2P_ALLOC: SimpleAllocator = SimpleAllocator::new();
+// pub static L2P_MAPPER: CoreLocalCell<L2pMapper<SimpleAllocator>> = CoreLocalCell::new();
 
-pub static MM_ALLOC: SimpleAllocator = SimpleAllocator::new();
-pub static MM: CoreLocalCell<MediaManager<SimpleAllocator>> = CoreLocalCell::new();
+// pub static MM_ALLOC: SimpleAllocator = SimpleAllocator::new();
+// pub static MM: CoreLocalCell<MediaManager<SimpleAllocator>> = CoreLocalCell::new();
+
+use super::read::{L2P_MAPPER, MM};
+
+
 
 make_stage_static!(write_l2p, init_l2p, exit, l2p_context_handler);
 make_stage_static!(write_prov, init_prov, exit, prov_context_handler);
@@ -21,22 +25,12 @@ make_stage_static!(write_mm, init_mm, exit, mm_context_handler);
 fn init_l2p() -> ::core::ffi::c_int {
     ssd_os_sleep(1);
     println!("WRITE: INIT: L2P STAGE");
-    let mem_region = MemoryRegion::new_from_cpu(1);
-    println!("{:?}", mem_region.free_start);
-    println!("{:?}", mem_region.end);
-
-    // L2P_ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-    // L2P_MAPPER.set(L2pMapper::new(&L2P_ALLOC));
-    // L2P_MAPPER.get_mut().map(0x1, 0x1234);
-    // L2P_MAPPER.get_mut().map(0x2, 0x5555);
-
     0
 }
 
 fn init_prov() -> ::core::ffi::c_int {
     ssd_os_sleep(1);
     println!("WRITE: INIT: PROV STAGE");
-
     0
 }
 
@@ -44,13 +38,6 @@ fn init_mm() -> ::core::ffi::c_int {
 
     ssd_os_sleep(1);
     println!("WRITE: INIT: MM STAGE");
-    let mem_region = MemoryRegion::new_from_cpu(2);
-    println!("{:?}", mem_region.free_start);
-    println!("{:?}", mem_region.end);
-
-    // MM_ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-    // MM.set(MediaManager::new(&MM_ALLOC));
-
     0
 }
 
@@ -62,6 +49,14 @@ fn l2p_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c
     ssd_os_sleep(1);
     println!("WRITE: L2P STAGE");
     // We just propagete the context here.
+    
+    // TEST WE CAN GET IT 
+    // let res = L2P_MAPPER.get_mut().lookup(0x1);
+    let Some(res) = L2P_MAPPER.get_mut().lookup(0x1) else {
+        return context;
+    };
+    
+    println!("RES {:?}", res);
 
     // let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
     
