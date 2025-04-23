@@ -2,7 +2,7 @@ use crate::allocator::sdd_os_alloc::SimpleAllocator;
 use crate::bindings::mem::MemoryRegion;
 use crate::bindings::safe::ssd_os_sleep;
 use crate::l2p::l2p::L2pMapper;
-use crate::media_manager::media_manager::MediaManager;
+use crate::media_manager::media_manager::{Geometry, MediaManager};
 use crate::shared::core_local_cell::CoreLocalCell;
 use crate::{make_stage_static, println};
 
@@ -40,7 +40,14 @@ fn init_mm() -> ::core::ffi::c_int {
     println!("{:?}", mem_region.end);
 
     MM_ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-    MM.set(MediaManager::new(&MM_ALLOC));
+    let geo = Geometry{
+        n_pages: 2,
+        n_of_ch: 44,
+        lun_per_ch: 44,
+        blk_per_lun: 44,
+        pg_per_blk: 44,
+    };
+    MM.set(MediaManager::new(&MM_ALLOC, geo));
 
     0
 }
