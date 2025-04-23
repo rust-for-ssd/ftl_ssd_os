@@ -33,10 +33,14 @@ fn init() -> ::core::ffi::c_int {
 
     println!("L2P_LRING_INIT");
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
+    println!("L2P_LRING_INITEND");
     l2p_mapper.set(L2pMapper::new(&ALLOC));
+    println!("L2P_LRING_INITEND");
     l2p_mapper.get_mut().map(0x1, 0x1234);
+    println!("L2P_LRING_INITEND");
     l2p_mapper.get_mut().map(0x2, 0x1111);
 
+    println!("L2P_LRING_INITEND");
     0
 }
 
@@ -65,16 +69,18 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
             req.physical_addr = l2p_mapper.get_mut().lookup(req.logical_addr);
             return ssd_os_get_connection(c"l2p", c"l2p_media_manager");
         }
+        CommandType::WRITE if req.physical_addr.is_none() => {
+            println!("No PPA! {:?}", req);
+            return ssd_os_get_connection(c"l2p", c"l2p_prov");
+        }
         CommandType::WRITE if req.physical_addr.is_some() => {
+            println!("PPA! {:?}", req);
             // WARNING: ASSUMING that the physical addr is only set from the provisioner in the write path.
             l2p_mapper
                 .get_mut()
                 .map(req.logical_addr, req.physical_addr.unwrap());
 
             return ssd_os_get_connection(c"l2p", c"l2p_media_manager");
-        }
-        CommandType::WRITE if req.physical_addr.is_none() => {
-            return ssd_os_get_connection(c"l2p", c"l2p_prov");
         }
         _ => {
             println!("UNEXPECTED MATCH IN L2P");

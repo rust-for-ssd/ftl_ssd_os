@@ -12,10 +12,12 @@ use crate::{
         safe::{ssd_os_get_connection, ssd_os_sleep},
     },
     l2p::l2p::L2pMapper,
-    make_connector_static, println,
+    make_connector_static,
+    media_manager::media_manager::Geometry,
+    println,
     provisioner::provisioner::Provisioner,
     requester::requester::{CommandType, Request, RequestError},
-    shared::core_local_cell::CoreLocalCell,
+    shared::{addresses::PhysicalBlockAddress, core_local_cell::CoreLocalCell},
 };
 
 make_connector_static!(prov, init, exit, pipe_start, ring);
@@ -36,16 +38,32 @@ fn init() -> ::core::ffi::c_int {
     let ring = lring.get_lring().unwrap();
     mem_region.reserve(ring.alloc_mem as usize);
 
-    println!("L2P_LRING_INIT");
+    println!("PROV_LRING_INIT");
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
-    let geo: MaybeUninit<nvm_mmgr_geometry> = MaybeUninit::zeroed();
-    unsafe {
-        volt_get_geometry(geo.as_ptr().cast_mut());
-    }
-    let geo = unsafe { geo.assume_init() };
-    provisioner.set(Provisioner::new(&geo, &ALLOC));
-
+    // let geo: MaybeUninit<nvm_mmgr_geometry> = MaybeUninit::zeroed();
+    // unsafe {
+    //     volt_get_geometry(geo.as_ptr().cast_mut());
+    // }
+    // let geo = unsafe { geo.assume_init() };
+    provisioner.set(Provisioner::new(
+        &Geometry {
+            n_pages: 16,
+            n_of_ch: 4,
+            lun_per_ch: 8,
+            blk_per_lun: 16,
+            pg_per_blk: 8,
+        },
+        &ALLOC,
+    ));
+    provisioner
+        .get_mut()
+        .push_free_block(&PhysicalBlockAddress {
+            channel: 0,
+            lun: 0,
+            plane: 0,
+            block: 0,
+        });
     0
 }
 
@@ -72,10 +90,10 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
         return null_mut();
     };
 
-    let nvm_ppa: nvm_ppa_addr = ppa.into();
-
     // TODO: problem because we cannot work with u64 as per 23/5
-    req.physical_addr = Some(unsafe { nvm_ppa.__bindgen_anon_1.ppa } as u32);
+    // let nvm_ppa: nvm_ppa_addr = ppa.into();
+    // req.physical_addr = Some(unsafe { nvm_ppa.__bindgen_anon_1.ppa } as u32);
+    req.physical_addr = Some(ppa.into());
 
     return ssd_os_get_connection(c"prov", c"prov_l2p");
 }
