@@ -1,35 +1,62 @@
+use super::super::apps::connector_per_component::connectors::requester::{CommandType, Request};
+use crate::{l2p::l2p::PhysicalAddr, println};
+use alloc::{collections::BTreeMap, vec::Vec};
 use core::{alloc::Allocator, ptr::null_mut};
-use alloc::vec::Vec;
-use crate::println;
-use super::super::apps::connector_per_component::connectors::requester::{Request, CommandType};
+
+type mm_page = Vec<u8>;
 
 pub struct MediaManager<A: Allocator + 'static> {
-    data_buffer: Vec<u8, &'static A>,
+    data_buffer: BTreeMap<PhysicalAddr, mm_page, &'static A>,
+}
+
+pub enum MM_ERR {
+    NoPPAInReq,
+    PPANotFound,
+    NullDataPtr,
 }
 
 impl<A: Allocator + 'static> MediaManager<A> {
     pub fn new(alloc: &'static A) -> Self {
         MediaManager {
-            data_buffer: Vec::new_in(alloc),
+            data_buffer: BTreeMap::new_in(alloc),
         }
     }
-    
-    pub fn execute_request(&mut self, request: Request, data: Option<Vec<u8>>) -> Result<*mut u8, ()> {
+
+    pub fn execute_request(
+        &mut self,
+        request: &Request,
+        data: Option<mm_page>,
+    ) -> Result<*mut u8, MM_ERR> {
         match request.cmd {
             CommandType::READ => {
                 println!("READ DATA SUCESSFULLY");
-                Ok(self.data_buffer.as_mut_ptr())
+                let Some(ppa) = request.physical_addr else {
+                    return Err(MM_ERR::NoPPAInReq);
+                };
+                let Some(res) = self.data_buffer.get(&ppa) else {
+                    return Err(MM_ERR::PPANotFound);
+                };
+                Ok(res.as_ptr().cast_mut())
             }
             CommandType::WRITE => {
                 println!("WROTE DATA SUCESSFULLY");
-                self.data_buffer.push(99);
+
+                let Some(value) = data else {
+                    return Err(MM_ERR::NullDataPtr);
+                };
+
+                self.data_buffer
+                    .insert(request.physical_addr.unwrap(), value.clone());
                 Ok(null_mut())
             }
             CommandType::ERASE => {
                 println!("WROTE DATA SUCESSFULLY");
+                let Some(ppa) = request.physical_addr else {
+                    return Err(MM_ERR::NoPPAInReq);
+                };
+                self.data_buffer.remove(&ppa);
                 Ok(null_mut())
-            }            
+            }
         }
     }
-    
 }
