@@ -1,9 +1,12 @@
-use super::super::apps::connector_per_component::connectors::requester::{CommandType, Request};
-use crate::{l2p::l2p::PhysicalAddr, println};
+use crate::{
+    l2p::l2p::PhysicalAddr,
+    println,
+    requester::requester::{CommandType, Request},
+};
 use alloc::{collections::BTreeMap, vec::Vec};
 use core::{alloc::Allocator, ptr::null_mut};
 
-type mm_page = Vec<u8>;
+pub type mm_page = [u8; 64];
 
 pub struct MediaManager<A: Allocator + 'static> {
     data_buffer: BTreeMap<PhysicalAddr, mm_page, &'static A>,
@@ -22,11 +25,7 @@ impl<A: Allocator + 'static> MediaManager<A> {
         }
     }
 
-    pub fn execute_request(
-        &mut self,
-        request: &Request,
-        data: Option<mm_page>,
-    ) -> Result<*mut u8, MM_ERR> {
+    pub fn execute_request(&mut self, request: &Request) -> Result<*mut u8, MM_ERR> {
         match request.cmd {
             CommandType::READ => {
                 println!("READ DATA SUCESSFULLY");
@@ -41,12 +40,10 @@ impl<A: Allocator + 'static> MediaManager<A> {
             CommandType::WRITE => {
                 println!("WROTE DATA SUCESSFULLY");
 
-                let Some(value) = data else {
-                    return Err(MM_ERR::NullDataPtr);
-                };
-
                 self.data_buffer
-                    .insert(request.physical_addr.unwrap(), value.clone());
+                    .insert(request.physical_addr.unwrap(), unsafe {
+                        *request.data.clone()
+                    });
                 Ok(null_mut())
             }
             CommandType::ERASE => {
