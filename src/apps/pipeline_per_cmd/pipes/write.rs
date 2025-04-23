@@ -25,10 +25,10 @@ fn init_l2p() -> ::core::ffi::c_int {
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
 
-    L2P_ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-    L2P_MAPPER.set(L2pMapper::new(&L2P_ALLOC));
-    L2P_MAPPER.get_mut().map(0x1, 0x1234);
-    L2P_MAPPER.get_mut().map(0x2, 0x5555);
+    // L2P_ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
+    // L2P_MAPPER.set(L2pMapper::new(&L2P_ALLOC));
+    // L2P_MAPPER.get_mut().map(0x1, 0x1234);
+    // L2P_MAPPER.get_mut().map(0x2, 0x5555);
 
     0
 }
@@ -48,8 +48,8 @@ fn init_mm() -> ::core::ffi::c_int {
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
 
-    MM_ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-    MM.set(MediaManager::new(&MM_ALLOC));
+    // MM_ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
+    // MM.set(MediaManager::new(&MM_ALLOC));
 
     0
 }
@@ -63,13 +63,13 @@ fn l2p_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c
     println!("WRITE: L2P STAGE");
     // We just propagete the context here.
 
-    let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
+    // let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
     
-    if let Ok(request) = req {
-        // println!("L2P_WRITE_STAGE: {:?}", request);
-        // Modify the value behind the context pointer 
-        request.physical_addr = Some(L2P_MAPPER.get_mut().lookup(request.logical_addr).unwrap());
-    }
+    // if let Ok(request) = req {
+    //     // println!("L2P_WRITE_STAGE: {:?}", request);
+    //     // Modify the value behind the context pointer 
+    //     request.physical_addr = Some(L2P_MAPPER.get_mut().lookup(request.logical_addr).unwrap());
+    // }
     context
 }
 
@@ -78,13 +78,13 @@ fn prov_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::
     println!("WRITE: PROV STAGE");
     // We just propagete the context here.
 
-    let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
+    // let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
     
-    if let Ok(request) = req {
-        // println!("L2P_WRITE_STAGE: {:?}", request);
-        // Modify the value behind the context pointer 
-        request.physical_addr = Some(L2P_MAPPER.get_mut().lookup(request.logical_addr).unwrap());
-    }
+    // if let Ok(request) = req {
+    //     // println!("L2P_WRITE_STAGE: {:?}", request);
+    //     // Modify the value behind the context pointer 
+    //     request.physical_addr = Some(L2P_MAPPER.get_mut().lookup(request.logical_addr).unwrap());
+    // }
     context
 }
 
@@ -93,13 +93,13 @@ fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_
 
     // println!("WRITE: MM STAGE");
     // let req = context as *mut Result<Request, RequestError>;
-    let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
+    // let req : &mut Result<Request, RequestError> =  unsafe { context.cast::<Result<Request, RequestError>>().as_mut().unwrap() };
     
-    if let Ok(request) = req {
-        // println!("L2P_WRITE_STAGE: {:?}", request);
-        // Modify the value behind the context pointer 
-        request.data = MM.get_mut().execute_request(request, None).unwrap();
-    }
+    // if let Ok(request) = req {
+    //     // println!("L2P_WRITE_STAGE: {:?}", request);
+    //     // Modify the value behind the context pointer 
+    //     request.data = MM.get_mut().execute_request(request, None).unwrap();
+    // }
 
     // println!("REQUESTER TO L2P STAGE: {:?}", unsafe {*req});
 

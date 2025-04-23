@@ -51,13 +51,13 @@ fn init() -> ::core::ffi::c_int {
         data: data_to_write.as_ptr().cast_mut().cast(),
     }));
 
-    requests.get_mut().push(Ok(Request {
-        id: 1,
-        cmd: CommandType::READ,
-        logical_addr: 0x1,
-        physical_addr: None,
-        data: null_mut(),
-    }));
+    // requests.get_mut().push(Ok(Request {
+    //     id: 1,
+    //     cmd: CommandType::READ,
+    //     logical_addr: 0x1,
+    //     physical_addr: None,
+    //     data: null_mut(),
+    // }));
 
     // requests.get_mut().push(Ok(Request {
     //     id: 2,
@@ -99,13 +99,25 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
         unsafe { requestIdx += 1 };
 
         match cur_req {
-            Some(req) => {
-                println!("REQUEST: {:?}", req);
-                let pipe_1 = ssd_os_get_connection(c"requester1", c"read");
-                //SET THE CTX
-                entry.set_ctx(req);
-                return pipe_1;
-            }
+            Some(Ok(req)) => {
+                
+                match req.cmd {
+                    CommandType::READ => {
+                        entry.set_ctx(req);
+                        return ssd_os_get_connection(c"requester1", c"read");
+                                    }
+                    CommandType::WRITE => {
+                        entry.set_ctx(req);
+                        return ssd_os_get_connection(c"requester1", c"write")
+                    },
+                    CommandType::ERASE => {
+                        entry.set_ctx(req);
+                        return ssd_os_get_connection(c"requester1", c"erase")
+                    },
+                }
+            },
+            Some(Err(_)) => {todo!()},
+
             None => {
                 println!("REQUESTER_PIPE_START: No request found");
                 return null_mut();
