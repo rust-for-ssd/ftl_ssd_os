@@ -1,22 +1,18 @@
-use core::{mem::MaybeUninit, ptr::null_mut};
+use core::ptr::null_mut;
 
 use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,
     bindings::{
-        generated::{
-            lring_entry, nvm_mmgr_geometry, nvm_mmgr_set_ch_info, nvm_ppa_addr, pipeline,
-            volt_get_geometry,
-        },
+        generated::{lring_entry, pipeline},
         lring::{LRing, LRingErr},
         mem::MemoryRegion,
         safe::{ssd_os_get_connection, ssd_os_sleep},
     },
-    l2p::l2p::L2pMapper,
     make_connector_static,
     media_manager::media_manager::Geometry,
     println,
     provisioner::provisioner::Provisioner,
-    requester::requester::{CommandType, Request, RequestError},
+    requester::requester::{Request, RequestError},
     shared::{addresses::PhysicalBlockAddress, core_local_cell::CoreLocalCell},
 };
 
@@ -25,27 +21,18 @@ make_connector_static!(prov, init, exit, pipe_start, ring);
 static lring: LRing<128> = LRing::new();
 static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static provisioner: CoreLocalCell<Provisioner<SimpleAllocator>> = CoreLocalCell::new();
-// static l2p_mapper: CoreLocalCell<L2pMapper<SimpleAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
-    println!("L2P_INIT");
+    println!("PROV_INIT");
     let mut mem_region = MemoryRegion::new_from_cpu(3);
-    println!("{:?}", mem_region.free_start);
-    println!("{:?}", mem_region.end);
     let Ok(()) = lring.init(c"L2P_LRING", mem_region.free_start, 0) else {
         panic!("L2P_LRING WAS ALREADY INITIALIZED!");
     };
     let ring = lring.get_lring().unwrap();
     mem_region.reserve(ring.alloc_mem as usize);
 
-    println!("PROV_LRING_INIT");
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
-    // let geo: MaybeUninit<nvm_mmgr_geometry> = MaybeUninit::zeroed();
-    // unsafe {
-    //     volt_get_geometry(geo.as_ptr().cast_mut());
-    // }
-    // let geo = unsafe { geo.assume_init() };
     provisioner.set(Provisioner::new(
         &Geometry {
             n_pages: 16,
@@ -64,6 +51,7 @@ fn init() -> ::core::ffi::c_int {
             plane: 0,
             block: 0,
         });
+    println!("PROV_INIT_END");
     0
 }
 
@@ -73,14 +61,11 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    println!("L2P_PIPE_START");
     ssd_os_sleep(1);
 
-    println!("A");
     let Ok(res) = lring.dequeue_as_mut(entry) else {
         return null_mut();
     };
-    println!("B");
     let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
         return null_mut();
     };
@@ -99,7 +84,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    println!("L2P_LRING");
+    ssd_os_sleep(1);
     match lring.enqueue(entry) {
         Ok(()) => 0,
         Err(LRingErr::Enqueue(i)) => i,
