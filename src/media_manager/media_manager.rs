@@ -61,7 +61,7 @@ impl<A: Allocator + 'static> MediaManager<A> {
                 let Some(res) = self.data_buffer.get(&ppa) else {
                     return Err(MM_ERR::PPANotFound);
                 };
-                println!("READ DATA SUCESSFULLY");
+                // println!("READ DATA SUCESSFULLY");
                 Ok(res.as_ptr().cast_mut().cast())
             }
             CommandType::WRITE => {
@@ -71,7 +71,7 @@ impl<A: Allocator + 'static> MediaManager<A> {
 
                 self.data_buffer
                     .insert(ppa, unsafe { *request.data.clone() });
-                println!("WROTE DATA SUCESSFULLY");
+                // println!("WROTE DATA SUCESSFULLY");
                 Ok(null_mut())
             }
             CommandType::ERASE => {
@@ -79,7 +79,7 @@ impl<A: Allocator + 'static> MediaManager<A> {
                     return Err(MM_ERR::NoPPAInReq);
                 };
                 self.data_buffer.remove(&ppa);
-                println!("ERASED DATA SUCESSFULLY");
+                // println!("ERASED DATA SUCESSFULLY");
                 Ok(null_mut())
             }
         }

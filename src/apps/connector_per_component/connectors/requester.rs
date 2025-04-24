@@ -1,4 +1,4 @@
-use core::ptr::{null, null_mut};
+use core::ptr::null_mut;
 
 use alloc::vec::Vec;
 
@@ -38,10 +38,7 @@ fn init() -> ::core::ffi::c_int {
     let ring = lring.get_lring().unwrap();
     mem_region.reserve(ring.alloc_mem as usize);
 
-    println!("LRING_INIT");
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-    println!("{:?}", mem_region.free_start);
-    println!("{:?}", mem_region.end);
 
     requests.set(Vec::new_in(&ALLOC));
     requests.get_mut().push(Ok(Request {
@@ -76,6 +73,7 @@ fn init() -> ::core::ffi::c_int {
         data: null_mut(),
     }));
 
+    println!("REQUESTER_INIT_END");
     0
 }
 
@@ -85,7 +83,6 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    println!("REQUESTER_PIPE_START");
     ssd_os_sleep(1);
 
     // 1 if there is a request in the ring, it means it's back around
@@ -101,56 +98,48 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 
         match cur_req {
             Some(req) => {
-                println!("REQUEST: {:?}", req);
                 let pipe_1 = ssd_os_get_connection(c"requester", c"requester_l2p");
                 //SET THE CTX
                 entry.set_ctx(req);
                 return pipe_1;
             }
             None => {
-                println!("REQUESTER_PIPE_START: No request found");
                 return null_mut();
             }
         }
     };
-    let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
-        return null_mut();
-    };
-
-    // We read the result!
-    println!(
-        "REQUESTER: RESULT ARRIVED BACK DATA POINTER: {:?}",
-        req.data
-    );
-
-    if (req.data.is_null()) {
-        return null_mut();
-    }
-
-    println!("REQUESTER: RESULT ARRIVED BACK DATA VALUE: {:?}", unsafe {
-        req.data.as_ref().unwrap()
-    });
-
     return null_mut();
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    println!("REQUESTER_LRING");
-    match lring.enqueue(entry) {
-        Ok(()) => {
-            let res = lring_entry::new(entry).unwrap();
-            let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
-                return 0;
-            };
-            unsafe {
-                println!("request data is: {:?}", req.data.as_ref());
-            }
-            0
-        }
-        Err(LRingErr::Enqueue(i)) => i,
-        _ => {
-            println!("DID NOT MATCH RES FROM ENQUEUE!");
-            -1
+    ssd_os_sleep(1);
+    let res = lring_entry::new(entry).unwrap();
+    let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
+        return 0;
+    };
+
+    if !req.data.is_null() {
+        unsafe {
+            println!("request {} data is: {:?}", req.id, req.data.as_ref());
         }
     }
+    println!("REQUEST {} DONE!", req.id);
+    // match lring.enqueue(entry) {
+    //     Ok(()) => {
+    //         let res = lring_entry::new(entry).unwrap();
+    //         let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
+    //             return 0;
+    //         };
+    //         unsafe {
+    //             println!("request data is: {:?}", req.data.as_ref());
+    //         }
+    //         0
+    //     }
+    //     Err(LRingErr::Enqueue(i)) => i,
+    //     _ => {
+    //         println!("DID NOT MATCH RES FROM ENQUEUE!");
+    //         -1
+    //     }
+    // }
+    0
 }

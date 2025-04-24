@@ -1,4 +1,5 @@
 use crate::{
+    bindings::safe::ssd_os_sleep,
     make_stage_static, println,
     requester::requester::{Request, RequestError},
 };
@@ -14,9 +15,10 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
+    ssd_os_sleep(1);
     let req = context as *mut Result<Request, RequestError>;
-    println!("l2p_prov_stage: {:?}", unsafe { *req });
-
-    // We just propagete the context here.
+    unsafe {
+        println!("l2p -> prov: {}", req.as_ref().unwrap().unwrap().id);
+    }
     context
 }
