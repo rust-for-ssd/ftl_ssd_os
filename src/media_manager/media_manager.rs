@@ -47,8 +47,6 @@ impl<A: Allocator + 'static> MediaManager<A> {
         let mut mm = MediaManager {
             data_buffer: BTreeMap::new_in(alloc),
         };
-        mm.data_buffer.insert(0x1234, [12, 34]);
-        mm.data_buffer.insert(0x1111, [11, 11]);
         mm
     }
 

@@ -2,6 +2,7 @@ use core::ptr::null_mut;
 
 use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,
+    apps::connector_per_component::connectors::requester::N_REQUESTS,
     bindings::{
         generated::{lring_entry, pipeline},
         lring::{LRing, LRingErr},
@@ -31,8 +32,13 @@ fn init() -> ::core::ffi::c_int {
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
     l2p_mapper.set(L2pMapper::new(&ALLOC));
-    l2p_mapper.get_mut().map(0x1, 0x1234);
-    l2p_mapper.get_mut().map(0x2, 0x1111);
+    // l2p_mapper.get_mut().map(0x1, 0x1234);
+    // l2p_mapper.get_mut().map(0x2, 0x1111);
+    let l2p_map = l2p_mapper.get_mut();
+    for i in 0..N_REQUESTS {
+        let i = i as u32;
+        l2p_map.map(i, i);
+    }
 
     println!("L2P_LRING_INIT_END");
     0

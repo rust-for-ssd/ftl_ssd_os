@@ -26,8 +26,9 @@ static requests: CoreLocalCell<Vec<Result<Request, RequestError>, &SimpleAllocat
     CoreLocalCell::new();
 static mut requestIdx: usize = 0;
 
-static write_arr_1: mm_page = [42, 69];
-static write_arr_2: mm_page = [66, 13];
+static request_pages: CoreLocalCell<Vec<(usize, mm_page), &SimpleAllocator>> = CoreLocalCell::new();
+
+pub const N_REQUESTS: usize = 128;
 
 fn init() -> ::core::ffi::c_int {
     println!("REQUESTER_INIT");
@@ -40,38 +41,65 @@ fn init() -> ::core::ffi::c_int {
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
-    requests.set(Vec::new_in(&ALLOC));
-    requests.get_mut().push(Ok(Request {
-        id: 0,
-        cmd: CommandType::WRITE,
-        logical_addr: 0x1,
-        physical_addr: None,
-        data: write_arr_1.as_ptr().cast_mut().cast(),
-    }));
+    requests.set(Vec::with_capacity_in(N_REQUESTS, &ALLOC));
+    request_pages.set(Vec::with_capacity_in(N_REQUESTS, &ALLOC));
+    let pages = request_pages.get_mut();
+    let request = requests.get_mut();
+    for i in 0..N_REQUESTS {
+        pages.push((i, [i as u8, i as u8]));
+        if i % 2 == 0 {
+            request.push(Ok(Request {
+                id: i as u32,
+                cmd: CommandType::WRITE,
+                logical_addr: i as u32,
+                physical_addr: None,
+                data: pages[i].1.as_ptr().cast_mut().cast(),
+            }));
+        } else {
+            request.push(Ok(Request {
+                id: i as u32,
+                cmd: CommandType::READ,
+                logical_addr: i as u32,
+                physical_addr: None,
+                data: null_mut(),
+            }))
+        }
+    }
+    // let mut i = 0;
+    // req_pages.push((i, [0, 0]));
+    // requests.get_mut().push(Ok(Request {
+    //     id: i as u32,
+    //     cmd: CommandType::WRITE,
+    //     logical_addr: 0x1,
+    //     physical_addr: None,
+    //     data: req_pages[i].1.as_ptr().cast_mut().cast(),
+    // }));
 
-    requests.get_mut().push(Ok(Request {
-        id: 1,
-        cmd: CommandType::WRITE,
-        logical_addr: 0x2,
-        physical_addr: None,
-        data: write_arr_2.as_ptr().cast_mut().cast(),
-    }));
+    // i += 1;
+    // req_pages.push((i, [1, 1]));
+    // requests.get_mut().push(Ok(Request {
+    //     id: i as u32,
+    //     cmd: CommandType::WRITE,
+    //     logical_addr: 0x2,
+    //     physical_addr: None,
+    //     data: req_pages[i].1.as_ptr().cast_mut().cast(),
+    // }));
 
-    requests.get_mut().push(Ok(Request {
-        id: 2,
-        cmd: CommandType::READ,
-        logical_addr: 0x1,
-        physical_addr: None,
-        data: null_mut(),
-    }));
+    // requests.get_mut().push(Ok(Request {
+    //     id: 2,
+    //     cmd: CommandType::READ,
+    //     logical_addr: 0x1,
+    //     physical_addr: None,
+    //     data: null_mut(),
+    // }));
 
-    requests.get_mut().push(Ok(Request {
-        id: 3,
-        cmd: CommandType::READ,
-        logical_addr: 0x2,
-        physical_addr: None,
-        data: null_mut(),
-    }));
+    // requests.get_mut().push(Ok(Request {
+    //     id: 3,
+    //     cmd: CommandType::READ,
+    //     logical_addr: 0x2,
+    //     physical_addr: None,
+    //     data: null_mut(),
+    // }));
 
     println!("REQUESTER_INIT_END");
     0

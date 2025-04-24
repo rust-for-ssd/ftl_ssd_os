@@ -5,7 +5,6 @@ use core::{
 
 use super::generated;
 
-
 pub fn ssd_os_get_connection(connector_name: &CStr, pipe_name: &CStr) -> *mut generated::pipeline {
     unsafe {
         generated::ssd_os_get_connection(
@@ -43,7 +42,7 @@ pub fn ssd_os_print_unlock() {
 
 pub fn ssd_os_sleep(i: u32) {
     unsafe {
-        generated::ssd_os_sleep(i as i32);
+        // generated::ssd_os_sleep(i as i32);
     }
 }
 
