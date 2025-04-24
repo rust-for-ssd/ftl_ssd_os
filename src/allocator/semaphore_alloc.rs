@@ -14,10 +14,11 @@ pub struct SemaphoreAllocator {
 impl SemaphoreAllocator {
     pub const fn new() -> Self {
         Self {
-            semaphore: Semaphore::new(SimpleAllocator::new()),
+            semaphore: Semaphore::new(),
         }
     }
     pub fn init(&self, start: *mut u8, end: *mut u8) {
+        self.semaphore.init(SimpleAllocator::new());
         let guard = self.semaphore.lock();
         guard.initialize(start, end);
     }
