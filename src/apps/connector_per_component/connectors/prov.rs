@@ -39,7 +39,7 @@ fn init() -> ::core::ffi::c_int {
             n_of_ch: 4,
             lun_per_ch: 8,
             blk_per_lun: 16,
-            pg_per_blk: 8,
+            pg_per_blk: 16,
         },
         &ALLOC,
     ));
