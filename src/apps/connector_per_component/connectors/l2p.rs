@@ -22,7 +22,7 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static l2p_mapper: CoreLocalCell<L2pMapper<SimpleAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
-    println!("L2P_INIT_START");
+    // println!("L2P_INIT_START");
     let mut mem_region = MemoryRegion::new_from_cpu(2);
     let Ok(()) = lring.init(c"L2P_LRING", mem_region.free_start, 0) else {
         panic!("L2P_LRING WAS ALREADY INITIALIZED!");
@@ -40,12 +40,12 @@ fn init() -> ::core::ffi::c_int {
         l2p_map.map(i, i);
     }
 
-    println!("L2P_LRING_INIT_END");
+    // println!("L2P_LRING_INIT_END");
     0
 }
 
 fn exit() -> ::core::ffi::c_int {
-    println!("EXIT!");
+    // println!("EXIT!");
     0
 }
 
@@ -59,7 +59,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
         return null_mut();
     };
 
-    println!("l2p request: {:?}", req);
+    // println!("l2p request: {:?}", req);
     match req.cmd {
         CommandType::READ => {
             req.physical_addr = l2p_mapper.get_mut().lookup(req.logical_addr);
@@ -91,7 +91,7 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
     let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
         return 0;
     };
-    println!("l2p recived: {:?}", req);
+    // println!("l2p recived: {:?}", req);
     match lring.enqueue(entry) {
         Ok(()) => 0,
         Err(LRingErr::Enqueue(i)) => i,
