@@ -50,7 +50,7 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    ssd_os_sleep(1);
+    // ssd_os_sleep(1);
 
     let Ok(res) = lring.dequeue_as_mut(entry) else {
         return null_mut();
@@ -86,7 +86,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    ssd_os_sleep(1);
+    // ssd_os_sleep(1);
     let res = lring_entry::new(entry).unwrap();
     let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
         return 0;
