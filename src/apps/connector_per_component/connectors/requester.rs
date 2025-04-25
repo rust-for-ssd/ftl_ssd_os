@@ -54,6 +54,8 @@ fn init() -> ::core::ffi::c_int {
                 logical_addr: i as u32,
                 physical_addr: None,
                 data: pages[i].1.as_ptr().cast_mut().cast(),
+                start_time: 0,
+                end_time: 0,
             }));
         } else {
             request.push(Ok(Request {
@@ -62,6 +64,8 @@ fn init() -> ::core::ffi::c_int {
                 logical_addr: i as u32,
                 physical_addr: None,
                 data: null_mut(),
+                start_time: 0,
+                end_time: 0,
             }))
         }
     }
@@ -121,13 +125,27 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
             return null_mut();
         };
 
-        let cur_req = requests.get_mut().get(unsafe { requestIdx });
+        let cur_req : Option<&mut Result<Request, RequestError>> = requests.get_mut().get_mut(unsafe { requestIdx });
         unsafe { requestIdx += 1 };
 
         match cur_req {
-            Some(req) => {
+            Some(mut req) => {
                 let pipe_1 = ssd_os_get_connection(c"requester", c"requester_l2p");
-                //SET THE CTX
+                
+                match req {
+                    Ok(elem) => {
+                        elem.start_timer();
+
+                    },
+                    Err(_) => todo!(),
+                }
+               
+                // Start the timer!
+                (*req).unwrap().start_timer();
+                
+                // println!("Start value!!! request: {:?}", (*req).unwrap().start_time);
+                
+                
                 entry.set_ctx(req);
                 return pipe_1;
             }
@@ -145,6 +163,10 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
     let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
         return 0;
     };
+    
+    // stop timer 
+    req.end_timer();
+    
 
     if !req.data.is_null() {
         unsafe {
@@ -152,6 +174,8 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
         }
     }
     println!("REQUEST {} DONE!", req.id);
+    println!("Round trip time {} DONE!", req.calc_round_trip_time_ms());
+
     // match lring.enqueue(entry) {
     //     Ok(()) => {
     //         let res = lring_entry::new(entry).unwrap();

@@ -42,6 +42,8 @@ fn init() -> ::core::ffi::c_int {
             logical_addr: i as u32,
             physical_addr: Some(i as u32),
             data: arr.as_ptr().cast_mut().cast(),
+            start_time: 0,
+            end_time: 0,
         });
     }
     println!("MM_INIT_END");
