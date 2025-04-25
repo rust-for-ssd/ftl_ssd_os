@@ -23,7 +23,7 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static MM: CoreLocalCell<MediaManager<SimpleAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
-    println!("MM_INIT_START");
+    // println!("MM_INIT_START");
     let mut mem_region = MemoryRegion::new_from_cpu(4);
     let Ok(()) = lring.init(c"MM_LRING", mem_region.free_start, 0) else {
         panic!("MM_LRING WAS ALREADY INITIALIZED!");
@@ -46,7 +46,7 @@ fn init() -> ::core::ffi::c_int {
             end_time: 0,
         });
     }
-    println!("MM_INIT_END");
+    // println!("MM_INIT_END");
     0
 }
 

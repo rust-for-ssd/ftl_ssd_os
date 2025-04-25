@@ -31,7 +31,7 @@ static request_pages: CoreLocalCell<Vec<(usize, mm_page), &SimpleAllocator>> = C
 pub const N_REQUESTS: usize = 128;
 
 fn init() -> ::core::ffi::c_int {
-    println!("REQUESTER_INIT");
+    // println!("REQUESTER_INIT");
     let mut mem_region = MemoryRegion::new_from_cpu(1);
     let Ok(()) = lring.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
         panic!("REQUESTER_LRING WAS ALREADY INITIALIZED!");
@@ -105,12 +105,12 @@ fn init() -> ::core::ffi::c_int {
     //     data: null_mut(),
     // }));
 
-    println!("REQUESTER_INIT_END");
+    // println!("REQUESTER_INIT_END");
     0
 }
 
 fn exit() -> ::core::ffi::c_int {
-    println!("EXIT!");
+    // println!("EXIT!");
     0
 }
 

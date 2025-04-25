@@ -15,11 +15,11 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ssd_os_sleep(1);
-    let req = context as *mut Result<Request, RequestError>;
-    // println!("prov_l2p_stage: {:?}", unsafe { *req });
-    unsafe {
-        println!("prov -> l2p: {}", req.as_ref().unwrap().unwrap().id);
-    }
+    // ssd_os_sleep(1);
+    // let req = context as *mut Result<Request, RequestError>;
+    // // println!("prov_l2p_stage: {:?}", unsafe { *req });
+    // unsafe {
+    //     println!("prov -> l2p: {}", req.as_ref().unwrap().unwrap().id);
+    // }
     context
 }

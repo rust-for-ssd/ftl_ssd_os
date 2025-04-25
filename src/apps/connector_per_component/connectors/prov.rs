@@ -23,7 +23,7 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static provisioner: CoreLocalCell<Provisioner<SimpleAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
-    println!("PROV_INIT");
+    // println!("PROV_INIT");
     let mut mem_region = MemoryRegion::new_from_cpu(3);
     let Ok(()) = lring.init(c"L2P_LRING", mem_region.free_start, 0) else {
         panic!("L2P_LRING WAS ALREADY INITIALIZED!");
@@ -51,12 +51,12 @@ fn init() -> ::core::ffi::c_int {
             plane: 0,
             block: 0,
         });
-    println!("PROV_INIT_END");
+    // println!("PROV_INIT_END");
     0
 }
 
 fn exit() -> ::core::ffi::c_int {
-    println!("EXIT!");
+    // println!("EXIT!");
     0
 }
 
@@ -71,7 +71,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     };
 
     let Ok(ppa) = provisioner.get_mut().provision_page() else {
-        println!("COULD NOT PROVISION!");
+        // println!("COULD NOT PROVISION!");
         return null_mut();
     };
 
