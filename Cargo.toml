@@ -12,11 +12,12 @@ harness = false
 
 [profile.small]
 inherits = "release"
-# opt-level = "s"   # Optimize for size
-# lto = true        # Enable Link-Time Optimization
+opt-level = "s"
+lto = true        # Enable Link-Time Optimization
 strip = true # Strip debug symbols
 panic = "abort"   # Reduce binary size by removing panic unwinding
 codegen-units = 1
+# debug = "full"
 
 [build-dependencies]
 bindgen = "0.71.1"
