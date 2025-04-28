@@ -21,7 +21,7 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn l2p_read_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ssd_os_sleep(1);
+    // ssd_os_sleep(1);
     println!("READ: L2P STAGE");
     // We just propagete the context here.
 
@@ -41,7 +41,7 @@ fn l2p_read_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::f
 }
 
 fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ssd_os_sleep(1);
+    // ssd_os_sleep(1);
 
     // println!("READ: MM STAGE");
     // let req = context as *mut Result<Request, RequestError>;

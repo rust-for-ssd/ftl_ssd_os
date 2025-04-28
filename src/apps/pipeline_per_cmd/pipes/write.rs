@@ -27,8 +27,8 @@ make_stage_static!(write_prov, init_prov, exit, prov_context_handler);
 make_stage_static!(write_mm, init_mm, exit, mm_context_handler);
 
 fn init_l2p() -> ::core::ffi::c_int {
-    ssd_os_sleep(1);
-    println!("WRITE: INIT: L2P STAGE");
+    // ssd_os_sleep(1);
+    // println!("WRITE: INIT: L2P STAGE");
     let mem_region = MemoryRegion::new_from_cpu(1);
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
@@ -38,12 +38,16 @@ fn init_l2p() -> ::core::ffi::c_int {
     let mut l2p_mapper = L2P_MAPPER.lock();
     l2p_mapper.map(0x1, 0x1234);
     l2p_mapper.map(0x2, 0x5555);
+    // for i in 0..128 {
+    //     let i = i as u32;
+    //     l2p_mapper.map(i, i);
+    // }
     0
 }
 
 fn init_prov() -> ::core::ffi::c_int {
     ssd_os_sleep(1);
-    println!("WRITE: INIT: PROV STAGE");
+    // println!("WRITE: INIT: PROV STAGE");
     let mem_region = MemoryRegion::new_from_cpu(3);
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
@@ -73,8 +77,8 @@ fn init_prov() -> ::core::ffi::c_int {
 }
 
 fn init_mm() -> ::core::ffi::c_int {
-    ssd_os_sleep(1);
-    println!("WRITE: INIT: MM STAGE");
+    // ssd_os_sleep(1);
+    // println!("WRITE: INIT: MM STAGE");
     let mem_region = MemoryRegion::new_from_cpu(2);
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
@@ -89,8 +93,8 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn prov_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ssd_os_sleep(1);
-    println!("WRITE: PROV STAGE");
+    // ssd_os_sleep(1);
+    // println!("WRITE: PROV STAGE");
     // We just propagete the context here.
 
     let req: &mut Result<Request, RequestError> = unsafe {
@@ -116,8 +120,8 @@ fn prov_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::
 }
 
 fn l2p_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ssd_os_sleep(1);
-    println!("WRITE: L2P STAGE");
+    // ssd_os_sleep(1);
+    // println!("WRITE: L2P STAGE");
     // We just propagete the context here.
 
     // TEST WE CAN GET IT
@@ -154,7 +158,7 @@ fn l2p_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c
 }
 
 fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ssd_os_sleep(1);
+    // ssd_os_sleep(1);
 
     // println!("WRITE: MM STAGE");
     // let req = context as *mut Result<Request, RequestError>;
