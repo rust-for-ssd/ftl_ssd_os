@@ -27,15 +27,15 @@ try:
             raise ValueError("Marker '--- ssd_os is READY! ---' not found in file.")
         
         # Now extract data from the following lines
-        clock_cycles = []
+        input = []
         for line in lines[start_index:]:
             if line.strip():  # Avoid empty lines
-                clock_cycles.append(int(line.strip()))
+                input.append(int(line.strip()))
     
     # Convert from 10MHz clock cycles to milliseconds
     # 1 cycle at 10MHz = 0.1 μs = 0.0001 ms
-    conversion_factor = 0.0001  # 10MHz clock cycle to milliseconds
-    rtt_data = [cycles * conversion_factor for cycles in clock_cycles]
+    # conversion_factor = 0.0001  # 10MHz clock cycle to milliseconds
+    rtt_data = input
     
     print(f"Successfully loaded {len(rtt_data)} data points from bench.txt")
     print(f"Converted clock cycles at 10MHz to milliseconds (1 cycle = 0.0001 ms)")
