@@ -49,6 +49,8 @@ fn init() -> ::core::ffi::c_int {
         logical_addr: 0x1,
         physical_addr: None,
         data: data_to_write.as_ptr().cast_mut().cast(),
+        start_time: 0,
+        end_time: 0,
     }));
 
     requests.get_mut().push(Ok(Request {
@@ -57,6 +59,8 @@ fn init() -> ::core::ffi::c_int {
         logical_addr: 0x1,
         physical_addr: None,
         data: null_mut(),
+        start_time: 0,
+        end_time: 0,
     }));
 
     // requests.get_mut().push(Ok(Request {
