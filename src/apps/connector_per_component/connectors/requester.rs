@@ -158,7 +158,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    ssd_os_sleep(1);
+    // ssd_os_sleep(1);
     let res = lring_entry::new(entry).unwrap();
     let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
         return 0;
@@ -168,13 +168,15 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
     req.end_timer();
     
 
-    if !req.data.is_null() {
-        unsafe {
-            println!("request {} data is: {:?}", req.id, req.data.as_ref());
-        }
-    }
-    println!("REQUEST {} DONE!", req.id);
-    println!("Round trip time {} DONE!", req.calc_round_trip_time_ms());
+    // if !req.data.is_null() {
+    //     unsafe {
+    //         println!("request {} data is: {:?}", req.id, req.data.as_ref());
+    //     }
+    // }
+    // println!("REQUEST {} DONE!", req.id);
+    // println!("Round trip time {} DONE!", req.calc_round_trip_time_ms());
+    // 
+    println!(req.calc_round_trip_time_ms());
 
     // match lring.enqueue(entry) {
     //     Ok(()) => {

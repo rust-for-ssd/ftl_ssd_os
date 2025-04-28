@@ -42,8 +42,8 @@ impl Default for Request {
 
 impl Request {
     pub fn calc_round_trip_time_ms(&self) -> u32 {
-        println!("Start time {:?}", self.start_time);
-        println!("End time {:?}", self.end_time);
+        // println!("Start time {:?}", self.start_time);
+        // println!("End time {:?}", self.end_time);
         // println!(self.end_time)
         self.end_time - self.start_time
     }
