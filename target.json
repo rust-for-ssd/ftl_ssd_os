@@ -22,4 +22,5 @@
   "target-pointer-width": "32",
   "code-model": "medium",
   "function-sections": false
+
 }

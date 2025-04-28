@@ -26,11 +26,12 @@ static requests: CoreLocalCell<Vec<Result<Request, RequestError>, &SimpleAllocat
     CoreLocalCell::new();
 static mut requestIdx: usize = 0;
 
-static write_arr_1: mm_page = [42, 69];
-static write_arr_2: mm_page = [66, 13];
+static request_pages: CoreLocalCell<Vec<(usize, mm_page), &SimpleAllocator>> = CoreLocalCell::new();
+
+pub const N_REQUESTS: usize = 128;
 
 fn init() -> ::core::ffi::c_int {
-    println!("REQUESTER_INIT");
+    // println!("REQUESTER_INIT");
     let mut mem_region = MemoryRegion::new_from_cpu(1);
     let Ok(()) = lring.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
         panic!("REQUESTER_LRING WAS ALREADY INITIALIZED!");
@@ -40,45 +41,76 @@ fn init() -> ::core::ffi::c_int {
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
-    requests.set(Vec::new_in(&ALLOC));
-    requests.get_mut().push(Ok(Request {
-        id: 0,
-        cmd: CommandType::WRITE,
-        logical_addr: 0x1,
-        physical_addr: None,
-        data: write_arr_1.as_ptr().cast_mut().cast(),
-    }));
+    requests.set(Vec::with_capacity_in(N_REQUESTS, &ALLOC));
+    request_pages.set(Vec::with_capacity_in(N_REQUESTS, &ALLOC));
+    let pages = request_pages.get_mut();
+    let request = requests.get_mut();
+    for i in 0..N_REQUESTS {
+        pages.push((i, [i as u8, i as u8]));
+        if i % 2 == 0 {
+            request.push(Ok(Request {
+                id: i as u32,
+                cmd: CommandType::WRITE,
+                logical_addr: i as u32,
+                physical_addr: None,
+                data: pages[i].1.as_ptr().cast_mut().cast(),
+                start_time: 0,
+                end_time: 0,
+            }));
+        } else {
+            request.push(Ok(Request {
+                id: i as u32,
+                cmd: CommandType::READ,
+                logical_addr: i as u32,
+                physical_addr: None,
+                data: null_mut(),
+                start_time: 0,
+                end_time: 0,
+            }))
+        }
+    }
+    // let mut i = 0;
+    // req_pages.push((i, [0, 0]));
+    // requests.get_mut().push(Ok(Request {
+    //     id: i as u32,
+    //     cmd: CommandType::WRITE,
+    //     logical_addr: 0x1,
+    //     physical_addr: None,
+    //     data: req_pages[i].1.as_ptr().cast_mut().cast(),
+    // }));
 
-    requests.get_mut().push(Ok(Request {
-        id: 1,
-        cmd: CommandType::WRITE,
-        logical_addr: 0x2,
-        physical_addr: None,
-        data: write_arr_2.as_ptr().cast_mut().cast(),
-    }));
+    // i += 1;
+    // req_pages.push((i, [1, 1]));
+    // requests.get_mut().push(Ok(Request {
+    //     id: i as u32,
+    //     cmd: CommandType::WRITE,
+    //     logical_addr: 0x2,
+    //     physical_addr: None,
+    //     data: req_pages[i].1.as_ptr().cast_mut().cast(),
+    // }));
 
-    requests.get_mut().push(Ok(Request {
-        id: 2,
-        cmd: CommandType::READ,
-        logical_addr: 0x1,
-        physical_addr: None,
-        data: null_mut(),
-    }));
+    // requests.get_mut().push(Ok(Request {
+    //     id: 2,
+    //     cmd: CommandType::READ,
+    //     logical_addr: 0x1,
+    //     physical_addr: None,
+    //     data: null_mut(),
+    // }));
 
-    requests.get_mut().push(Ok(Request {
-        id: 3,
-        cmd: CommandType::READ,
-        logical_addr: 0x2,
-        physical_addr: None,
-        data: null_mut(),
-    }));
+    // requests.get_mut().push(Ok(Request {
+    //     id: 3,
+    //     cmd: CommandType::READ,
+    //     logical_addr: 0x2,
+    //     physical_addr: None,
+    //     data: null_mut(),
+    // }));
 
-    println!("REQUESTER_INIT_END");
+    // println!("REQUESTER_INIT_END");
     0
 }
 
 fn exit() -> ::core::ffi::c_int {
-    println!("EXIT!");
+    // println!("EXIT!");
     0
 }
 
@@ -93,13 +125,27 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
             return null_mut();
         };
 
-        let cur_req = requests.get_mut().get(unsafe { requestIdx });
+        let cur_req : Option<&mut Result<Request, RequestError>> = requests.get_mut().get_mut(unsafe { requestIdx });
         unsafe { requestIdx += 1 };
 
         match cur_req {
-            Some(req) => {
+            Some(mut req) => {
                 let pipe_1 = ssd_os_get_connection(c"requester", c"requester_l2p");
-                //SET THE CTX
+                
+                match req {
+                    Ok(elem) => {
+                        elem.start_timer();
+
+                    },
+                    Err(_) => todo!(),
+                }
+               
+                // Start the timer!
+                (*req).unwrap().start_timer();
+                
+                // println!("Start value!!! request: {:?}", (*req).unwrap().start_time);
+                
+                
                 entry.set_ctx(req);
                 return pipe_1;
             }
@@ -112,18 +158,26 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    ssd_os_sleep(1);
+    // ssd_os_sleep(1);
     let res = lring_entry::new(entry).unwrap();
     let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
         return 0;
     };
+    
+    // stop timer 
+    req.end_timer();
+    
 
-    if !req.data.is_null() {
-        unsafe {
-            println!("request {} data is: {:?}", req.id, req.data.as_ref());
-        }
-    }
-    println!("REQUEST {} DONE!", req.id);
+    // if !req.data.is_null() {
+    //     unsafe {
+    //         println!("request {} data is: {:?}", req.id, req.data.as_ref());
+    //     }
+    // }
+    // println!("REQUEST {} DONE!", req.id);
+    // println!("Round trip time {} DONE!", req.calc_round_trip_time_ms());
+    // 
+    println!(req.calc_round_trip_time_ms());
+
     // match lring.enqueue(entry) {
     //     Ok(()) => {
     //         let res = lring_entry::new(entry).unwrap();
