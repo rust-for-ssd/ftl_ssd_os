@@ -31,14 +31,9 @@ try:
         for line in lines[start_index:]:
             if line.strip():  # Avoid empty lines
                 input.append(int(line.strip()))
-    
-    # Convert from 10MHz clock cycles to milliseconds
-    # 1 cycle at 10MHz = 0.1 μs = 0.0001 ms
-    # conversion_factor = 0.0001  # 10MHz clock cycle to milliseconds
     rtt_data = input
     
     print(f"Successfully loaded {len(rtt_data)} data points from bench.txt")
-    print(f"Converted clock cycles at 10MHz to milliseconds (1 cycle = 0.0001 ms)")
 except FileNotFoundError:
     print("Error: bench.txt file not found. Please ensure the file exists in the current directory.")
     # Provide sample data in case file is not found
