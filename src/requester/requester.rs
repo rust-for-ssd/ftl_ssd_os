@@ -41,7 +41,7 @@ impl Default for Request {
 }
 
 impl Request {
-    pub fn calc_round_trip_time_ms(&self) -> u32 {
+    pub fn calc_round_trip_time_clock_cycles(&self) -> u32 {
         // println!("Start time {:?}", self.start_time);
         // println!("End time {:?}", self.end_time);
         // println!(self.end_time)
@@ -69,14 +69,3 @@ pub fn read_mtime() -> u32 { // it's in ms
         core::ptr::read_volatile(mtime_addr)
     }
 }
-
-fn benchmark_example() -> u32 {
-    let start = read_mtime();
-    
-    // Code to benchmark
-    unsafe { ssd_os_sleep(1) };
-
-    let end = read_mtime();
-    (end - start) // Return ticks elapsed
-}
-

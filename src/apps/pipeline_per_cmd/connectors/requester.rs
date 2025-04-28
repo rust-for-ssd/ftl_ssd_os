@@ -26,6 +26,10 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static requests: CoreLocalCell<Vec<Result<Request, RequestError>, &SimpleAllocator>> =
     CoreLocalCell::new();
 static mut requestIdx: usize = 0;
+pub const N_REQUESTS: usize = 128;
+
+static request_pages: CoreLocalCell<Vec<(usize, mm_page), &SimpleAllocator>> = CoreLocalCell::new();
+
 static data_to_write : [u8; 2] = [1,2];
 
 fn init() -> ::core::ffi::c_int {
@@ -41,6 +45,35 @@ fn init() -> ::core::ffi::c_int {
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
+    
+    // requests.set(Vec::with_capacity_in(N_REQUESTS, &ALLOC));
+    // request_pages.set(Vec::with_capacity_in(N_REQUESTS, &ALLOC));
+    // let pages = request_pages.get_mut();
+    // let request = requests.get_mut();
+    // for i in 0..N_REQUESTS {
+    //     pages.push((i, [i as u8, i as u8]));
+    //     if i % 2 == 0 {
+    //         request.push(Ok(Request {
+    //             id: i as u32,
+    //             cmd: CommandType::WRITE,
+    //             logical_addr: i as u32,
+    //             physical_addr: None,
+    //             data: pages[i].1.as_ptr().cast_mut().cast(),
+    //             start_time: 0,
+    //             end_time: 0,
+    //         }));
+    //     } else {
+    //         request.push(Ok(Request {
+    //             id: i as u32,
+    //             cmd: CommandType::READ,
+    //             logical_addr: i as u32,
+    //             physical_addr: None,
+    //             data: null_mut(),
+    //             start_time: 0,
+    //             end_time: 0,
+    //         }))
+    //     }
+    // }
 
     requests.set(Vec::new_in(&ALLOC));
     requests.get_mut().push(Ok(Request {
@@ -53,15 +86,15 @@ fn init() -> ::core::ffi::c_int {
         end_time: 0,
     }));
 
-    requests.get_mut().push(Ok(Request {
-        id: 1,
-        cmd: CommandType::READ,
-        logical_addr: 0x1,
-        physical_addr: None,
-        data: null_mut(),
-        start_time: 0,
-        end_time: 0,
-    }));
+    // requests.get_mut().push(Ok(Request {
+    //     id: 1,
+    //     cmd: CommandType::READ,
+    //     logical_addr: 0x1,
+    //     physical_addr: None,
+    //     data: null_mut(),
+    //     start_time: 0,
+    //     end_time: 0,
+    // }));
 
     // requests.get_mut().push(Ok(Request {
     //     id: 2,
@@ -88,8 +121,8 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    println!("REQUESTER_PIPE_START");
-    ssd_os_sleep(1);
+    // println!("REQUESTER_PIPE_START");
+    // ssd_os_sleep(1);
 
     // 1 if there is a request in the ring, it means it's back around
     let Ok(res) = lring.dequeue_as_mut(entry) else {
@@ -99,12 +132,15 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
             return null_mut();
         };
 
-        let cur_req = requests.get_mut().get(unsafe { requestIdx });
+        let cur_req : Option<&mut Result<Request, RequestError>> = requests.get_mut().get_mut(unsafe { requestIdx });
         unsafe { requestIdx += 1 };
 
         match cur_req {
             Some(Ok(req)) => {
-                
+                // println!("here");
+                req.start_timer();
+                // println!("here1");
+
                 match req.cmd {
                     CommandType::READ => {
                         entry.set_ctx(req);
@@ -123,7 +159,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
             Some(Err(_)) => {todo!()},
 
             None => {
-                println!("REQUESTER_PIPE_START: No request found");
+                // println!("REQUESTER_PIPE_START: No request found");
                 return null_mut();
             }
         }
@@ -133,25 +169,35 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     };
 
     // We read the result!
-    println!("REQUESTER: RESULT ARRIVED BACK POINTER: {:?}", req.data);
+    // println!("REQUESTER: RESULT ARRIVED BACK POINTER: {:?}", req.data);
     
     if (req.data.is_null()) {
         return null_mut();
     }
     
-    println!("REQUESTER: RESULT ARRIVED BACK DATA VALUE: {:?}", unsafe {*req.data});
+    // println!("REQUESTER: RESULT ARRIVED BACK DATA VALUE: {:?}", unsafe {*req.data});
 
     return null_mut();
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    println!("REQUESTER_LRING");
-    match lring.enqueue(entry) {
-        Ok(()) => 0,
-        Err(LRingErr::Enqueue(i)) => i,
-        _ => {
-            println!("DID NOT MATCH RES FROM ENQUEUE!");
-            -1
-        }
-    }
+    let res = lring_entry::new(entry).unwrap();
+    let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
+        return 0;
+    };
+    
+    // stop timer 
+    req.end_timer();
+    println!(req.calc_round_trip_time_clock_cycles());
+    0
+    
+    // println!("REQUESTER_LRING");
+    // match lring.enqueue(entry) {
+    //     Ok(()) => 0,
+    //     Err(LRingErr::Enqueue(i)) => i,
+    //     _ => {
+    //         println!("DID NOT MATCH RES FROM ENQUEUE!");
+    //         -1
+    //     }
+    // }
 }
