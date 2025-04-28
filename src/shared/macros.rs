@@ -8,4 +8,14 @@ macro_rules! cstr {
     };
 }
 
+macro_rules! ensure_unique {
+    () => {
+        {
+            static DUMMY: u8 = 0;
+            unsafe { core::ptr::read_volatile(&DUMMY) };
+        }
+    };
+}
+
 pub(crate) use cstr;
+pub(crate) use ensure_unique;
