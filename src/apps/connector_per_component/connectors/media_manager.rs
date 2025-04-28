@@ -1,6 +1,8 @@
 use core::ptr::null_mut;
 
-use crate::requester::requester::{Request, RequestError};
+use crate::apps::connector_per_component::connectors::requester::N_REQUESTS;
+use crate::media_manager::media_manager::mm_page;
+use crate::requester::requester::{CommandType, Request, RequestError};
 use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,
     bindings::{
@@ -21,7 +23,7 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static MM: CoreLocalCell<MediaManager<SimpleAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
-    println!("MM_INIT_START");
+    // println!("MM_INIT_START");
     let mut mem_region = MemoryRegion::new_from_cpu(4);
     let Ok(()) = lring.init(c"MM_LRING", mem_region.free_start, 0) else {
         panic!("MM_LRING WAS ALREADY INITIALIZED!");
@@ -31,7 +33,20 @@ fn init() -> ::core::ffi::c_int {
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
     MM.set(MediaManager::new(&ALLOC));
-    println!("MM_INIT_END");
+    let mmgr = MM.get_mut();
+    for i in 0..N_REQUESTS {
+        static arr: mm_page = [0, 0];
+        let _ = mmgr.execute_request(&Request {
+            id: i as u32,
+            cmd: CommandType::WRITE,
+            logical_addr: i as u32,
+            physical_addr: Some(i as u32),
+            data: arr.as_ptr().cast_mut().cast(),
+            start_time: 0,
+            end_time: 0,
+        });
+    }
+    // println!("MM_INIT_END");
     0
 }
 
