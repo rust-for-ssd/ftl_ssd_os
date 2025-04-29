@@ -25,7 +25,7 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<SimpleAllocator>> =
     CoreLocalCell::new();
 
-pub const N_REQUESTS: usize = 128;
+pub const N_REQUESTS: usize = 1024;
 
 fn init() -> ::core::ffi::c_int {
     #[cfg(feature = "debug")]
@@ -40,8 +40,8 @@ fn init() -> ::core::ffi::c_int {
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
     WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
-        WorkloadType::READ,
-        128,
+        WorkloadType::WRITE,
+        1024,
         &ALLOC,
     ));
     let workload = WORKLOAD_GENERATOR.get_mut();

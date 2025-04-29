@@ -181,6 +181,7 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
         let n_pages = n_of_ch * lun_per_ch * blk_per_lun * pg_per_blk;
         let total = self.requests.len();
         assert!(total <= n_pages);
+        println!("MAXIMUM NUMBER OF PAGES: {}", n_pages);
         Geometry {
             n_of_ch: n_of_ch as u8,
             lun_per_ch: lun_per_ch as u8,
