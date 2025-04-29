@@ -42,6 +42,8 @@ pub enum MM_ERR {
     NullDataPtr,
 }
 
+static dummy: mm_page = [99, 99];
+
 impl<A: Allocator + 'static> MediaManager<A> {
     pub fn new(alloc: &'static A) -> Self {
         let mut mm = MediaManager {
@@ -53,6 +55,9 @@ impl<A: Allocator + 'static> MediaManager<A> {
     pub fn execute_request(&mut self, request: &Request) -> Result<*mut mm_page, MM_ERR> {
         match request.cmd {
             CommandType::READ => {
+                #[cfg(feature = "benchmark")]
+                return Ok(&dummy as *const mm_page as *mut mm_page);
+
                 let Some(ppa) = request.physical_addr else {
                     return Err(MM_ERR::NoPPAInReq);
                 };

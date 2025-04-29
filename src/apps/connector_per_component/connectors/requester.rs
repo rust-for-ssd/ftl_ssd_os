@@ -40,7 +40,7 @@ fn init() -> ::core::ffi::c_int {
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
     WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
-        WorkloadType::WRITE,
+        WorkloadType::READ,
         1024,
         &ALLOC,
     ));
