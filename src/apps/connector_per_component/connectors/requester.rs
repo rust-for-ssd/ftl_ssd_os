@@ -41,6 +41,7 @@ fn init() -> ::core::ffi::c_int {
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
+    
     requests.set(Vec::with_capacity_in(N_REQUESTS, &ALLOC));
     request_pages.set(Vec::with_capacity_in(N_REQUESTS, &ALLOC));
     let pages = request_pages.get_mut();
@@ -110,12 +111,12 @@ fn init() -> ::core::ffi::c_int {
 }
 
 fn exit() -> ::core::ffi::c_int {
-    // println!("EXIT!");
+    println!("EXIT IS TRIGGERED");
     0
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    ssd_os_sleep(1);
+    // ssd_os_sleep(1);
 
     // 1 if there is a request in the ring, it means it's back around
     let Ok(res) = lring.dequeue_as_mut(entry) else {
@@ -176,7 +177,7 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
     // println!("REQUEST {} DONE!", req.id);
     // println!("Round trip time {} DONE!", req.calc_round_trip_time_ms());
     // 
-    println!(req.calc_round_trip_time_ms());
+    println!(req.calc_round_trip_time_clock_cycles());
 
     // match lring.enqueue(entry) {
     //     Ok(()) => {

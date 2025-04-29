@@ -27,13 +27,18 @@ try:
             raise ValueError("Marker '--- ssd_os is READY! ---' not found in file.")
         
         # Now extract data from the following lines
-        input = []
+        clock_cycles = []
         for line in lines[start_index:]:
             if line.strip():  # Avoid empty lines
-                input.append(int(line.strip()))
-    rtt_data = input
+                clock_cycles.append(int(line.strip()))
+    
+    # Convert from 10MHz clock cycles to milliseconds
+    # 1 cycle at 10MHz = 0.1 μs = 0.0001 ms
+    conversion_factor = 0.0001  # 10MHz clock cycle to milliseconds
+    rtt_data = [cycles * conversion_factor for cycles in clock_cycles]
     
     print(f"Successfully loaded {len(rtt_data)} data points from bench.txt")
+    print(f"Converted clock cycles at 10MHz to milliseconds (1 cycle = 0.0001 ms)")
 except FileNotFoundError:
     print("Error: bench.txt file not found. Please ensure the file exists in the current directory.")
     # Provide sample data in case file is not found
@@ -74,7 +79,7 @@ if rtt_data:
     plt.xlabel('Round Trip Time (ms)')
     plt.ylabel('Frequency')
     plt.legend()
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.savefig(f'{plot_folder}/rtt_histogram.png', dpi=300)
     plt.close()
     
@@ -83,7 +88,9 @@ if rtt_data:
     sns.boxplot(y=rtt_series, color='lightgreen')
     plt.title('RTT Box Plot')
     plt.ylabel('Round Trip Time (ms)')
-    plt.tight_layout()
+    # plt.tight_layout()
+    plt.tight_layout(pad=3.0)  # Adjust layout before saving
+
     plt.savefig(f'{plot_folder}/rtt_boxplot.png', dpi=300)
     plt.close()
     
@@ -98,10 +105,12 @@ if rtt_data:
                      color='red', 
                      label=f'±1 Std Dev: {std_rtt:.4f}')
     plt.title('RTT Values Over Samples')
-    plt.xlabel('Sample Index')
+    plt.xlabel('Sample Id')
     plt.ylabel('Round Trip Time (ms)')
     plt.legend()
-    plt.tight_layout()
+    # plt.tight_layout()
+    plt.tight_layout(pad=3.0)  # Adjust layout before saving
+
     plt.savefig(f'{plot_folder}/rtt_lineplot.png', dpi=300)
     plt.close()
     
@@ -134,18 +143,20 @@ if rtt_data:
                      color='red', 
                      label=f'±1 Std Dev: {std_rtt:.4f}')
     plt.title('RTT Values Over Samples')
-    plt.xlabel('Sample Index')
+    plt.xlabel('Request Id')
     plt.ylabel('Round Trip Time (ms)')
     plt.legend()
     
     # plt.tight_layout()
+    plt.tight_layout(pad=3.0)  # Adjust layout before saving
+
     plt.savefig(f'{plot_folder}/rtt_combined.png', dpi=300)
     # plt.show()
     
     # Create a DataFrame for further analysis if needed
     rtt_df = pd.DataFrame({
         'RTT (ms)': rtt_series,
-        'Sample': range(1, len(rtt_series) + 1)
+        'Request Id': range(1, len(rtt_series) + 1)
     })
     # Show a summary of the data
     # display(rtt_df.describe())

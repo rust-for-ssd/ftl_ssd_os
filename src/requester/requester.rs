@@ -1,4 +1,8 @@
-use crate::{bindings::generated::ssd_os_sleep, media_manager::media_manager::mm_page, println};
+use core::alloc::Allocator;
+
+use alloc::vec::Vec;
+
+use crate::{allocator::sdd_os_alloc::SimpleAllocator, bindings::generated::ssd_os_sleep, l2p::l2p::LogicalAddr, media_manager::media_manager::mm_page, println};
 
 #[derive(Debug, Clone, Copy)]
 pub enum CommandType {
@@ -8,12 +12,22 @@ pub enum CommandType {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum Status {
+    BAD, 
+    DONE, 
+    IN_PROCESS,
+    PENDING
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct Request {
     pub id: u32, 
+    pub status: Status, 
     pub cmd: CommandType, 
     pub logical_addr: u32,
     pub physical_addr: Option<u32>,
     pub data: *mut mm_page,
+    
     
     // Timing metadata
     pub start_time: u32,
@@ -36,11 +50,25 @@ impl Default for Request {
             data: core::ptr::null_mut(),
             start_time: 0,
             end_time: 0,
+            status: Status::IN_PROCESS,
         }
     }
 }
 
 impl Request {
+    
+    pub fn new(id: u32, cmd: CommandType, logical_addr: LogicalAddr, data: *mut mm_page) -> Self { 
+        Request { 
+            id: id, 
+            status: Status::PENDING,
+            cmd: cmd,
+            logical_addr: logical_addr,
+            physical_addr: None,
+            data: data,
+            start_time: 0,
+            end_time: 0 }
+    }
+    
     pub fn calc_round_trip_time_clock_cycles(&self) -> u32 {
         // println!("Start time {:?}", self.start_time);
         // println!("End time {:?}", self.end_time);
@@ -67,5 +95,60 @@ pub fn read_mtime() -> u32 { // it's in ms
         // Access the memory-mapped MTIME register
         let mtime_addr = MTIME_REG as *const u32;
         core::ptr::read_volatile(mtime_addr)
+    }
+}
+
+
+
+pub enum WorkloadType {
+    READ, 
+    WRITE,
+    MIXED
+}
+
+pub struct RequestWorkloadGenerator<A: Allocator + 'static> {
+    requests: Vec<Request, &'static A>, 
+    cur_request_idx: usize,
+    workload_type: WorkloadType, 
+    start_time: u32, 
+    end_time: u32,
+    write_data: mm_page
+}
+
+
+impl <A: Allocator + 'static> RequestWorkloadGenerator<A> {
+    pub fn new (workload_type: WorkloadType, size: usize, alloc: &'static A) -> Self {
+        RequestWorkloadGenerator {
+            requests: Vec::with_capacity_in(size, alloc),
+            cur_request_idx: 0,
+            workload_type: workload_type,
+            start_time: 0,
+            end_time: 0,
+            write_data: [42, 42]
+            
+            
+        }
+    }
+
+    pub fn init_workload(&mut self) {
+        for i in 0..self.requests.capacity() { 
+            match self.workload_type {
+                WorkloadType::READ => self.requests.push(Request::new(i as u32, CommandType::READ, i as LogicalAddr, core::ptr::null_mut())),
+                WorkloadType::WRITE => self.requests.push(Request::new(i as u32, CommandType::WRITE, i as LogicalAddr, &self.write_data as *const mm_page as *mut mm_page)),
+                WorkloadType::MIXED => {
+                    if i % 2 == 0 {
+                        self.requests.push(Request::new(i as u32, CommandType::READ, i as LogicalAddr, core::ptr::null_mut()))
+                    } else {
+                        self.requests.push(Request::new(i as u32, CommandType::WRITE, i as LogicalAddr, &self.write_data as *const mm_page as *mut mm_page))
+                    }
+                },
+            }
+        }
+    }
+    
+    pub fn next_request(&mut self) -> Option<&mut Request> { 
+        let res = self.requests.get_mut(self.cur_request_idx);
+        self.cur_request_idx +=1;
+        res
     }
 }
