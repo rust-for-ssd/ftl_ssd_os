@@ -2,11 +2,9 @@ use core::alloc::Allocator;
 
 use alloc::{collections::VecDeque, vec::Vec};
 
-use crate::{shared::addresses::{PhysicalBlockAddress, PhysicalPageAddress}
-};
+use crate::shared::addresses::{PhysicalBlockAddress, PhysicalPageAddress};
 
 use crate::media_manager::media_manager::Geometry;
-
 
 #[derive(Debug)]
 pub struct Provisioner<A: Allocator + 'static> {
@@ -88,6 +86,20 @@ impl<A: Allocator + 'static> Provisioner<A> {
             channels,
             last_picked_channel: 0,
             alloc,
+        }
+    }
+
+    pub fn init_all_free(&mut self) {
+        for ch in self.channels.iter_mut() {
+            for lun in ch.luns.iter_mut() {
+                let cap = lun.free.capacity();
+                for block_idx in 0..cap {
+                    lun.free.push_back(Block {
+                        id: block_idx,
+                        plane_id: 0,
+                    });
+                }
+            }
         }
     }
 
