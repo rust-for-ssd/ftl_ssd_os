@@ -33,5 +33,6 @@ default = []
 test = [] 
 pipeline_per_cmd = []
 connector_per_component = []
-
+debug = []
+benchmark = []
 
