@@ -3,17 +3,12 @@ use core::ptr::null_mut;
 use alloc::vec::Vec;
 
 use crate::{
-    allocator::sdd_os_alloc::SimpleAllocator,
-    bindings::{
+    allocator::sdd_os_alloc::SimpleAllocator, bindings::{
         generated::{lring_entry, pipeline},
         lring::{LRing, LRingErr},
         mem::MemoryRegion,
         safe::{ssd_os_get_connection, ssd_os_sleep},
-    },
-    make_connector_static,
-    media_manager::media_manager::mm_page,
-    println,
-    shared::core_local_cell::CoreLocalCell,
+    }, make_connector_static, media_manager::media_manager::mm_page, println, requester::requester::{RequestWorkloadGenerator, WorkloadType}, shared::core_local_cell::CoreLocalCell
 };
 
 use crate::requester::requester::{CommandType, Request, RequestError};
@@ -22,11 +17,13 @@ make_connector_static!(requester, init, exit, pipe_start, ring);
 
 static lring: LRing<128> = LRing::new();
 static ALLOC: SimpleAllocator = SimpleAllocator::new();
-static requests: CoreLocalCell<Vec<Result<Request, RequestError>, &SimpleAllocator>> =
-    CoreLocalCell::new();
-static mut requestIdx: usize = 0;
+static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<SimpleAllocator>> = CoreLocalCell::new();
 
-static request_pages: CoreLocalCell<Vec<(usize, mm_page), &SimpleAllocator>> = CoreLocalCell::new();
+// static requests: CoreLocalCell<Vec<Result<Request, RequestError>, &SimpleAllocator>> =
+//     CoreLocalCell::new();
+// static mut requestIdx: usize = 0;
+
+// static request_pages: CoreLocalCell<Vec<(usize, mm_page), &SimpleAllocator>> = CoreLocalCell::new();
 
 pub const N_REQUESTS: usize = 128;
 
@@ -40,36 +37,39 @@ fn init() -> ::core::ffi::c_int {
     mem_region.reserve(ring.alloc_mem as usize);
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
+    WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(WorkloadType::READ, 128, &ALLOC));
+    let workload = WORKLOAD_GENERATOR.get_mut();
+    workload.init_workload();
 
     
-    requests.set(Vec::with_capacity_in(N_REQUESTS, &ALLOC));
-    request_pages.set(Vec::with_capacity_in(N_REQUESTS, &ALLOC));
-    let pages = request_pages.get_mut();
-    let request = requests.get_mut();
-    for i in 0..N_REQUESTS {
-        pages.push((i, [i as u8, i as u8]));
-        if i % 2 == 0 {
-            request.push(Ok(Request {
-                id: i as u32,
-                cmd: CommandType::WRITE,
-                logical_addr: i as u32,
-                physical_addr: None,
-                data: pages[i].1.as_ptr().cast_mut().cast(),
-                start_time: 0,
-                end_time: 0,
-            }));
-        } else {
-            request.push(Ok(Request {
-                id: i as u32,
-                cmd: CommandType::READ,
-                logical_addr: i as u32,
-                physical_addr: None,
-                data: null_mut(),
-                start_time: 0,
-                end_time: 0,
-            }))
-        }
-    }
+    // requests.set(Vec::with_capacity_in(N_REQUESTS, &ALLOC));
+    // request_pages.set(Vec::with_capacity_in(N_REQUESTS, &ALLOC));
+    // let pages = request_pages.get_mut();
+    // let request = requests.get_mut();
+    // for i in 0..N_REQUESTS {
+    //     pages.push((i, [i as u8, i as u8]));
+    //     if i % 2 == 0 {
+    //         request.push(Ok(Request {
+    //             id: i as u32,
+    //             cmd: CommandType::WRITE,
+    //             logical_addr: i as u32,
+    //             physical_addr: None,
+    //             data: pages[i].1.as_ptr().cast_mut().cast(),
+    //             start_time: 0,
+    //             end_time: 0,
+    //         }));
+    //     } else {
+    //         request.push(Ok(Request {
+    //             id: i as u32,
+    //             cmd: CommandType::READ,
+    //             logical_addr: i as u32,
+    //             physical_addr: None,
+    //             data: null_mut(),
+    //             start_time: 0,
+    //             end_time: 0,
+    //         }))
+    //     }
+    // }
     // let mut i = 0;
     // req_pages.push((i, [0, 0]));
     // requests.get_mut().push(Ok(Request {
@@ -125,24 +125,30 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
             println!("NULL PTR!");
             return null_mut();
         };
+        
+        let workload = WORKLOAD_GENERATOR.get_mut();
 
-        let cur_req : Option<&mut Result<Request, RequestError>> = requests.get_mut().get_mut(unsafe { requestIdx });
-        unsafe { requestIdx += 1 };
+        let cur_req : Option<&mut Request> = workload.next_request();
+            
+            
+        // let cur_req : Option<&mut Result<Request, RequestError>> = requests.get_mut().get_mut(unsafe { requestIdx });
+        // unsafe { requestIdx += 1 };
 
         match cur_req {
-            Some(mut req) => {
+            Some(req) => {
                 let pipe_1 = ssd_os_get_connection(c"requester", c"requester_l2p");
                 
-                match req {
-                    Ok(elem) => {
-                        elem.start_timer();
+                req.start_timer();
+                // match req {
+                //     Ok(elem) => {
+                //         elem.start_timer();
 
-                    },
-                    Err(_) => todo!(),
-                }
+                //     },
+                //     Err(_) => todo!(),
+                // }
                
-                // Start the timer!
-                (*req).unwrap().start_timer();
+                // // Start the timer!
+                // (*req).unwrap().start_timer();
                 
                 // println!("Start value!!! request: {:?}", (*req).unwrap().start_time);
                 
