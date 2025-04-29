@@ -16,6 +16,8 @@ use crate::{
     shared::{addresses::PhysicalBlockAddress, core_local_cell::CoreLocalCell},
 };
 
+use super::requester::WORKLOAD_GENERATOR;
+
 make_connector_static!(prov, init, exit, pipe_start, ring);
 
 static lring: LRing<128> = LRing::new();
@@ -33,25 +35,9 @@ fn init() -> ::core::ffi::c_int {
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
-    provisioner.set(Provisioner::new(
-        &Geometry {
-            n_pages: 16,
-            n_of_ch: 4,
-            lun_per_ch: 8,
-            blk_per_lun: 16,
-            pg_per_blk: 16,
-        },
-        &ALLOC,
-    ));
-    provisioner
-        .get_mut()
-        .push_free_block(&PhysicalBlockAddress {
-            channel: 0,
-            lun: 0,
-            plane: 0,
-            block: 0,
-        });
-    // println!("PROV_INIT_END");
+    let geo = WORKLOAD_GENERATOR.get().get_geo();
+    provisioner.set(Provisioner::new(&geo, &ALLOC));
+    provisioner.get_mut().init_all_free();
     0
 }
 
