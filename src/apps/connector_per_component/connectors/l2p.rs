@@ -55,7 +55,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     let Ok(res) = lring.dequeue_as_mut(entry) else {
         return null_mut();
     };
-    let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
+    let Some(req) = res.get_ctx_as_mut::<Request>() else {
         return null_mut();
     };
 
@@ -88,7 +88,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
     // ssd_os_sleep(1);
     let res = lring_entry::new(entry).unwrap();
-    let Some(Ok(req)) = res.get_ctx_as_mut::<Result<Request, RequestError>>() else {
+    let Some(req) = res.get_ctx_as_mut::<Request>() else {
         return 0;
     };
     // println!("l2p recived: {:?}", req);
