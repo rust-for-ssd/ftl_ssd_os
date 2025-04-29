@@ -8,7 +8,7 @@ APP_NAME=${APP_NAME:-"connector_per_component"}
 
 rm *.o
 # cargo clean
-cargo b --profile small --features=$APP_NAME
+cargo b --profile small --features=$APP_NAME,benchmark
 ar x ./target/target/small/libftl_ssd_os.a
 
 if riscv32-none-elf-nm ftl_ssd_os*.o | grep -q "this_doesnt_exist"; then
