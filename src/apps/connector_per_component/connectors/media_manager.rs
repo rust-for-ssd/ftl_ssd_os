@@ -2,7 +2,7 @@ use core::ptr::null_mut;
 
 use crate::apps::connector_per_component::connectors::requester::N_REQUESTS;
 use crate::media_manager::media_manager::mm_page;
-use crate::requester::requester::{CommandType, Request, RequestError};
+use crate::requester::requester::{CommandType, Request, RequestError, Status};
 use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,
     bindings::{
@@ -44,6 +44,7 @@ fn init() -> ::core::ffi::c_int {
             data: arr.as_ptr().cast_mut().cast(),
             start_time: 0,
             end_time: 0,
+            status: Status::IN_PROCESS,
         });
     }
     // println!("MM_INIT_END");
