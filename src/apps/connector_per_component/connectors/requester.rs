@@ -43,6 +43,7 @@ fn init() -> ::core::ffi::c_int {
 }
 
 fn exit() -> ::core::ffi::c_int {
+    #[cfg(feature = "debug")]
     println!("EXIT IS TRIGGERED");
     0
 }
