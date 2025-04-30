@@ -21,14 +21,14 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<SimpleAllocator>> =
     CoreLocalCell::new();
 
-pub const N_REQUESTS: usize = 1024;
+pub const N_REQUESTS: usize = 10000;
 
 static mut READ_PIPE: *mut pipeline = core::ptr::null_mut();
 static mut WRITE_PIPE: *mut pipeline = core::ptr::null_mut();
 
 fn init() -> ::core::ffi::c_int {
     println!("REQUESTER_INIT");
-    let mut mem_region = MemoryRegion::new_from_cpu(1);
+    let mem_region = MemoryRegion::new_from_cpu(1);
     // let Ok(()) = lring.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
     //     panic!("REQUESTER_LRING WAS ALREADY INITIALIZED!");
     // };
@@ -119,9 +119,9 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
 
     // stop timer
     req.end_timer();
+    let workload = WORKLOAD_GENERATOR.get_mut();
+    workload.request_returned += 1;
     
-    // println!("BACK2");
-
 
     #[cfg(feature = "debug")]
     {
@@ -138,9 +138,9 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
     }
 
     #[cfg(feature = "benchmark")]
-    println!(req.calc_round_trip_time_clock_cycles());
-
-    // println!("BACK3");
+    if workload.request_returned == workload.get_n_requests() {
+        workload.calculate_stats();
+    }
 
     0
 }

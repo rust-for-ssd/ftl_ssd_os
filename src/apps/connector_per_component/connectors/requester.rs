@@ -25,7 +25,7 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<SimpleAllocator>> =
     CoreLocalCell::new();
 
-pub const N_REQUESTS: usize = 128;
+pub const N_REQUESTS: usize = 1024;
 
 fn init() -> ::core::ffi::c_int {
     #[cfg(feature = "debug")]
@@ -97,6 +97,8 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
 
     // stop timer
     req.end_timer();
+    let workload = WORKLOAD_GENERATOR.get_mut();
+    workload.request_returned += 1;
 
     #[cfg(feature = "debug")]
     {
@@ -112,8 +114,9 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
         );
     }
 
-    #[cfg(feature = "benchmark")]
-    println!(req.calc_round_trip_time_clock_cycles());
+    if workload.request_returned == workload.get_n_requests() {
+           workload.calculate_stats();
+       }
 
     0
 }
