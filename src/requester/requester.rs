@@ -113,7 +113,7 @@ pub enum WorkloadType {
 pub struct RequestWorkloadGenerator<A: Allocator + 'static> {
     requests: Vec<Request, &'static A>,
     cur_request_idx: usize,
-    request_returned: usize,
+    pub request_returned: usize,
     workload_type: WorkloadType,
     start_time: u32,
     end_time: u32,
@@ -176,11 +176,12 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
     }
     
     pub fn calculate_stats(&mut self) {
+        unsafe { ssd_os_sleep(1) };
         for i in 0..self.requests.capacity(){
             let Some(res) = self.requests.get_mut(i) else {
                 return;
             };
-            res
+            println!(res.calc_round_trip_time_clock_cycles())
         }
     }
 
