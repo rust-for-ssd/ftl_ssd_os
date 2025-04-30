@@ -1,10 +1,9 @@
 use crate::{
     bindings::generated::nvm_mmgr_geometry,
     l2p::l2p::PhysicalAddr,
-    println,
     requester::requester::{CommandType, Request},
 };
-use alloc::{collections::BTreeMap, vec::Vec};
+use alloc::collections::BTreeMap;
 use core::{alloc::Allocator, ptr::null_mut};
 
 pub type mm_page = [u8; 2];
@@ -14,6 +13,7 @@ pub type mm_page = [u8; 2];
 pub struct Geometry {
     pub n_pages: u32, //TODO convert to u64 when possible
     pub n_of_ch: u8,
+    pub n_of_planes: u8,
     pub lun_per_ch: u8,
     pub blk_per_lun: u16,
     pub pg_per_blk: u16,
@@ -24,6 +24,7 @@ impl Geometry {
         Geometry {
             n_pages: nvm_geo.tot_pg as u32, //TODO convert to u64 when possible
             n_of_ch: nvm_geo.n_of_ch,
+            n_of_planes: nvm_geo.n_of_planes,
             lun_per_ch: nvm_geo.lun_per_ch,
             blk_per_lun: nvm_geo.blk_per_lun,
             pg_per_blk: nvm_geo.pg_per_blk,
@@ -46,7 +47,7 @@ static dummy: mm_page = [99, 99];
 
 impl<A: Allocator + 'static> MediaManager<A> {
     pub fn new(alloc: &'static A) -> Self {
-        let mut mm = MediaManager {
+        let mm = MediaManager {
             data_buffer: BTreeMap::new_in(alloc),
         };
         mm

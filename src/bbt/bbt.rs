@@ -5,6 +5,7 @@ use core::alloc::Allocator;
 /// we assume the structure is channels[LUNS[Planes[Blocks]]]
 use alloc::vec::Vec;
 
+use crate::media_manager::media_manager::Geometry;
 use crate::shared::addresses::PhysicalBlockAddress;
 use crate::{bindings::generated::nvm_mmgr_geometry, println};
 
@@ -32,7 +33,7 @@ pub enum BadBlockStatus {
 unsafe impl<A: Allocator> Sync for BadBlockTable<A> {}
 
 impl<A: Allocator> BadBlockTable<A> {
-    pub fn new(geometry: &nvm_mmgr_geometry, alloc: &'static A) -> Self {
+    pub fn new(geometry: &Geometry, alloc: &'static A) -> Self {
         let mut channels: Vec<Channel<A>, &A> =
             Vec::with_capacity_in(geometry.n_of_ch as usize, alloc);
         for _ in 0..geometry.n_of_ch {
@@ -57,21 +58,11 @@ impl<A: Allocator> BadBlockTable<A> {
     }
 
     pub fn set_bad_block(&mut self, pba: &PhysicalBlockAddress) {
-        println!("SETTING PBA");
-        println!(pba.channel as u32);
-        println!(pba.lun as u32);
-        println!(pba.plane as u32);
-        println!(pba.block as u32);
         self.channels[pba.channel as usize].luns[pba.lun as usize].planes[pba.plane as usize]
             .blocks[pba.block as usize] = BadBlockStatus::Bad;
     }
 
     pub fn get_block_status(&self, pba: &PhysicalBlockAddress) -> BadBlockStatus {
-        println!("GETTING PBA");
-        println!(pba.channel as u32);
-        println!(pba.lun as u32);
-        println!(pba.plane as u32);
-        println!(pba.block as u32);
         self.channels[pba.channel as usize].luns[pba.lun as usize].planes[pba.plane as usize].blocks
             [pba.block as usize]
     }

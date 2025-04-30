@@ -6,14 +6,12 @@ use crate::{
         generated::{lring_entry, pipeline},
         lring::{LRing, LRingErr},
         mem::MemoryRegion,
-        safe::{ssd_os_get_connection, ssd_os_sleep},
+        safe::ssd_os_get_connection,
     },
-    make_connector_static,
-    media_manager::media_manager::Geometry,
-    println,
+    make_connector_static, println,
     provisioner::provisioner::Provisioner,
-    requester::requester::{Request, RequestError},
-    shared::{addresses::PhysicalBlockAddress, core_local_cell::CoreLocalCell},
+    requester::requester::Request,
+    shared::core_local_cell::CoreLocalCell,
 };
 
 use super::requester::WORKLOAD_GENERATOR;
@@ -37,7 +35,11 @@ fn init() -> ::core::ffi::c_int {
     
     let geo = WORKLOAD_GENERATOR.get().get_geo();
     provisioner.set(Provisioner::new(&geo, &ALLOC));
-    provisioner.get_mut().init_all_free();
+
+    // SAFETY: we access the BBT here directly because it is in the init, which is data race safe.
+    provisioner
+        .get_mut()
+        .init_free_from_bbt(&geo, super::bbt::BBT.get());
     0
 }
 

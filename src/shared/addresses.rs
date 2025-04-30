@@ -71,3 +71,14 @@ impl From<PhysicalPageAddress> for u32 {
         ppa.channel as u32 + ppa.lun as u32 + ppa.plane as u32 + ppa.block as u32 + ppa.page as u32
     }
 }
+
+impl From<PhysicalPageAddress> for PhysicalBlockAddress {
+    fn from(ppa: PhysicalPageAddress) -> Self {
+        PhysicalBlockAddress {
+            channel: ppa.channel,
+            lun: ppa.lun,
+            plane: ppa.plane,
+            block: ppa.block,
+        }
+    }
+}
