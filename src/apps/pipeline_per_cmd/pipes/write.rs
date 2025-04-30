@@ -197,7 +197,22 @@ fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_
     if let Ok(request) = req {
         // println!("L2P_READ_STAGE: {:?}", request);
         // Modify the value behind the context pointer
-        request.data = MM.lock().execute_request(request).unwrap();
+        let Ok(data) = MM.lock().execute_request(request) else {
+            if let Some(_pba) = request.physical_addr {
+                //TODO: only do this because ssd_os does not support LLVM 64-bit operations,
+                // so we cannot convert ppa correctly.
+                // if it works, then use pba directly.
+                let pba = PhysicalBlockAddress {
+                    channel: 0,
+                    lun: 0,
+                    plane: 0,
+                    block: 0,
+                };
+                BBT.lock().set_bad_block(&pba);
+            }
+            return context;
+        };
+        request.data = data;
     }
 
     context
