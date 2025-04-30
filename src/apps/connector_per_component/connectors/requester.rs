@@ -1,7 +1,7 @@
 use core::ptr::null_mut;
 
 use crate::{
-    allocator::sdd_os_alloc::SimpleAllocator,
+    allocator::linked_list_alloc::LinkedListAllocator,
     bindings::{
         generated::{lring_entry, pipeline},
         lring::LRing,
@@ -18,8 +18,8 @@ use crate::requester::requester::Request;
 make_connector_static!(requester, init, exit, pipe_start, ring);
 
 static lring: LRing<128> = LRing::new();
-static ALLOC: SimpleAllocator = SimpleAllocator::new();
-pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<SimpleAllocator>> =
+static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
+pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedListAllocator>> =
     CoreLocalCell::new();
 
 pub const N_REQUESTS: usize = 1024;
@@ -34,14 +34,17 @@ fn init() -> ::core::ffi::c_int {
     };
     mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
 
-    ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
+    ALLOC.set(LinkedListAllocator::new());
+    ALLOC
+        .get()
+        .initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
     #[cfg(feature = "benchmark")]
     {
         WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
             crate::requester::requester::WorkloadType::READ,
             N_REQUESTS,
-            &ALLOC,
+            ALLOC.get(),
         ));
         let workload = WORKLOAD_GENERATOR.get_mut();
         workload.init_workload();
@@ -104,8 +107,8 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
     }
 
     if workload.request_returned == workload.get_n_requests() {
-           workload.calculate_stats();
-       }
+        workload.calculate_stats();
+    }
 
     0
 }

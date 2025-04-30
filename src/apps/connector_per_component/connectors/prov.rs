@@ -1,7 +1,7 @@
 use core::ptr::null_mut;
 
 use crate::{
-    allocator::sdd_os_alloc::SimpleAllocator,
+    allocator::linked_list_alloc::LinkedListAllocator,
     bindings::{
         generated::{lring_entry, pipeline},
         lring::{LRing, LRingErr},
@@ -19,8 +19,8 @@ use super::requester::WORKLOAD_GENERATOR;
 make_connector_static!(prov, init, exit, pipe_start, ring);
 
 static lring: LRing<128> = LRing::new();
-static ALLOC: SimpleAllocator = SimpleAllocator::new();
-static provisioner: CoreLocalCell<Provisioner<SimpleAllocator>> = CoreLocalCell::new();
+static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
+static provisioner: CoreLocalCell<Provisioner<LinkedListAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
     let mut mem_region = MemoryRegion::new_from_cpu(3);
@@ -29,10 +29,13 @@ fn init() -> ::core::ffi::c_int {
     };
     mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
 
-    ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
+    ALLOC.set(LinkedListAllocator::new());
+    ALLOC
+        .get()
+        .initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
     let geo = WORKLOAD_GENERATOR.get().get_geo();
-    provisioner.set(Provisioner::new(&geo, &ALLOC));
+    provisioner.set(Provisioner::new(&geo, ALLOC.get()));
 
     // SAFETY: we access the BBT here directly because it is in the init, which is data race safe.
     provisioner
