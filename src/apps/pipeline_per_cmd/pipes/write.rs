@@ -1,6 +1,7 @@
 use core::ptr::null_mut;
 
 use crate::allocator::semaphore_alloc::SemaphoreAllocator;
+use crate::apps::pipeline_per_cmd::connectors::requester::WORKLOAD_GENERATOR;
 use crate::bindings::mem::MemoryRegion;
 use crate::bindings::safe::ssd_os_sleep;
 use crate::l2p::l2p::L2pMapper;
@@ -8,6 +9,7 @@ use crate::media_manager::media_manager::{Geometry, MediaManager};
 use crate::provisioner::provisioner::Provisioner;
 use crate::shared::addresses::PhysicalBlockAddress;
 use crate::shared::core_local_cell::CoreLocalCell;
+use crate::shared::macros::ensure_unique;
 use crate::shared::semaphore::Semaphore;
 use crate::{make_stage_static, println};
 
@@ -27,17 +29,34 @@ make_stage_static!(write_prov, init_prov, exit, prov_context_handler);
 make_stage_static!(write_mm, init_mm, exit, mm_context_handler);
 
 fn init_l2p() -> ::core::ffi::c_int {
-    // ssd_os_sleep(1);
-    // println!("WRITE: INIT: L2P STAGE");
-    let mem_region = MemoryRegion::new_from_cpu(1);
+    ensure_unique!();
+
+    #[cfg(feature = "debug")]
+    {
+    ssd_os_sleep(1);
+    println!("WRITE: INIT: L2P STAGE");
+        
+    }
+
+    let mem_region = MemoryRegion::new_from_cpu(2);
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
 
     L2P_ALLOC.init(mem_region.free_start.cast(), mem_region.end.cast());
     L2P_MAPPER.init(L2pMapper::new(&L2P_ALLOC));
-    let mut l2p_mapper = L2P_MAPPER.lock();
-    l2p_mapper.map(0x1, 0x1234);
-    l2p_mapper.map(0x2, 0x5555);
+    let n_requests = WORKLOAD_GENERATOR.get().get_n_requests();
+    let mut l2p_map = L2P_MAPPER.lock();
+    l2p_map.prepare_for_benchmark(n_requests);
+
+    
+    // #[cfg(feature = "benchmark")]
+    // {
+    // let l2p_map = l2p_mapper.get_mut();
+    // l2p_map.prepare_for_benchmark(n_requests);
+    // }
+    
+    // l2p_mapper.map(0x0, 0x1234);
+    // l2p_mapper.map(0x2, 0x5555);
     // for i in 0..128 {
     //     let i = i as u32;
     //     l2p_mapper.map(i, i);
@@ -46,40 +65,28 @@ fn init_l2p() -> ::core::ffi::c_int {
 }
 
 fn init_prov() -> ::core::ffi::c_int {
-    ssd_os_sleep(1);
+    ensure_unique!();
+
+    // ssd_os_sleep(1);
     // println!("WRITE: INIT: PROV STAGE");
     let mem_region = MemoryRegion::new_from_cpu(3);
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
     PROV_ALLOC.init(mem_region.free_start.cast(), mem_region.end.cast());
-
-    PROVISIONER.init(Provisioner::new(
-        &Geometry {
-            n_pages: 16,
-            n_of_ch: 4,
-            lun_per_ch: 8,
-            blk_per_lun: 16,
-            pg_per_blk: 8,
-        },
-        &PROV_ALLOC,
-    ));
-
-    let example_free_block = PhysicalBlockAddress {
-        channel: 1,
-        lun: 1,
-        plane: 1,
-        block: 1,
-    };
-
-    let mut prov = PROVISIONER.lock();
-    prov.push_free_block(&example_free_block);
+    
+    let geo = WORKLOAD_GENERATOR.get().get_geo();
+    PROVISIONER.init(Provisioner::new(&geo, &PROV_ALLOC));
+    PROVISIONER.lock().init_all_free();
+    
     0
 }
 
 fn init_mm() -> ::core::ffi::c_int {
+    ensure_unique!();
+
     // ssd_os_sleep(1);
     // println!("WRITE: INIT: MM STAGE");
-    let mem_region = MemoryRegion::new_from_cpu(2);
+    let mem_region = MemoryRegion::new_from_cpu(4);
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
 
@@ -93,6 +100,8 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn prov_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
+    ensure_unique!();
+
     // ssd_os_sleep(1);
     // println!("WRITE: PROV STAGE");
     // We just propagete the context here.
@@ -120,6 +129,8 @@ fn prov_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::
 }
 
 fn l2p_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
+    ensure_unique!();
+
     // ssd_os_sleep(1);
     // println!("WRITE: L2P STAGE");
     // We just propagete the context here.
@@ -158,6 +169,7 @@ fn l2p_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c
 }
 
 fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
+    ensure_unique!();
     // ssd_os_sleep(1);
 
     // println!("WRITE: MM STAGE");

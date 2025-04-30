@@ -16,37 +16,46 @@ use crate::requester::requester::{Request, RequestError, CommandType};
 
 make_connector_static!(requester1, init, exit, pipe_start, ring);
 
-static lring: LRing<128> = LRing::new();
+// static lring: LRing<128> = LRing::new();
 static ALLOC: SimpleAllocator = SimpleAllocator::new();
 pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<SimpleAllocator>> =
     CoreLocalCell::new();
 
 pub const N_REQUESTS: usize = 1024;
 
+static mut READ_PIPE: *mut pipeline = core::ptr::null_mut();
+static mut WRITE_PIPE: *mut pipeline = core::ptr::null_mut();
+
 fn init() -> ::core::ffi::c_int {
     println!("REQUESTER_INIT");
     let mut mem_region = MemoryRegion::new_from_cpu(1);
-    let Ok(()) = lring.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
-        panic!("REQUESTER_LRING WAS ALREADY INITIALIZED!");
-    };
-    let ring = lring.get_lring().unwrap();
-    mem_region.reserve(ring.alloc_mem as usize);
+    // let Ok(()) = lring.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
+    //     panic!("REQUESTER_LRING WAS ALREADY INITIALIZED!");
+    // };
+    // let ring = lring.get_lring().unwrap();
+    // mem_region.reserve(ring.alloc_mem as usize);
 
     println!("LRING_INIT");
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
     
-    #[cfg(feature = "benchmark")]
-    {
+    
+    unsafe { READ_PIPE = ssd_os_get_connection(c"requester1", c"read"); };
+    unsafe { WRITE_PIPE = ssd_os_get_connection(c"requester1", c"write"); };
+
+    
+    
+    // #[cfg(feature = "benchmark")]
+    // {
     WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
-        WorkloadType::READ,
+        WorkloadType::WRITE,
         N_REQUESTS,
         &ALLOC,
     ));
     let workload = WORKLOAD_GENERATOR.get_mut();
     workload.init_workload();  
-    }
+    // }
     0
 }
 
@@ -75,9 +84,11 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
             match req.cmd {
                 CommandType::READ => {
                     entry.set_ctx(req);
+                    // println!("HERE1");
                     return ssd_os_get_connection(c"requester1", c"read");
                 },
                 CommandType::WRITE => {
+                    // println!("HERE2");
                     entry.set_ctx(req);
                     return ssd_os_get_connection(c"requester1", c"write")
                 },
@@ -94,6 +105,8 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
+    
+    // println!("BACK");
     #[cfg(feature = "debug")]
     ssd_os_sleep(1);
 
@@ -102,8 +115,13 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
         return 0;
     };
 
+    // println!("BACK1");
+
     // stop timer
     req.end_timer();
+    
+    // println!("BACK2");
+
 
     #[cfg(feature = "debug")]
     {
@@ -121,6 +139,8 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
 
     #[cfg(feature = "benchmark")]
     println!(req.calc_round_trip_time_clock_cycles());
+
+    // println!("BACK3");
 
     0
 }
