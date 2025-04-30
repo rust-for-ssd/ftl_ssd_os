@@ -1,15 +1,13 @@
 use core::ptr::null_mut;
 
-use crate::apps::connector_per_component::connectors::requester::N_REQUESTS;
-use crate::media_manager::media_manager::mm_page;
-use crate::requester::requester::{CommandType, Request, Status};
+use crate::requester::requester::Request;
 use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,
     bindings::{
         generated::{lring_entry, pipeline},
         lring::{LRing, LRingErr},
         mem::MemoryRegion,
-        safe::{ssd_os_get_connection, ssd_os_sleep},
+        safe::ssd_os_get_connection,
     },
     make_connector_static,
     media_manager::media_manager::MediaManager,
@@ -27,8 +25,7 @@ fn init() -> ::core::ffi::c_int {
     let Ok(()) = lring.init(c"MM_LRING", mem_region.free_start, 0) else {
         panic!("MM_LRING WAS ALREADY INITIALIZED!");
     };
-    let ring = lring.get_lring().unwrap();
-    mem_region.reserve(ring.alloc_mem as usize);
+    mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
     MM.set(MediaManager::new(&ALLOC));
@@ -41,8 +38,6 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    // ssd_os_sleep(1);
-
     let Ok(res) = lring.dequeue_as_mut(entry) else {
         return null_mut();
     };
@@ -61,7 +56,6 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    // ssd_os_sleep(1);
     match lring.enqueue(entry) {
         Ok(()) => 0,
         Err(LRingErr::Enqueue(i)) => i,
