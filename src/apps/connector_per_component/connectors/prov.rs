@@ -23,16 +23,14 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static provisioner: CoreLocalCell<Provisioner<SimpleAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
-    // println!("PROV_INIT");
     let mut mem_region = MemoryRegion::new_from_cpu(3);
     let Ok(()) = lring.init(c"L2P_LRING", mem_region.free_start, 0) else {
         panic!("L2P_LRING WAS ALREADY INITIALIZED!");
     };
-    let ring = lring.get_lring().unwrap();
-    mem_region.reserve(ring.alloc_mem as usize);
+    mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-    
+
     let geo = WORKLOAD_GENERATOR.get().get_geo();
     provisioner.set(Provisioner::new(&geo, &ALLOC));
 
@@ -44,13 +42,10 @@ fn init() -> ::core::ffi::c_int {
 }
 
 fn exit() -> ::core::ffi::c_int {
-    // println!("EXIT!");
     0
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    // ssd_os_sleep(1);
-
     let Ok(res) = lring.dequeue_as_mut(entry) else {
         return null_mut();
     };
@@ -59,7 +54,6 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     };
 
     let Ok(ppa) = provisioner.get_mut().provision_page() else {
-        // println!("COULD NOT PROVISION!");
         return null_mut();
     };
 
@@ -72,7 +66,6 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    // ssd_os_sleep(1);
     match lring.enqueue(entry) {
         Ok(()) => 0,
         Err(LRingErr::Enqueue(i)) => i,

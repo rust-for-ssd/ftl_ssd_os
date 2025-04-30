@@ -2,20 +2,17 @@ use core::ptr::null_mut;
 
 use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,
-    apps::connector_per_component::connectors::requester::N_REQUESTS,
     bindings::{
         generated::{lring_entry, pipeline},
         lring::{LRing, LRingErr},
         mem::MemoryRegion,
-        safe::{ssd_os_get_connection, ssd_os_sleep},
+        safe::ssd_os_get_connection,
     },
     l2p::l2p::L2pMapper,
     make_connector_static, println,
-    requester::requester::{CommandType, Request, RequestError},
+    requester::requester::{CommandType, Request},
     shared::core_local_cell::CoreLocalCell,
 };
-
-use super::requester::WORKLOAD_GENERATOR;
 
 make_connector_static!(l2p, init, exit, pipe_start, ring);
 
@@ -24,54 +21,47 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static l2p_mapper: CoreLocalCell<L2pMapper<SimpleAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
-    // println!("L2P_INIT_START");
     let mut mem_region = MemoryRegion::new_from_cpu(2);
     let Ok(()) = lring.init(c"L2P_LRING", mem_region.free_start, 0) else {
         panic!("L2P_LRING WAS ALREADY INITIALIZED!");
     };
-    let ring = lring.get_lring().unwrap();
-    mem_region.reserve(ring.alloc_mem as usize);
+    mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
     l2p_mapper.set(L2pMapper::new(&ALLOC));
-    
+
     #[cfg(feature = "benchmark")]
     {
-    let n_requests = WORKLOAD_GENERATOR.get().get_n_requests();
-    let l2p_map = l2p_mapper.get_mut();
-    l2p_map.prepare_for_benchmark(n_requests);
+        let n_requests = super::requester::WORKLOAD_GENERATOR.get().get_n_requests();
+        let l2p_map = l2p_mapper.get_mut();
+        l2p_map.prepare_for_benchmark(n_requests);
     }
-    
+
     0
 }
 
 fn exit() -> ::core::ffi::c_int {
-    // println!("EXIT!");
     0
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    // ssd_os_sleep(1);
-
     let Ok(res) = lring.dequeue_as_mut(entry) else {
         return null_mut();
     };
+
     let Some(req) = res.get_ctx_as_mut::<Request>() else {
         return null_mut();
     };
 
-    // println!("l2p request: {:?}", req);
     match req.cmd {
         CommandType::READ => {
             req.physical_addr = l2p_mapper.get_mut().lookup(req.logical_addr);
             return ssd_os_get_connection(c"l2p", c"l2p_media_manager");
         }
         CommandType::WRITE if req.physical_addr.is_none() => {
-            // println!("l2p -> prov");
             return ssd_os_get_connection(c"l2p", c"l2p_prov");
         }
         CommandType::WRITE if req.physical_addr.is_some() => {
-            // println!("l2p -> mm");
             // WARNING: ASSUMING that the physical addr is only set from the provisioner in the write path.
             l2p_mapper
                 .get_mut()
@@ -87,12 +77,6 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    // ssd_os_sleep(1);
-    let res = lring_entry::new(entry).unwrap();
-    let Some(req) = res.get_ctx_as_mut::<Request>() else {
-        return 0;
-    };
-    // println!("l2p recived: {:?}", req);
     match lring.enqueue(entry) {
         Ok(()) => 0,
         Err(LRingErr::Enqueue(i)) => i,
