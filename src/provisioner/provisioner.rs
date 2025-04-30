@@ -114,6 +114,20 @@ impl<A: Allocator + 'static> Provisioner<A> {
             }
         }
     }
+    
+    pub fn init_all_free(&mut self) {
+             for ch in self.channels.iter_mut() {
+                 for lun in ch.luns.iter_mut() {
+                     let cap = lun.free.capacity();
+                     for block_idx in 0..cap {
+                         lun.free.push_back(Block {
+                             id: block_idx,
+                             plane_id: 0,
+                         });
+                     }
+                 }
+             }
+         }
 
     pub fn provision_block(&mut self) -> Result<PhysicalBlockAddress, ProvisionError> {
         // pick channel RR

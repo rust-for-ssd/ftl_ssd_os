@@ -113,6 +113,7 @@ pub enum WorkloadType {
 pub struct RequestWorkloadGenerator<A: Allocator + 'static> {
     requests: Vec<Request, &'static A>,
     cur_request_idx: usize,
+    request_returned: usize,
     workload_type: WorkloadType,
     start_time: u32,
     end_time: u32,
@@ -124,6 +125,7 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
         RequestWorkloadGenerator {
             requests: Vec::with_capacity_in(size, alloc),
             cur_request_idx: 0,
+            request_returned: 0,
             workload_type: workload_type,
             start_time: 0,
             end_time: 0,
@@ -171,6 +173,15 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
         let res = self.requests.get_mut(self.cur_request_idx);
         self.cur_request_idx += 1;
         res
+    }
+    
+    pub fn calculate_stats(&mut self) {
+        for i in 0..self.requests.capacity(){
+            let Some(res) = self.requests.get_mut(i) else {
+                return;
+            };
+            res
+        }
     }
 
     pub fn get_geo(&self) -> Geometry {
