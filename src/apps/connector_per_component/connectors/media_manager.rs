@@ -2,7 +2,7 @@ use core::ptr::null_mut;
 
 use crate::apps::connector_per_component::connectors::requester::N_REQUESTS;
 use crate::media_manager::media_manager::mm_page;
-use crate::requester::requester::{CommandType, Request, RequestError, Status};
+use crate::requester::requester::{CommandType, Request, Status};
 use crate::{
     allocator::sdd_os_alloc::SimpleAllocator,
     bindings::{
@@ -23,7 +23,6 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 static MM: CoreLocalCell<MediaManager<SimpleAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
-    // println!("MM_INIT_START");
     let mut mem_region = MemoryRegion::new_from_cpu(4);
     let Ok(()) = lring.init(c"MM_LRING", mem_region.free_start, 0) else {
         panic!("MM_LRING WAS ALREADY INITIALIZED!");
@@ -53,6 +52,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 
     let Ok(res) = MM.get_mut().execute_request(req) else {
         println!("MM ERROR!: {:?}", MM.get_mut().execute_request(req));
+        ssd_os_get_connection(c"mm", c"media_manager_bbt");
         return null_mut();
     };
     req.data = res;
