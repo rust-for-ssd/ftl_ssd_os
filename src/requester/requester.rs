@@ -175,6 +175,7 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
 
     pub fn get_geo(&self) -> Geometry {
         let n_of_ch = 8;
+        let n_of_planes = 2;
         let lun_per_ch = 4;
         let blk_per_lun = 64;
         let pg_per_blk = 64;
@@ -184,6 +185,7 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
         println!("MAXIMUM NUMBER OF PAGES: {}", n_pages);
         Geometry {
             n_of_ch: n_of_ch as u8,
+            n_of_planes,
             lun_per_ch: lun_per_ch as u8,
             blk_per_lun: blk_per_lun as u16,
             pg_per_blk: pg_per_blk as u16,

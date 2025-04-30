@@ -72,10 +72,10 @@ use crate::shared::core_local_cell::CoreLocalCell;
 //     }
 // };
 
-
 const GEOMETRY: Geometry = Geometry {
     n_pages: 100,
     n_of_ch: 8,
+    n_of_planes: 2,
     lun_per_ch: 12,
     blk_per_lun: 16,
     pg_per_blk: 16,
