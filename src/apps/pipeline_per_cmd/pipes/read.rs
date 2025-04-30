@@ -1,4 +1,6 @@
+
 use crate::bindings::safe::ssd_os_sleep;
+use crate::shared::macros::ensure_unique;
 use crate::{make_stage_static, println};
 
 use crate::requester::requester::{Request, RequestError};
@@ -21,8 +23,10 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn l2p_read_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
+    ensure_unique!();
+
     // ssd_os_sleep(1);
-    println!("READ: L2P STAGE");
+    // println!("READ: L2P STAGE");
     // We just propagete the context here.
 
     let req: &mut Result<Request, RequestError> = unsafe {
@@ -33,14 +37,26 @@ fn l2p_read_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::f
     };
 
     if let Ok(request) = req {
-        println!("L2P_READ_STAGE: {:?}", request);
+        // println!("L2P_READ_STAGE: {:?}", request);
         // Modify the value behind the context pointer
-        request.physical_addr = Some(L2P_MAPPER.lock().lookup(request.logical_addr).unwrap());
+        let physcial_add = L2P_MAPPER.lock().lookup(request.logical_addr); 
+        match physcial_add {
+            Some(_) => {
+                request.physical_addr = physcial_add;
+
+            },
+            None => {
+                println!("SOMETHING WENT WRONG");
+                request.physical_addr = None;
+            },
+        }
     }
     context
 }
 
 fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
+    ensure_unique!();
+
     // ssd_os_sleep(1);
 
     // println!("READ: MM STAGE");
@@ -55,7 +71,10 @@ fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_
     if let Ok(request) = req {
         // println!("L2P_READ_STAGE: {:?}", request);
         // Modify the value behind the context pointer
+        // println!("HERE");
         request.data = MM.lock().execute_request(request).unwrap();
+        // println!("HERE123");
+
     }
 
     // println!("REQUESTER TO L2P STAGE: {:?}", unsafe {*req});
