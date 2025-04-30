@@ -53,10 +53,15 @@ impl<A: Allocator + 'static> MediaManager<A> {
     }
 
     pub fn execute_request(&mut self, request: &Request) -> Result<*mut mm_page, MM_ERR> {
+        // println!("HERE1");
         match request.cmd {
             CommandType::READ => {
+                // println!("HERE2");
+
                 #[cfg(feature = "benchmark")]
                 return Ok(&dummy as *const mm_page as *mut mm_page);
+
+                // println!("HERE4");
 
                 let Some(ppa) = request.physical_addr else {
                     return Err(MM_ERR::NoPPAInReq);
