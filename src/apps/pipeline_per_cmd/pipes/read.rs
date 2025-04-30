@@ -1,4 +1,3 @@
-use crate::bindings::safe::ssd_os_sleep;
 use crate::shared::addresses::PhysicalBlockAddress;
 use crate::shared::macros::ensure_unique;
 use crate::{make_stage_static, println};
@@ -25,10 +24,6 @@ fn exit() -> ::core::ffi::c_int {
 fn l2p_read_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     ensure_unique!();
 
-    // ssd_os_sleep(1);
-    // println!("READ: L2P STAGE");
-    // We just propagete the context here.
-
     let req: &mut Result<Request, RequestError> = unsafe {
         context
             .cast::<Result<Request, RequestError>>()
@@ -37,7 +32,6 @@ fn l2p_read_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::f
     };
 
     if let Ok(request) = req {
-        // println!("L2P_READ_STAGE: {:?}", request);
         // Modify the value behind the context pointer
         let physcial_add = L2P_MAPPER.lock().lookup(request.logical_addr);
         match physcial_add {
@@ -45,7 +39,7 @@ fn l2p_read_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::f
                 request.physical_addr = physcial_add;
             }
             None => {
-                println!("SOMETHING WENT WRONG");
+                println!("Logical address not mapped!");
                 request.physical_addr = None;
             }
         }
@@ -56,10 +50,6 @@ fn l2p_read_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::f
 fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     ensure_unique!();
 
-    // ssd_os_sleep(1);
-
-    // println!("READ: MM STAGE");
-    // let req = context as *mut Result<Request, RequestError>;
     let req: &mut Result<Request, RequestError> = unsafe {
         context
             .cast::<Result<Request, RequestError>>()
@@ -68,9 +58,6 @@ fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_
     };
 
     if let Ok(request) = req {
-        // println!("L2P_READ_STAGE: {:?}", request);
-        // Modify the value behind the context pointer
-        // println!("HERE");
         let Ok(data) = MM.lock().execute_request(request) else {
             if let Some(_pba) = request.physical_addr {
                 //TODO: only do this because ssd_os does not support LLVM 64-bit operations,
@@ -89,11 +76,6 @@ fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_
             return context;
         };
         request.data = data;
-        // println!("HERE123");
     }
-
-    // println!("REQUESTER TO L2P STAGE: {:?}", unsafe {*req});
-
-    // We just propagete the context here.
     context
 }
