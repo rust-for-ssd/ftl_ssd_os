@@ -2,6 +2,7 @@ use core::alloc::Allocator;
 
 use alloc::{collections::VecDeque, vec::Vec};
 
+use crate::bbt::bbt::{BadBlockStatus, BadBlockTable};
 use crate::shared::addresses::{PhysicalBlockAddress, PhysicalPageAddress};
 
 use crate::media_manager::media_manager::Geometry;
@@ -89,15 +90,26 @@ impl<A: Allocator + 'static> Provisioner<A> {
         }
     }
 
-    pub fn init_all_free(&mut self) {
-        for ch in self.channels.iter_mut() {
-            for lun in ch.luns.iter_mut() {
-                let cap = lun.free.capacity();
-                for block_idx in 0..cap {
-                    lun.free.push_back(Block {
-                        id: block_idx,
-                        plane_id: 0,
-                    });
+    pub fn init_free_from_bbt<BBT_A: Allocator + 'static>(
+        &mut self,
+        geo: &Geometry,
+        bbt: &BadBlockTable<BBT_A>,
+    ) {
+        for channel in 0..geo.n_of_ch {
+            for lun in 0..geo.lun_per_ch {
+                for plane in 0..geo.n_of_planes {
+                    // TODO: Is the calculation of blk per lun / n of planes correct???
+                    for block in 0..geo.blk_per_lun as u16 / geo.n_of_planes as u16 {
+                        let pba = PhysicalBlockAddress {
+                            channel: channel.into(),
+                            lun: lun.into(),
+                            plane: plane.into(),
+                            block: block.into(),
+                        };
+                        if let BadBlockStatus::Good = bbt.get_block_status(&pba) {
+                            self.push_free_block(&pba);
+                        }
+                    }
                 }
             }
         }

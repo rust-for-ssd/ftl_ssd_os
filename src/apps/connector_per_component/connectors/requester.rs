@@ -25,7 +25,7 @@ static ALLOC: SimpleAllocator = SimpleAllocator::new();
 pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<SimpleAllocator>> =
     CoreLocalCell::new();
 
-pub const N_REQUESTS: usize = 1024;
+pub const N_REQUESTS: usize = 128;
 
 fn init() -> ::core::ffi::c_int {
     #[cfg(feature = "debug")]

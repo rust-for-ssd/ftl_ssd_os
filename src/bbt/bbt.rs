@@ -5,6 +5,7 @@ use core::alloc::Allocator;
 /// we assume the structure is channels[LUNS[Planes[Blocks]]]
 use alloc::vec::Vec;
 
+use crate::media_manager::media_manager::Geometry;
 use crate::shared::addresses::PhysicalBlockAddress;
 use crate::{bindings::generated::nvm_mmgr_geometry, println};
 
@@ -32,7 +33,7 @@ pub enum BadBlockStatus {
 unsafe impl<A: Allocator> Sync for BadBlockTable<A> {}
 
 impl<A: Allocator> BadBlockTable<A> {
-    pub fn new(geometry: &nvm_mmgr_geometry, alloc: &'static A) -> Self {
+    pub fn new(geometry: &Geometry, alloc: &'static A) -> Self {
         let mut channels: Vec<Channel<A>, &A> =
             Vec::with_capacity_in(geometry.n_of_ch as usize, alloc);
         for _ in 0..geometry.n_of_ch {
