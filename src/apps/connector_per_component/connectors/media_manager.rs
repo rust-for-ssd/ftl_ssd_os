@@ -33,21 +33,6 @@ fn init() -> ::core::ffi::c_int {
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
     MM.set(MediaManager::new(&ALLOC));
-    let mmgr = MM.get_mut();
-    for i in 0..N_REQUESTS {
-        static arr: mm_page = [0, 0];
-        let _ = mmgr.execute_request(&Request {
-            id: i as u32,
-            cmd: CommandType::WRITE,
-            logical_addr: i as u32,
-            physical_addr: Some(i as u32),
-            data: arr.as_ptr().cast_mut().cast(),
-            start_time: 0,
-            end_time: 0,
-            status: Status::IN_PROCESS,
-        });
-    }
-    // println!("MM_INIT_END");
     0
 }
 

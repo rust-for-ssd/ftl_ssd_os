@@ -39,13 +39,17 @@ fn init() -> ::core::ffi::c_int {
     mem_region.reserve(ring.alloc_mem as usize);
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
+    
+    #[cfg(feature = "benchmark")]
+    {
     WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
         WorkloadType::READ,
-        1024,
+        N_REQUESTS,
         &ALLOC,
     ));
     let workload = WORKLOAD_GENERATOR.get_mut();
-    workload.init_workload();
+    workload.init_workload();    
+    }
 
     0
 }

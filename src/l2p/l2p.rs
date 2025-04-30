@@ -48,4 +48,10 @@ impl<A: Allocator + 'static> L2pMapper<A> {
     pub fn clear(&mut self) {
         self.entries.clear();
     }
+    
+    pub fn prepare_for_benchmark(&mut self, n_requests: usize) {
+        for i in 0..n_requests {
+            self.map(i as u32, i as u32);
+        }
+    }
 }

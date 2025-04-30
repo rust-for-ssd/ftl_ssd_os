@@ -190,4 +190,8 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
             n_pages: n_pages as u32,
         }
     }
+    
+    pub fn get_n_requests(&self) -> usize {
+        self.requests.capacity()
+    }
 }

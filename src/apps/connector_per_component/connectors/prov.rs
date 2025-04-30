@@ -34,7 +34,7 @@ fn init() -> ::core::ffi::c_int {
     mem_region.reserve(ring.alloc_mem as usize);
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-
+    
     let geo = WORKLOAD_GENERATOR.get().get_geo();
     provisioner.set(Provisioner::new(&geo, &ALLOC));
     provisioner.get_mut().init_all_free();
