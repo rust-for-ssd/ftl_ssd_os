@@ -10,7 +10,10 @@ use crate::{
     },
     make_connector_static, println,
     requester::requester::Request,
-    shared::core_local_cell::CoreLocalCell,
+    shared::{
+        addresses::{PhysicalBlockAddress, PhysicalPageAddress},
+        core_local_cell::CoreLocalCell,
+    },
 };
 
 use super::requester::WORKLOAD_GENERATOR;
@@ -44,9 +47,24 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     let Ok(res) = lring.dequeue_as_mut(entry) else {
         return null_mut();
     };
-    let Some(_req) = res.get_ctx_as_mut::<Request>() else {
+    let Some(req) = res.get_ctx_as_mut::<Request>() else {
         return null_mut();
     };
+
+    let Some(ppa) = req.physical_addr else {
+        return null_mut();
+    };
+
+    // TODO: placeholder for now as we cannot convert u32 into PhysicalBlockAddress
+    // if ssd_os supports 64-bit operations for LLVM, then this should be possible with the nvm_addr
+    let pba = &PhysicalBlockAddress {
+        channel: 0,
+        lun: 0,
+        plane: 0,
+        block: 0,
+    };
+
+    BBT.get_mut().set_bad_block(pba);
 
     return null_mut();
 }

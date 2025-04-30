@@ -58,21 +58,11 @@ impl<A: Allocator> BadBlockTable<A> {
     }
 
     pub fn set_bad_block(&mut self, pba: &PhysicalBlockAddress) {
-        println!("SETTING PBA");
-        println!(pba.channel as u32);
-        println!(pba.lun as u32);
-        println!(pba.plane as u32);
-        println!(pba.block as u32);
         self.channels[pba.channel as usize].luns[pba.lun as usize].planes[pba.plane as usize]
             .blocks[pba.block as usize] = BadBlockStatus::Bad;
     }
 
     pub fn get_block_status(&self, pba: &PhysicalBlockAddress) -> BadBlockStatus {
-        println!("GETTING PBA");
-        println!(pba.channel as u32);
-        println!(pba.lun as u32);
-        println!(pba.plane as u32);
-        println!(pba.block as u32);
         self.channels[pba.channel as usize].luns[pba.lun as usize].planes[pba.plane as usize].blocks
             [pba.block as usize]
     }
