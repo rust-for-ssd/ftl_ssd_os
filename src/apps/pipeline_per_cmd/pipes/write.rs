@@ -2,6 +2,7 @@ use core::ptr::null_mut;
 
 use crate::allocator::semaphore_alloc::SemaphoreAllocator;
 use crate::apps::pipeline_per_cmd::connectors::requester::WORKLOAD_GENERATOR;
+use crate::bbt::bbt::BadBlockTable;
 use crate::bindings::mem::MemoryRegion;
 use crate::bindings::safe::ssd_os_sleep;
 use crate::l2p::l2p::L2pMapper;
@@ -17,6 +18,7 @@ use crate::requester::requester::{Request, RequestError};
 
 pub static PROV_ALLOC: SemaphoreAllocator = SemaphoreAllocator::new();
 pub static PROVISIONER: Semaphore<Provisioner<SemaphoreAllocator>> = Semaphore::new();
+pub static BBT: Semaphore<BadBlockTable<SemaphoreAllocator>> = Semaphore::new();
 
 pub static L2P_ALLOC: SemaphoreAllocator = SemaphoreAllocator::new();
 pub static L2P_MAPPER: Semaphore<L2pMapper<SemaphoreAllocator>> = Semaphore::new();
@@ -33,9 +35,8 @@ fn init_l2p() -> ::core::ffi::c_int {
 
     #[cfg(feature = "debug")]
     {
-    ssd_os_sleep(1);
-    println!("WRITE: INIT: L2P STAGE");
-        
+        ssd_os_sleep(1);
+        println!("WRITE: INIT: L2P STAGE");
     }
 
     let mem_region = MemoryRegion::new_from_cpu(2);
@@ -48,13 +49,12 @@ fn init_l2p() -> ::core::ffi::c_int {
     let mut l2p_map = L2P_MAPPER.lock();
     l2p_map.prepare_for_benchmark(n_requests);
 
-    
     // #[cfg(feature = "benchmark")]
     // {
     // let l2p_map = l2p_mapper.get_mut();
     // l2p_map.prepare_for_benchmark(n_requests);
     // }
-    
+
     // l2p_mapper.map(0x0, 0x1234);
     // l2p_mapper.map(0x2, 0x5555);
     // for i in 0..128 {
@@ -73,11 +73,12 @@ fn init_prov() -> ::core::ffi::c_int {
     println!("{:?}", mem_region.free_start);
     println!("{:?}", mem_region.end);
     PROV_ALLOC.init(mem_region.free_start.cast(), mem_region.end.cast());
-    
+
     let geo = WORKLOAD_GENERATOR.get().get_geo();
     PROVISIONER.init(Provisioner::new(&geo, &PROV_ALLOC));
-    PROVISIONER.lock().init_all_free();
-    
+    BBT.init(BadBlockTable::new(&geo, &PROV_ALLOC));
+    PROVISIONER.lock().init_free_from_bbt(&geo, &BBT.lock());
+
     0
 }
 
