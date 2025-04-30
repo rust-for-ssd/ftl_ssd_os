@@ -10,10 +10,7 @@ use crate::{
     },
     make_connector_static, println,
     requester::requester::Request,
-    shared::{
-        addresses::{PhysicalBlockAddress, PhysicalPageAddress},
-        core_local_cell::CoreLocalCell,
-    },
+    shared::{addresses::PhysicalBlockAddress, core_local_cell::CoreLocalCell},
 };
 
 use super::requester::WORKLOAD_GENERATOR;
@@ -29,8 +26,7 @@ fn init() -> ::core::ffi::c_int {
     let Ok(()) = lring.init(c"BBT_LRING", mem_region.free_start, 0) else {
         panic!("BBT_LRING WAS ALREADY INITIALIZED!");
     };
-    let ring = lring.get_lring().unwrap();
-    mem_region.reserve(ring.alloc_mem as usize);
+    mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
 
     ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
@@ -51,7 +47,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
         return null_mut();
     };
 
-    let Some(ppa) = req.physical_addr else {
+    let Some(_ppa) = req.physical_addr else {
         return null_mut();
     };
 

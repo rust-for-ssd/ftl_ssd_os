@@ -14,10 +14,5 @@ fn exit() -> ::core::ffi::c_int {
 #[unsafe(no_mangle)]
 fn context_handler_mm_bbt(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     ensure_unique!();
-    // ssd_os_sleep(1);
-    // let req = context as *mut Result<Request, RequestError>;
-    // unsafe {
-    //     println!("l2p -> mm: {}", req.as_ref().unwrap().unwrap().id);
-    // }
     context
 }
