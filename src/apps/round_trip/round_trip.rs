@@ -14,7 +14,6 @@ make_stage_static!(stage2_1, stage_init_fn, stage_exit_fn, stage2_1_fn);
 make_stage_static!(stage2_2, stage_init_fn, stage_exit_fn, stage2_2_fn);
 make_stage_static!(stage2_3, stage_init_fn, stage_exit_fn, stage2_3_fn);
 
-// Simple static variables
 static mut AMOUNT: u32 = 0;
 static mut COUNT: u32 = 0;
 static mut SUBMITTED: u32 = 0;
@@ -22,11 +21,12 @@ static mut LAST_COUNT: u32 = 0;
 
 static mut PIPE1: *mut pipeline = core::ptr::null_mut();
 static mut PIPE2: *mut pipeline = core::ptr::null_mut();
-static LRING: LRing<128> = LRing::new();
 static POOL_SIZE: usize = 10000;
+static RING_SIZE: usize = 128;
+static LRING: LRing<RING_SIZE> = LRing::new();
 
 
-// Static array to hold all of our message instances
+
 static mut MESSAGE_POOL: [Numbers; POOL_SIZE] = [Numbers::ZERO; POOL_SIZE];
 static mut MSG_USAGE_BITMAP: [bool; POOL_SIZE] = [false; POOL_SIZE];
 
@@ -39,7 +39,6 @@ struct Numbers {
 }
 
 impl Numbers {
-    // Use a const for initializing static arrays
     const ZERO: Self = Numbers {
         value: 0,
         add: 0,
@@ -61,7 +60,7 @@ impl Numbers {
     }
 }
 
-// Get an index for a Numbers instance in our pool
+// TODO: this could be more efficient, but it's not a bottle neck atm
 fn get_free_message_index() -> Option<usize> {
     unsafe {
         for i in 0..POOL_SIZE {
@@ -131,7 +130,6 @@ extern "C" fn timer_callback() {
 }
 
 // ------- Connection functions --------
-
 fn conn1_init() -> ::core::ffi::c_int {
     ensure_unique!();
     println!("Connector 1 initializing");
@@ -163,12 +161,9 @@ fn conn2_exit() -> ::core::ffi::c_int {
 }
 
 fn conn1_fn(entry: *mut lring_entry) -> *mut pipeline {
-    // unsafe { ssd_os_sleep(1) };
-    
     unsafe {
-        let ctx_ptr = (*entry).ctx;
-        
-        if ctx_ptr.is_null() {
+        // Only allocate a new message if we're below capacity
+        if AMOUNT < RING_SIZE as u32 {
             if let Some(idx) = get_free_message_index() {
                 let msg_ptr = get_message_ptr(idx);
                 
@@ -180,23 +175,52 @@ fn conn1_fn(entry: *mut lring_entry) -> *mut pipeline {
                 (*entry).ctx = msg_ptr as *mut c_void;
                 
                 AMOUNT += 1;
-            } else {
-                println!("No free messages in pool!");
             }
-        } else {
-            // Process existing message
-            let msg_ptr = ctx_ptr as *mut Numbers;
-            println!("Processing message: {:?}", *msg_ptr);
         }
         
         if PIPE1.is_null() {
-            // println!("Getting pipe1 connection");
             PIPE1 = ssd_os_get_connection(c"cpath_conn1", c"cpath_pipe1");
         }
         
         PIPE1
     }
 }
+
+// fn conn1_fn(entry: *mut lring_entry) -> *mut pipeline {
+//     // unsafe { ssd_os_sleep(1) };
+    
+//     unsafe {
+//         let ctx_ptr = (*entry).ctx;
+        
+//         if ctx_ptr.is_null() {
+//             if let Some(idx) = get_free_message_index() {
+//                 let msg_ptr = get_message_ptr(idx);
+                
+//                 (*msg_ptr).value = 1;
+//                 (*msg_ptr).add = 1;
+//                 (*msg_ptr).id = SUBMITTED as u16;
+//                 SUBMITTED += 1;
+                
+//                 (*entry).ctx = msg_ptr as *mut c_void;
+                
+//                 AMOUNT += 1;
+//             } else {
+//                 println!("No free messages in pool!");
+//             }
+//         } else {
+//             // Process existing message
+//             let msg_ptr = ctx_ptr as *mut Numbers;
+//             println!("Processing message: {:?}", *msg_ptr);
+//         }
+        
+//         if PIPE1.is_null() {
+//             // println!("Getting pipe1 connection");
+//             PIPE1 = ssd_os_get_connection(c"cpath_conn1", c"cpath_pipe1");
+//         }
+        
+//         PIPE1
+//     }
+// }
 
 fn conn2_fn(entry: *mut lring_entry) -> *mut pipeline {
     ensure_unique!();
@@ -239,16 +263,6 @@ fn conn1_ring_fn(entry: *mut lring_entry) -> ::core::ffi::c_int {
     // Release the message back to the pool
     if let Some(idx) = get_index_from_ptr(n) {
         release_message(idx);
-    }
-    
-    // Check if we need to submit more messages to keep 128 in flight
-    unsafe {
-        if AMOUNT < 128 {
-            // Submit a new empty entry to start the process again
-            let new_entry = entry;
-            (*new_entry).ctx = null_mut();
-            conn1_fn(new_entry);
-        }
     }
     
     0
@@ -361,17 +375,3 @@ fn stage2_3_fn(context: *mut c_void) -> *mut c_void {
 
     add_fn(context)
 }
-
-// Function to initialize and start the pipeline with 128 messages
-// pub fn start_pipeline() {
-//     // Create initial entries to start the pipeline with 128 messages
-//     for _ in 0..128 {
-//         let entry = unsafe { core::mem::zeroed::<lring_entry>() };
-//         let entry_ptr = &entry as *const _ as *mut lring_entry;
-        
-//         unsafe {
-//             (*entry_ptr).ctx = null_mut(); // Will be allocated in conn1_fn
-//             conn1_fn(entry_ptr);
-//         }
-//     }
-// }
