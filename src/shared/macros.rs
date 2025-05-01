@@ -45,6 +45,40 @@ macro_rules! println {
     }};
 }
 
+macro_rules! dbg_println {
+    ($($arg:tt)*) => {
+        #[cfg(feature = "debug")]
+        $crate::shared::macros::println!($($arg)*);
+    };
+}
+
+macro_rules! dbg {
+    () => {
+        if cfg!(feature = "debug") {
+            $crate::shared::macros::println!("[{}:{}]", file!(), line!());
+        }
+    };
+    ($val:expr) => {
+        if cfg!(feature = "debug") {
+            match &$val {
+                tmp => {
+                    $crate::shared::macros::println!(
+                        "[{}:{}] {} = {:?}",
+                        file!(),
+                        line!(),
+                        stringify!($val),
+                        tmp
+                    );
+                    tmp
+                }
+            }
+        } else {
+            &$val
+        }
+    };
+}
 pub(crate) use cstr;
+pub(crate) use dbg;
+pub(crate) use dbg_println;
 pub(crate) use ensure_unique;
 pub(crate) use println;
