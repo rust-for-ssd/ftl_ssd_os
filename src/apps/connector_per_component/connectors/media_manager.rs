@@ -1,6 +1,7 @@
 use core::ptr::null_mut;
 
 use crate::requester::requester::Request;
+use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
     bindings::{
@@ -11,10 +12,9 @@ use crate::{
     },
     make_connector_static,
     media_manager::media_manager::MediaManager,
-    println,
     shared::core_local_cell::CoreLocalCell,
 };
-make_connector_static!(mm, init, exit, pipe_start, ring);
+make_connector_static!(mm, init, exit, pipe_start, ring, 1);
 
 static lring: LRing<128> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();

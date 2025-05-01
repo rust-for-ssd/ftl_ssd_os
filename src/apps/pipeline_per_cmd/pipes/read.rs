@@ -1,6 +1,7 @@
+use crate::make_stage_static;
 use crate::shared::addresses::PhysicalBlockAddress;
 use crate::shared::macros::ensure_unique;
-use crate::{make_stage_static, println};
+use crate::shared::macros::println;
 
 use crate::requester::requester::{Request, RequestError};
 

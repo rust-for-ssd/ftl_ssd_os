@@ -5,14 +5,15 @@ use crate::apps::pipeline_per_cmd::connectors::requester::WORKLOAD_GENERATOR;
 use crate::bbt::bbt::BadBlockTable;
 use crate::bindings::mem::MemoryRegion;
 use crate::l2p::l2p::L2pMapper;
+use crate::make_stage_static;
 use crate::media_manager::media_manager::MediaManager;
 use crate::provisioner::provisioner::Provisioner;
 use crate::shared::addresses::PhysicalBlockAddress;
 use crate::shared::macros::ensure_unique;
 use crate::shared::semaphore::Semaphore;
-use crate::{make_stage_static, println};
 
 use crate::requester::requester::{Request, RequestError};
+use crate::shared::macros::println;
 
 pub static PROV_ALLOC: SemaphoreAllocator = SemaphoreAllocator::new();
 pub static PROVISIONER: Semaphore<Provisioner<SemaphoreAllocator>> = Semaphore::new();

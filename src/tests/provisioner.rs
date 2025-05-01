@@ -1,6 +1,6 @@
 use semihosting::println;
 
-use crate::allocator::sdd_os_alloc::SimpleAllocator;
+use crate::allocator::linked_list_alloc::LinkedListAllocator;
 use crate::bindings::generated::nvm_mmgr_geometry;
 use crate::media_manager::media_manager::Geometry;
 use crate::provisioner::provisioner::{Block, BlockWithPageInfo, ProvisionError, Provisioner};
@@ -81,9 +81,9 @@ const GEOMETRY: Geometry = Geometry {
     pg_per_blk: 16,
 };
 
-fn alloc_init() -> &'static SimpleAllocator {
-    static ALLOCATOR: CoreLocalCell<SimpleAllocator> = CoreLocalCell::new();
-    let alloc = SimpleAllocator::new();
+fn alloc_init() -> &'static LinkedListAllocator {
+    static ALLOCATOR: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
+    let alloc = LinkedListAllocator::new();
     let start = riscv_rt::heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     alloc.initialize(start, end);
@@ -94,7 +94,7 @@ fn alloc_init() -> &'static SimpleAllocator {
 #[test_case]
 fn init() {
     let allocator = alloc_init();
-    let prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
+    let prov: Provisioner<LinkedListAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     assert_eq!(prov.channels.len(), GEOMETRY.n_of_ch as usize);
     assert_eq!(prov.channels[0].luns.len(), GEOMETRY.lun_per_ch as usize);
@@ -109,7 +109,7 @@ fn init() {
 pub fn provision_block() {
     let allocator = alloc_init();
 
-    let mut prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
+    let mut prov: Provisioner<LinkedListAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     // No free blocks when creating new
     let res = prov.provision_block();
@@ -143,7 +143,7 @@ pub fn provision_block() {
 pub fn provision_page() {
     let allocator = alloc_init();
 
-    let mut prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
+    let mut prov: Provisioner<LinkedListAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     // No free blocks, meaning no free pages when creating new
     let res = prov.provision_page();
@@ -199,7 +199,7 @@ pub fn provision_page() {
 pub fn provision_page_with_partially_used_blocks() {
     let allocator = alloc_init();
 
-    let mut prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
+    let mut prov: Provisioner<LinkedListAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     // No free blocks, meaning no free pages when creating new
     let res = prov.provision_page();
@@ -262,7 +262,7 @@ pub fn provision_page_with_partially_used_blocks() {
 pub fn provision_block_from_different_channels() {
     let allocator = alloc_init();
 
-    let mut prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
+    let mut prov: Provisioner<LinkedListAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     // No free blocks when creating new
     let res = prov.provision_block();
@@ -292,7 +292,7 @@ pub fn provision_block_from_different_channels() {
 pub fn push_free_block() {
     let allocator = alloc_init();
 
-    let mut prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
+    let mut prov: Provisioner<LinkedListAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     // No free blocks when creating new
     let res = prov.provision_block();
@@ -323,7 +323,7 @@ pub fn push_free_block() {
 pub fn multiple_push_free_block() {
     let allocator = alloc_init();
 
-    let mut prov: Provisioner<SimpleAllocator> = Provisioner::new(&GEOMETRY, &allocator);
+    let mut prov: Provisioner<LinkedListAllocator> = Provisioner::new(&GEOMETRY, &allocator);
 
     // No free blocks when creating new
     let res = prov.provision_block();
