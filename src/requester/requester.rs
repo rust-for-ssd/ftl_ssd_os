@@ -1,4 +1,5 @@
 use core::alloc::Allocator;
+use core::ffi::c_void;
 
 use alloc::vec::Vec;
 
@@ -25,6 +26,12 @@ pub enum Status {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum RequestError {
+    ConnectorError,
+    StageError,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct Request {
     pub id: u32,
     pub status: Status,
@@ -36,12 +43,6 @@ pub struct Request {
     // Timing metadata
     pub start_time: u32,
     pub end_time: u32,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum RequestError {
-    ConnectorError,
-    StageError,
 }
 
 impl Default for Request {
@@ -85,6 +86,10 @@ impl Request {
 
     pub fn end_timer(&mut self) -> () {
         self.end_time = read_mtime();
+    }
+
+    pub fn from_ctx_ptr<'c>(ctx: *mut c_void) -> &'c mut Self {
+        unsafe { ctx.cast::<Request>().as_mut().unwrap() }
     }
 }
 
