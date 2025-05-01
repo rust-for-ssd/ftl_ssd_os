@@ -1,0 +1,2 @@
+cpath_pipe1 cpath_conn1,cpath_conn2
+cpath_pipe2 cpath_conn2,cpath_conn1

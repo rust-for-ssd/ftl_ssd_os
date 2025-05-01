@@ -4,9 +4,8 @@
 SSD_OS_PATH=${SSD_OS_PATH:-../ssd_os}
 APP_NAME=${APP_NAME:-"connector_per_component"}
 
-
-
 rm *.o
+
 # cargo clean
 cargo b --profile small --features=$APP_NAME,benchmark
 ar x ./target/target/small/libftl_ssd_os.a
