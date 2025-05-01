@@ -1,7 +1,7 @@
 use ::core::ffi::c_void;
 use core::ptr::{null, null_mut};
 
-use crate::{bindings::{generated::{lring_entry, pipeline, ssd_os_lring_dequeue, ssd_os_sleep, ssd_os_timer_interrupt_on, ssd_os_usleep, TICKS_SEC}, lring::LRing, mem::MemoryRegion, safe::ssd_os_get_connection}, make_connector_static, make_stage_static, println, shared::macros::ensure_unique};
+use crate::{bindings::{generated::{lring_entry, pipeline, ssd_os_lring_dequeue, ssd_os_sleep, ssd_os_timer_interrupt_on, ssd_os_usleep, TICKS_SEC}, lring::LRing, mem::MemoryRegion, safe::ssd_os_get_connection}, make_connector_static, make_stage_static, shared::macros::{ensure_unique, println}};
 
 make_connector_static!(cpath_conn1, conn1_init, conn1_exit, conn1_fn, conn1_ring_fn, 0);
 make_connector_static!(cpath_conn2, conn2_init, conn2_exit, conn2_fn, conn2_ring_fn, 0);
