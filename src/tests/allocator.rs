@@ -1,21 +1,19 @@
-use crate::{allocator::sdd_os_alloc::SimpleAllocator, bindings::safe::ssd_os_mem_get};
-use core::alloc::Allocator;
+use crate::allocator::linked_list_alloc::LinkedListAllocator;
+use crate::bindings::safe::ssd_os_mem_get;
 use riscv_rt::heap_start;
-use semihosting::{print, println};
 
 extern crate alloc;
 use alloc::boxed::Box;
-use alloc::string::String;
 use alloc::vec::Vec;
 
 #[test_case]
 pub fn we_can_allocate_two_boxes() {
-    let allocator = SimpleAllocator::new();
+    let allocator = LinkedListAllocator::new();
     let start = heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
-    let one: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
-    let two: Box<u32, &SimpleAllocator> = Box::new_in(2, &allocator);
+    let one: Box<u32, &LinkedListAllocator> = Box::new_in(1, &allocator);
+    let two: Box<u32, &LinkedListAllocator> = Box::new_in(2, &allocator);
 
     let three = *one + *two;
 
@@ -24,13 +22,13 @@ pub fn we_can_allocate_two_boxes() {
 
 #[test_case]
 pub fn we_can_mutate_boxes() {
-    let allocator = SimpleAllocator::new();
+    let allocator = LinkedListAllocator::new();
     let start = heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
-    let one: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
-    let mut two: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
+    let one: Box<u32, &LinkedListAllocator> = Box::new_in(1, &allocator);
+    let mut two: Box<u32, &LinkedListAllocator> = Box::new_in(1, &allocator);
     *two = 2;
 
     let three = *one + *two;
@@ -40,15 +38,15 @@ pub fn we_can_mutate_boxes() {
 
 #[test_case]
 pub fn boxes_gets_allocated_32bit_alligned() {
-    let allocator = SimpleAllocator::new();
+    let allocator = LinkedListAllocator::new();
     let start = heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
-    let one: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
-    let two: Box<u8, &SimpleAllocator> = Box::new_in(1, &allocator);
-    let three: Box<u8, &SimpleAllocator> = Box::new_in(1, &allocator);
-    let four: Box<u8, &SimpleAllocator> = Box::new_in(1, &allocator);
+    let one: Box<u32, &LinkedListAllocator> = Box::new_in(1, &allocator);
+    let two: Box<u8, &LinkedListAllocator> = Box::new_in(1, &allocator);
+    let three: Box<u8, &LinkedListAllocator> = Box::new_in(1, &allocator);
+    let four: Box<u8, &LinkedListAllocator> = Box::new_in(1, &allocator);
 
     let base = start as u32;
 
@@ -67,7 +65,7 @@ pub fn boxes_gets_allocated_32bit_alligned() {
 
 #[test_case]
 pub fn we_can_allocate_structs() {
-    let allocator = SimpleAllocator::new();
+    let allocator = LinkedListAllocator::new();
     let start = heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
@@ -85,7 +83,7 @@ pub fn we_can_allocate_structs() {
 
     let instance_clone = instance.clone();
 
-    let one: Box<MyStruct, &SimpleAllocator> = Box::new_in(instance, &allocator);
+    let one: Box<MyStruct, &LinkedListAllocator> = Box::new_in(instance, &allocator);
 
     assert_eq!(1234, one.id);
     assert_eq!("hi from struct", one.name);
@@ -94,12 +92,12 @@ pub fn we_can_allocate_structs() {
 
 #[test_case]
 pub fn we_cannot_allocate_above_the_region() {
-    let allocator = SimpleAllocator::new();
-    let start = 0x80000000 as *mut u8;
+    let allocator = LinkedListAllocator::new();
+    let start: *mut u8 = ssd_os_mem_get(0).cast();
     let end = unsafe { start.add(8) };
     allocator.initialize(start, end);
 
-    let one: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
+    let one: Box<u32, &LinkedListAllocator> = Box::new_in(1, &allocator);
     let should_fail = Box::try_new_in(1, &allocator);
     match should_fail {
         Ok(b) => {
@@ -113,14 +111,14 @@ pub fn we_cannot_allocate_above_the_region() {
 
 #[test_case]
 pub fn we_can_allocate_huge_things() {
-    let allocator = SimpleAllocator::new();
+    let allocator = LinkedListAllocator::new();
     let start = heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
     const SIZE: usize = 1024 * 256;
     // Create a large vector using the custom allocator
-    let mut vec: Vec<usize, &SimpleAllocator> = Vec::with_capacity_in(SIZE, &allocator); // ~4 MiB
+    let mut vec: Vec<usize, &LinkedListAllocator> = Vec::with_capacity_in(SIZE, &allocator); // ~4 MiB
 
     for i in 0..SIZE {
         // usize (4) * 1024 * 1024 bytes ~4 MiB
@@ -132,14 +130,14 @@ pub fn we_can_allocate_huge_things() {
 
 #[test_case]
 pub fn deallocation_works() {
-    let allocator = SimpleAllocator::new();
+    let allocator = LinkedListAllocator::new();
     let start = heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
     // allocate a value
     let first_ptr = {
-        let one: Box<u32, &SimpleAllocator> = Box::new_in(42, &allocator);
+        let one: Box<u32, &LinkedListAllocator> = Box::new_in(42, &allocator);
         let ptr = Box::into_raw(one); // extract the raw pointer
         unsafe {
             drop(Box::from_raw_in(ptr, &allocator));
@@ -148,7 +146,7 @@ pub fn deallocation_works() {
     };
 
     // allocate again, should reuse same memory if dealloc worked
-    let two: Box<u32, &SimpleAllocator> = Box::new_in(99, &allocator);
+    let two: Box<u32, &LinkedListAllocator> = Box::new_in(99, &allocator);
     let second_ptr = Box::into_raw(two);
 
     assert_eq!(
@@ -159,15 +157,15 @@ pub fn deallocation_works() {
 
 #[test_case]
 pub fn coalescing_works() {
-    let allocator = SimpleAllocator::new();
+    let allocator = LinkedListAllocator::new();
     let start = heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
     // Allocate adjacent blocks (e.g., 8 bytes each)
-    let a: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
-    let b: Box<u32, &SimpleAllocator> = Box::new_in(2, &allocator);
-    let c: Box<u32, &SimpleAllocator> = Box::new_in(3, &allocator);
+    let a: Box<u32, &LinkedListAllocator> = Box::new_in(1, &allocator);
+    let b: Box<u32, &LinkedListAllocator> = Box::new_in(2, &allocator);
+    let c: Box<u32, &LinkedListAllocator> = Box::new_in(3, &allocator);
 
     let a_ptr = Box::into_raw(a);
     let b_ptr = Box::into_raw(b);
@@ -186,7 +184,7 @@ pub fn coalescing_works() {
     }
 
     // Now try allocating a larger block that would only fit if coalesced
-    let large: Box<[u32; 10], &SimpleAllocator> = Box::new_in([0; 10], &allocator);
+    let large: Box<[u32; 10], &LinkedListAllocator> = Box::new_in([0; 10], &allocator);
     let large_ptr = Box::into_raw(large) as *mut u32;
 
     assert_eq!(
@@ -197,16 +195,16 @@ pub fn coalescing_works() {
 
 #[test_case]
 pub fn coalescing_works_in_middle() {
-    let allocator = SimpleAllocator::new();
+    let allocator = LinkedListAllocator::new();
     let start = heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
     // Allocate adjacent blocks (e.g., 8 bytes each)
-    let a: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
-    let b: Box<u32, &SimpleAllocator> = Box::new_in(2, &allocator); // goal: coalese this
-    let c: Box<u32, &SimpleAllocator> = Box::new_in(3, &allocator); // and this
-    let d: Box<u32, &SimpleAllocator> = Box::new_in(4, &allocator);
+    let a: Box<u32, &LinkedListAllocator> = Box::new_in(1, &allocator);
+    let b: Box<u32, &LinkedListAllocator> = Box::new_in(2, &allocator); // goal: coalese this
+    let c: Box<u32, &LinkedListAllocator> = Box::new_in(3, &allocator); // and this
+    let d: Box<u32, &LinkedListAllocator> = Box::new_in(4, &allocator);
 
     let a_ptr = Box::into_raw(a);
     let b_ptr = Box::into_raw(b);
@@ -226,7 +224,7 @@ pub fn coalescing_works_in_middle() {
     }
 
     // Now try allocating a larger block that would only fit if coalesced
-    let large: Box<[u32; 3], &SimpleAllocator> = Box::new_in([0; 3], &allocator);
+    let large: Box<[u32; 3], &LinkedListAllocator> = Box::new_in([0; 3], &allocator);
     let large_ptr = Box::into_raw(large) as *mut u32;
 
     assert_eq!(
@@ -237,16 +235,16 @@ pub fn coalescing_works_in_middle() {
 
 #[test_case]
 pub fn large_allocation_cannot_get_small_coalesed_block_in_middle() {
-    let allocator = SimpleAllocator::new();
+    let allocator = LinkedListAllocator::new();
     let start = heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
     allocator.initialize(start, end);
 
     // Allocate two adjacent blocks (e.g., 8 bytes each)
-    let a: Box<u32, &SimpleAllocator> = Box::new_in(1, &allocator);
-    let b: Box<u32, &SimpleAllocator> = Box::new_in(2, &allocator); // goal: coalese this
-    let c: Box<u32, &SimpleAllocator> = Box::new_in(3, &allocator); // and this
-    let d: Box<u32, &SimpleAllocator> = Box::new_in(4, &allocator);
+    let a: Box<u32, &LinkedListAllocator> = Box::new_in(1, &allocator);
+    let b: Box<u32, &LinkedListAllocator> = Box::new_in(2, &allocator); // goal: coalese this
+    let c: Box<u32, &LinkedListAllocator> = Box::new_in(3, &allocator); // and this
+    let d: Box<u32, &LinkedListAllocator> = Box::new_in(4, &allocator);
 
     let a_ptr = Box::into_raw(a);
     let b_ptr = Box::into_raw(b);
@@ -266,7 +264,7 @@ pub fn large_allocation_cannot_get_small_coalesed_block_in_middle() {
     }
 
     // Now try allocating a larger block that doesnt fit in the coalesed space in the middle
-    let large: Box<[u32; 100], &SimpleAllocator> = Box::new_in([0; 100], &allocator);
+    let large: Box<[u32; 100], &LinkedListAllocator> = Box::new_in([0; 100], &allocator);
     let large_ptr = Box::into_raw(large) as *mut u32;
     let should_be_here_ptr = unsafe { d_ptr.add(2) }; // 2x usize is the size of a free block (data + next pointer)
 

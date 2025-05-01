@@ -8,20 +8,16 @@ pub unsafe extern "C" fn memcpy(
     n: u32,
 ) -> *mut ::core::ffi::c_void {
     let alignment = ::core::mem::size_of::<usize>();
-    let dest_usize = dest as usize;
-    let src_usize = src as usize;
 
-    if dest_usize % alignment != 0 || src_usize % alignment != 0 {
-        // Fallback: byte-by-byte safe copy
-        let dest_u8 = dest as *mut u8;
-        let src_u8 = src as *const u8;
+    if dest as usize % alignment != 0 || src as usize % alignment != 0 {
+        let dest_byte_ptr = dest as *mut u8;
+        let src_byte_ptr = src as *const u8;
         for i in 0..n {
-            unsafe { *dest_u8.add(i as usize) = *src_u8.add(i as usize) };
+            unsafe { *dest_byte_ptr.add(i as usize) = *src_byte_ptr.add(i as usize) };
         }
         return dest;
     }
 
-    // Safe to use optimized C function
     unsafe { generated::ssd_os_mem_cpy(dest, src, n) }
 }
 
@@ -39,12 +35,16 @@ pub unsafe extern "C" fn memmove(
     }
 
     if (dst as usize) < (src as usize) || (dst as usize) >= (src as usize + size) {
-        // No overlap or safe to copy forward
         unsafe { memcpy(dst, src, size as u32) };
     } else {
-        // Overlap: copy backwards
+        // reverse cpy
         for i in (0..size).rev() {
-            unsafe { ptr::write(dst.add(i), ptr::read(src.add(i))) };
+            unsafe {
+                let dst_i = dst.add(i);
+                let src_i = src.add(i);
+                let data = ptr::read(src_i);
+                ptr::write(dst_i, data);
+            };
         }
     }
 

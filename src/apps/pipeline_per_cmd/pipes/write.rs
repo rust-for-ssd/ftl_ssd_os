@@ -5,14 +5,15 @@ use crate::apps::pipeline_per_cmd::connectors::requester::WORKLOAD_GENERATOR;
 use crate::bbt::bbt::BadBlockTable;
 use crate::bindings::mem::MemoryRegion;
 use crate::l2p::l2p::L2pMapper;
+use crate::make_stage_static;
 use crate::media_manager::media_manager::MediaManager;
 use crate::provisioner::provisioner::Provisioner;
 use crate::shared::addresses::PhysicalBlockAddress;
 use crate::shared::macros::ensure_unique;
 use crate::shared::semaphore::Semaphore;
-use crate::{make_stage_static, println};
 
-use crate::requester::requester::{Request, RequestError};
+use crate::requester::requester::Request;
+use crate::shared::macros::println;
 
 pub static PROV_ALLOC: SemaphoreAllocator = SemaphoreAllocator::new();
 pub static PROVISIONER: Semaphore<Provisioner<SemaphoreAllocator>> = Semaphore::new();
@@ -72,70 +73,48 @@ fn exit() -> ::core::ffi::c_int {
 fn prov_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     ensure_unique!();
 
-    let req: &mut Result<Request, RequestError> = unsafe {
-        context
-            .cast::<Result<Request, RequestError>>()
-            .as_mut()
-            .unwrap()
+    let request = Request::from_ctx_ptr(context);
+
+    let Ok(ppa) = PROVISIONER.lock().provision_page() else {
+        println!("COULD NOT PROVISION!");
+        return null_mut();
     };
 
-    if let Ok(request) = req {
-        let Ok(ppa) = PROVISIONER.lock().provision_page() else {
-            println!("COULD NOT PROVISION!");
-            return null_mut();
-        };
-
-        request.physical_addr = Some(ppa.into());
-    }
+    request.physical_addr = Some(ppa.into());
     context
 }
 
 fn l2p_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     ensure_unique!();
 
-    let req: &mut Result<Request, RequestError> = unsafe {
-        context
-            .cast::<Result<Request, RequestError>>()
-            .as_mut()
-            .unwrap()
-    };
+    let request = Request::from_ctx_ptr(context);
 
-    if let Ok(request) = req {
-        L2P_MAPPER
-            .lock()
-            .map(request.logical_addr, request.physical_addr.unwrap());
-    }
-
+    L2P_MAPPER
+        .lock()
+        .map(request.logical_addr, request.physical_addr.unwrap());
     context
 }
 
 fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
     ensure_unique!();
-    let req: &mut Result<Request, RequestError> = unsafe {
-        context
-            .cast::<Result<Request, RequestError>>()
-            .as_mut()
-            .unwrap()
-    };
+    let request = Request::from_ctx_ptr(context);
 
-    if let Ok(request) = req {
-        let Ok(data) = MM.lock().execute_request(request) else {
-            if let Some(_pba) = request.physical_addr {
-                //TODO: only do this because ssd_os does not support LLVM 64-bit operations,
-                // so we cannot convert ppa correctly.
-                // if it works, then use pba directly.
-                let pba = PhysicalBlockAddress {
-                    channel: 0,
-                    lun: 0,
-                    plane: 0,
-                    block: 0,
-                };
-                BBT.lock().set_bad_block(&pba);
-            }
-            return context;
-        };
-        request.data = data;
-    }
+    let Ok(data) = MM.lock().execute_request(request) else {
+        if let Some(_pba) = request.physical_addr {
+            //TODO: only do this because ssd_os does not support LLVM 64-bit operations,
+            // so we cannot convert ppa correctly.
+            // if it works, then use pba directly.
+            let pba = PhysicalBlockAddress {
+                channel: 0,
+                lun: 0,
+                plane: 0,
+                block: 0,
+            };
+            BBT.lock().set_bad_block(&pba);
+        }
+        return context;
+    };
+    request.data = data;
 
     context
 }

@@ -1,5 +1,6 @@
 use core::ptr::null_mut;
 
+use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
     bindings::{
@@ -8,14 +9,14 @@ use crate::{
         mem::MemoryRegion,
         safe::ssd_os_get_connection,
     },
-    make_connector_static, println,
+    make_connector_static,
     requester::requester::RequestWorkloadGenerator,
     shared::core_local_cell::CoreLocalCell,
 };
 
 use crate::requester::requester::Request;
 
-make_connector_static!(requester, init, exit, pipe_start, ring);
+make_connector_static!(requester, init, exit, pipe_start, ring, 1);
 
 static lring: LRing<128> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
@@ -25,8 +26,7 @@ pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedList
 pub const N_REQUESTS: usize = 1024;
 
 fn init() -> ::core::ffi::c_int {
-    #[cfg(feature = "debug")]
-    println!("REQUESTER_INIT");
+    crate::shared::macros::dbg_println!("REQUESTER_INIT");
 
     let mut mem_region = MemoryRegion::new_from_cpu(1);
     let Ok(()) = lring.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
@@ -59,7 +59,6 @@ fn exit() -> ::core::ffi::c_int {
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     let Some(entry) = lring_entry::new(entry) else {
-        println!("NULL PTR!");
         return null_mut();
     };
 

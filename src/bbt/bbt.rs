@@ -7,7 +7,7 @@ use alloc::vec::Vec;
 
 use crate::media_manager::media_manager::Geometry;
 use crate::shared::addresses::PhysicalBlockAddress;
-use crate::{bindings::generated::nvm_mmgr_geometry, println};
+use crate::shared::macros::println;
 
 pub struct BadBlockTable<A: Allocator + 'static> {
     pub channels: Vec<Channel<A>, &'static A>,
