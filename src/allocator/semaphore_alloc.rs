@@ -5,11 +5,14 @@ use core::{
 
 use crate::shared::semaphore::Semaphore;
 
-use super::sdd_os_alloc::SimpleAllocator;
+use super::linked_list_alloc::LinkedListAllocator;
 
 pub struct SemaphoreAllocator {
-    semaphore: Semaphore<SimpleAllocator>,
+    semaphore: Semaphore<LinkedListAllocator>,
 }
+
+// unsafe impl Send for SemaphoreAllocator {}
+unsafe impl Sync for SemaphoreAllocator {}
 
 impl SemaphoreAllocator {
     pub const fn new() -> Self {
@@ -18,7 +21,7 @@ impl SemaphoreAllocator {
         }
     }
     pub fn init(&self, start: *mut u8, end: *mut u8) {
-        self.semaphore.init(SimpleAllocator::new());
+        self.semaphore.init(LinkedListAllocator::new());
         let guard = self.semaphore.lock();
         guard.initialize(start, end);
     }

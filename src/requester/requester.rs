@@ -3,7 +3,7 @@ use core::alloc::Allocator;
 use alloc::vec::Vec;
 
 use crate::{
-    allocator::sdd_os_alloc::SimpleAllocator,
+    allocator::linked_list_alloc::LinkedListAllocator,
     bindings::generated::ssd_os_sleep,
     l2p::l2p::LogicalAddr,
     media_manager::media_manager::{Geometry, mm_page},
@@ -174,10 +174,10 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
         self.cur_request_idx += 1;
         res
     }
-    
+
     pub fn calculate_stats(&mut self) {
         unsafe { ssd_os_sleep(1) };
-        for i in 0..self.requests.capacity(){
+        for i in 0..self.requests.capacity() {
             let Some(res) = self.requests.get_mut(i) else {
                 return;
             };
@@ -204,7 +204,7 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
             n_pages: n_pages as u32,
         }
     }
-    
+
     pub fn get_n_requests(&self) -> usize {
         self.requests.capacity()
     }
