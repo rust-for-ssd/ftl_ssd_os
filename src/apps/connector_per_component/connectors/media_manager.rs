@@ -36,7 +36,6 @@ fn init() -> ::core::ffi::c_int {
 }
 
 fn exit() -> ::core::ffi::c_int {
-    println!("EXIT!");
     0
 }
 
@@ -49,7 +48,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     };
 
     let Ok(res) = MM.get_mut().execute_request(req) else {
-        println!("MM ERROR!: {:?}", MM.get_mut().execute_request(req));
+        println!("MMGR ERROR!: {:?}", MM.get_mut().execute_request(req));
         ssd_os_get_connection(c"mm", c"media_manager_bbt");
         return null_mut();
     };

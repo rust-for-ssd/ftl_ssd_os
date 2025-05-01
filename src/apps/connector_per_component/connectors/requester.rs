@@ -26,8 +26,7 @@ pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedList
 pub const N_REQUESTS: usize = 1024;
 
 fn init() -> ::core::ffi::c_int {
-    #[cfg(feature = "debug")]
-    println!("REQUESTER_INIT");
+    crate::shared::macros::dbg_println!("REQUESTER_INIT");
 
     let mut mem_region = MemoryRegion::new_from_cpu(1);
     let Ok(()) = lring.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
@@ -60,7 +59,6 @@ fn exit() -> ::core::ffi::c_int {
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     let Some(entry) = lring_entry::new(entry) else {
-        println!("NULL PTR!");
         return null_mut();
     };
 
