@@ -2,13 +2,11 @@ use core::alloc::Allocator;
 
 use alloc::vec::Vec;
 
+use crate::shared::macros::println;
 use crate::{
-    allocator::linked_list_alloc::LinkedListAllocator,
     bindings::generated::ssd_os_sleep,
     l2p::l2p::LogicalAddr,
     media_manager::media_manager::{Geometry, mm_page},
-    println,
-    provisioner::provisioner::Provisioner,
 };
 
 #[derive(Debug, Clone, Copy)]

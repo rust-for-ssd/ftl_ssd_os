@@ -1,5 +1,6 @@
 use core::ptr::null_mut;
 
+use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
     bindings::{
@@ -9,12 +10,12 @@ use crate::{
         safe::ssd_os_get_connection,
     },
     l2p::l2p::L2pMapper,
-    make_connector_static, println,
+    make_connector_static,
     requester::requester::{CommandType, Request},
     shared::core_local_cell::CoreLocalCell,
 };
 
-make_connector_static!(l2p, init, exit, pipe_start, ring);
+make_connector_static!(l2p, init, exit, pipe_start, ring, 1);
 
 static lring: LRing<128> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
