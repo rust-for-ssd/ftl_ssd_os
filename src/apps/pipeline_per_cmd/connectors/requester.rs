@@ -1,7 +1,7 @@
 use core::ptr::null_mut;
 
 use crate::{
-    allocator::sdd_os_alloc::SimpleAllocator,
+    allocator::linked_list_alloc::LinkedListAllocator,
     bindings::{
         generated::{lring_entry, pipeline},
         mem::MemoryRegion,
@@ -16,8 +16,8 @@ use crate::requester::requester::{CommandType, Request};
 
 make_connector_static!(requester1, init, exit, pipe_start, ring);
 
-static ALLOC: SimpleAllocator = SimpleAllocator::new();
-pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<SimpleAllocator>> =
+static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
+pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedListAllocator>> =
     CoreLocalCell::new();
 
 pub const N_REQUESTS: usize = 10000;
@@ -27,7 +27,10 @@ static mut WRITE_PIPE: *mut pipeline = core::ptr::null_mut();
 
 fn init() -> ::core::ffi::c_int {
     let mem_region = MemoryRegion::new_from_cpu(1);
-    ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
+    ALLOC.set(LinkedListAllocator::new());
+    ALLOC
+        .get()
+        .initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
     unsafe {
         READ_PIPE = ssd_os_get_connection(c"requester1", c"read");
@@ -41,7 +44,7 @@ fn init() -> ::core::ffi::c_int {
         WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
             crate::requester::requester::WorkloadType::WRITE,
             N_REQUESTS,
-            &ALLOC,
+            ALLOC.get(),
         ));
         let workload = WORKLOAD_GENERATOR.get_mut();
         workload.init_workload();

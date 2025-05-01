@@ -1,7 +1,7 @@
 use core::ptr::null_mut;
 
 use crate::{
-    allocator::sdd_os_alloc::SimpleAllocator,
+    allocator::linked_list_alloc::LinkedListAllocator,
     bindings::{
         generated::{lring_entry, pipeline},
         lring::{LRing, LRingErr},
@@ -17,8 +17,8 @@ use crate::{
 make_connector_static!(l2p, init, exit, pipe_start, ring);
 
 static lring: LRing<128> = LRing::new();
-static ALLOC: SimpleAllocator = SimpleAllocator::new();
-static l2p_mapper: CoreLocalCell<L2pMapper<SimpleAllocator>> = CoreLocalCell::new();
+static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
+static l2p_mapper: CoreLocalCell<L2pMapper<LinkedListAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
     let mut mem_region = MemoryRegion::new_from_cpu(2);
@@ -27,8 +27,11 @@ fn init() -> ::core::ffi::c_int {
     };
     mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
 
-    ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-    l2p_mapper.set(L2pMapper::new(&ALLOC));
+    ALLOC.set(LinkedListAllocator::new());
+    ALLOC
+        .get()
+        .initialize(mem_region.free_start.cast(), mem_region.end.cast());
+    l2p_mapper.set(L2pMapper::new(ALLOC.get()));
 
     #[cfg(feature = "benchmark")]
     {

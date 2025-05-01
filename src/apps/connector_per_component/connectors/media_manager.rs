@@ -2,7 +2,7 @@ use core::ptr::null_mut;
 
 use crate::requester::requester::Request;
 use crate::{
-    allocator::sdd_os_alloc::SimpleAllocator,
+    allocator::linked_list_alloc::LinkedListAllocator,
     bindings::{
         generated::{lring_entry, pipeline},
         lring::{LRing, LRingErr},
@@ -17,8 +17,8 @@ use crate::{
 make_connector_static!(mm, init, exit, pipe_start, ring);
 
 static lring: LRing<128> = LRing::new();
-static ALLOC: SimpleAllocator = SimpleAllocator::new();
-static MM: CoreLocalCell<MediaManager<SimpleAllocator>> = CoreLocalCell::new();
+static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
+static MM: CoreLocalCell<MediaManager<LinkedListAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
     let mut mem_region = MemoryRegion::new_from_cpu(4);
@@ -27,8 +27,11 @@ fn init() -> ::core::ffi::c_int {
     };
     mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
 
-    ALLOC.initialize(mem_region.free_start.cast(), mem_region.end.cast());
-    MM.set(MediaManager::new(&ALLOC));
+    ALLOC.set(LinkedListAllocator::new());
+    ALLOC
+        .get()
+        .initialize(mem_region.free_start.cast(), mem_region.end.cast());
+    MM.set(MediaManager::new(ALLOC.get()));
     0
 }
 

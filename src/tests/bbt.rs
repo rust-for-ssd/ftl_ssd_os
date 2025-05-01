@@ -1,6 +1,7 @@
 use crate::allocator::sdd_os_alloc::SimpleAllocator;
 use crate::bbt::bbt::BadBlockTable;
 use crate::media_manager::media_manager::Geometry;
+use crate::shared::core_local_cell::CoreLocalCell;
 use riscv_rt::heap_start;
 
 extern crate alloc;
@@ -16,12 +17,14 @@ const GEOMETRY: Geometry = Geometry {
 
 #[test_case]
 pub fn new() {
-    static ALLOCATOR: SimpleAllocator = SimpleAllocator::new();
+    static ALLOCATOR: CoreLocalCell<SimpleAllocator> = CoreLocalCell::new();
     let start = heap_start() as *mut u8;
     let end = unsafe { start.add(&crate::_heap_size as *const u8 as usize) };
-    ALLOCATOR.initialize(start, end);
 
-    let bbt: BadBlockTable<SimpleAllocator> = BadBlockTable::new(&GEOMETRY, &ALLOCATOR);
+    ALLOCATOR.set(SimpleAllocator::new());
+    ALLOCATOR.get().initialize(start, end);
+
+    let bbt: BadBlockTable<SimpleAllocator> = BadBlockTable::new(&GEOMETRY, ALLOCATOR.get());
 
     assert_eq!(bbt.channels.len(), GEOMETRY.n_of_ch as usize);
     assert_eq!(bbt.channels[0].luns.len(), GEOMETRY.lun_per_ch as usize);
