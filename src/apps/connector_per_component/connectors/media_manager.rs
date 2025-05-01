@@ -1,6 +1,7 @@
 use core::ptr::null_mut;
 
 use crate::requester::requester::Request;
+use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
     bindings::{
@@ -11,10 +12,9 @@ use crate::{
     },
     make_connector_static,
     media_manager::media_manager::MediaManager,
-    println,
     shared::core_local_cell::CoreLocalCell,
 };
-make_connector_static!(mm, init, exit, pipe_start, ring);
+make_connector_static!(mm, init, exit, pipe_start, ring, 1);
 
 static lring: LRing<128> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
@@ -36,7 +36,6 @@ fn init() -> ::core::ffi::c_int {
 }
 
 fn exit() -> ::core::ffi::c_int {
-    println!("EXIT!");
     0
 }
 
@@ -49,7 +48,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     };
 
     let Ok(res) = MM.get_mut().execute_request(req) else {
-        println!("MM ERROR!: {:?}", MM.get_mut().execute_request(req));
+        println!("MMGR ERROR!: {:?}", MM.get_mut().execute_request(req));
         ssd_os_get_connection(c"mm", c"media_manager_bbt");
         return null_mut();
     };

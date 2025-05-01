@@ -1,5 +1,6 @@
 use core::ptr::null_mut;
 
+use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
     bindings::{
@@ -7,14 +8,14 @@ use crate::{
         mem::MemoryRegion,
         safe::ssd_os_get_connection,
     },
-    make_connector_static, println,
+    make_connector_static,
     requester::requester::RequestWorkloadGenerator,
     shared::core_local_cell::CoreLocalCell,
 };
 
 use crate::requester::requester::{CommandType, Request};
 
-make_connector_static!(requester1, init, exit, pipe_start, ring);
+make_connector_static!(requester1, init, exit, pipe_start, ring, 1);
 
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
 pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedListAllocator>> =
@@ -22,22 +23,12 @@ pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedList
 
 pub const N_REQUESTS: usize = 10000;
 
-static mut READ_PIPE: *mut pipeline = core::ptr::null_mut();
-static mut WRITE_PIPE: *mut pipeline = core::ptr::null_mut();
-
 fn init() -> ::core::ffi::c_int {
     let mem_region = MemoryRegion::new_from_cpu(1);
     ALLOC.set(LinkedListAllocator::new());
     ALLOC
         .get()
         .initialize(mem_region.free_start.cast(), mem_region.end.cast());
-
-    unsafe {
-        READ_PIPE = ssd_os_get_connection(c"requester1", c"read");
-    };
-    unsafe {
-        WRITE_PIPE = ssd_os_get_connection(c"requester1", c"write");
-    };
 
     #[cfg(feature = "benchmark")]
     {

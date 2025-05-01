@@ -1,5 +1,6 @@
 use core::ptr::null_mut;
 
+use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
     bbt::bbt::BadBlockTable,
@@ -8,14 +9,14 @@ use crate::{
         lring::{LRing, LRingErr},
         mem::MemoryRegion,
     },
-    make_connector_static, println,
+    make_connector_static,
     requester::requester::Request,
     shared::{addresses::PhysicalBlockAddress, core_local_cell::CoreLocalCell},
 };
 
 use super::requester::WORKLOAD_GENERATOR;
 
-make_connector_static!(bbt, init, exit, pipe_start, ring);
+make_connector_static!(bbt, init, exit, pipe_start, ring, 1);
 
 static lring: LRing<128> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
