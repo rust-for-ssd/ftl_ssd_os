@@ -3,8 +3,8 @@ use core::ptr::{null, null_mut};
 
 use crate::{bindings::{generated::{lring_entry, pipeline, ssd_os_lring_dequeue, ssd_os_sleep, ssd_os_timer_interrupt_on, ssd_os_usleep, TICKS_SEC}, lring::LRing, mem::MemoryRegion, safe::ssd_os_get_connection}, make_connector_static, make_stage_static, println, shared::macros::ensure_unique};
 
-make_connector_static!(cpath_conn1, conn1_init, conn1_exit, conn1_fn, conn1_ring_fn);
-make_connector_static!(cpath_conn2, conn2_init, conn2_exit, conn2_fn, conn2_ring_fn);
+make_connector_static!(cpath_conn1, conn1_init, conn1_exit, conn1_fn, conn1_ring_fn, 0);
+make_connector_static!(cpath_conn2, conn2_init, conn2_exit, conn2_fn, conn2_ring_fn, 0);
 
 make_stage_static!(stage1_1, stage_init_fn, stage_exit_fn, stage1_1_fn);
 make_stage_static!(stage1_2, stage_init_fn, stage_exit_fn, stage1_2_fn);
@@ -185,42 +185,6 @@ fn conn1_fn(entry: *mut lring_entry) -> *mut pipeline {
         PIPE1
     }
 }
-
-// fn conn1_fn(entry: *mut lring_entry) -> *mut pipeline {
-//     // unsafe { ssd_os_sleep(1) };
-    
-//     unsafe {
-//         let ctx_ptr = (*entry).ctx;
-        
-//         if ctx_ptr.is_null() {
-//             if let Some(idx) = get_free_message_index() {
-//                 let msg_ptr = get_message_ptr(idx);
-                
-//                 (*msg_ptr).value = 1;
-//                 (*msg_ptr).add = 1;
-//                 (*msg_ptr).id = SUBMITTED as u16;
-//                 SUBMITTED += 1;
-                
-//                 (*entry).ctx = msg_ptr as *mut c_void;
-                
-//                 AMOUNT += 1;
-//             } else {
-//                 println!("No free messages in pool!");
-//             }
-//         } else {
-//             // Process existing message
-//             let msg_ptr = ctx_ptr as *mut Numbers;
-//             println!("Processing message: {:?}", *msg_ptr);
-//         }
-        
-//         if PIPE1.is_null() {
-//             // println!("Getting pipe1 connection");
-//             PIPE1 = ssd_os_get_connection(c"cpath_conn1", c"cpath_pipe1");
-//         }
-        
-//         PIPE1
-//     }
-// }
 
 fn conn2_fn(entry: *mut lring_entry) -> *mut pipeline {
     ensure_unique!();
