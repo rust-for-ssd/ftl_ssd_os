@@ -1,5 +1,6 @@
 use core::alloc::Allocator;
 use core::ffi::c_void;
+use core::u8;
 
 use alloc::vec::Vec;
 
@@ -32,6 +33,13 @@ pub enum RequestError {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum META_DATA {
+    NONE,
+    L2P_OLD_NEW_ID((u8, u8)),
+    L2P_NEW_ID(u8),
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct Request {
     pub id: u32,
     pub status: Status,
@@ -39,6 +47,7 @@ pub struct Request {
     pub logical_addr: u32,
     pub physical_addr: Option<u32>,
     pub data: *mut mm_page,
+    pub md: META_DATA,
 
     // Timing metadata
     pub start_time: u32,
@@ -56,6 +65,7 @@ impl Default for Request {
             start_time: 0,
             end_time: 0,
             status: Status::IN_PROCESS,
+            md: META_DATA::NONE,
         }
     }
 }
@@ -71,6 +81,7 @@ impl Request {
             data: data,
             start_time: 0,
             end_time: 0,
+            md: META_DATA::NONE,
         }
     }
 
