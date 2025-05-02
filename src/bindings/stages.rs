@@ -30,6 +30,12 @@ impl stage {
             stage_fn: Some(stage_fn),
         }
     }
+    pub const fn get_name(&self) -> &CStr {
+        let Ok(s) = CStr::from_bytes_until_nul(&self.name) else {
+            panic!("ERR");
+        };
+        s
+    }
 }
 
 #[macro_export]
