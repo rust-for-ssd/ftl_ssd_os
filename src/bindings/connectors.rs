@@ -3,7 +3,6 @@ use core::ffi::CStr;
 use bindings::generated::{MAGIC_CONNECTOR, lring_entry, pipeline};
 
 use crate::bindings;
-use crate::shared::macros::println;
 
 pub use bindings::generated::connector;
 
@@ -35,10 +34,9 @@ impl connector {
             nosched: noshed,
         }
     }
-    pub fn get_name(&self) -> &CStr {
+    pub const fn get_name(&self) -> &CStr {
         let Ok(s) = CStr::from_bytes_until_nul(&self.name) else {
-            println!("ERROR!");
-            return c"";
+            panic!("ERR");
         };
         s
     }
