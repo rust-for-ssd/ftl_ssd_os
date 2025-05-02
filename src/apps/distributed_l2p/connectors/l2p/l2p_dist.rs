@@ -17,6 +17,7 @@ use crate::{
 };
 
 use super::l2p_dist_table::L2PDistributionTable;
+use super::l2p_tables::N_TABLES;
 
 make_connector_static!(l2p_dist, init, exit, pipe_start, ring, 1);
 
@@ -26,7 +27,7 @@ static LRING: LRing<L2P_LRING_CAPACITY> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
 static DIST_TABLE: CoreLocalCell<L2PDistributionTable<LinkedListAllocator, { PIPE_TABLE.len() }>> =
     CoreLocalCell::new();
-static PIPE_TABLE: [&CStr; 4] = [c"A", c"B", c"C", c"D"];
+static PIPE_TABLE: [&CStr; N_TABLES] = [c"A", c"B", c"C", c"D"];
 
 fn init() -> ::core::ffi::c_int {
     let mut mem_region = MemoryRegion::new_from_cpu(2);

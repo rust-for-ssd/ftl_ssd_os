@@ -29,7 +29,7 @@ const CONN_NAMES: [&CStr; N_TABLES] = [
 ];
 const L2P_LRING_CAPACITY: usize = 128;
 const START_CPU_MEM_REGION: i32 = 6;
-const N_TABLES: usize = 4;
+pub const N_TABLES: usize = 4;
 
 static LRINGS: [LRing<L2P_LRING_CAPACITY>; N_TABLES] = [const { LRing::new() }; N_TABLES];
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
