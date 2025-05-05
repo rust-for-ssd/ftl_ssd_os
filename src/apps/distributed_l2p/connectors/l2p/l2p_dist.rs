@@ -17,7 +17,7 @@ use crate::{
 };
 
 use super::l2p_dist_table::L2PDistributionTable;
-use super::l2p_tables::N_TABLES;
+use super::l2p_tables::{self, N_TABLES};
 
 make_connector_static!(l2p_dist, init, exit, pipe_start, ring, 1);
 
@@ -27,7 +27,7 @@ static LRING: LRing<L2P_LRING_CAPACITY> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
 static DIST_TABLE: CoreLocalCell<L2PDistributionTable<LinkedListAllocator, { PIPE_TABLE.len() }>> =
     CoreLocalCell::new();
-static PIPE_TABLE: [&CStr; N_TABLES] = [c"A", c"B", c"C", c"D"];
+static PIPE_TABLE: [&CStr; N_TABLES] = [c"dist_l2p0", c"dist_l2p1", c"dist_l2p2", c"dist_l2p3"];
 
 fn init() -> ::core::ffi::c_int {
     let mut mem_region = MemoryRegion::new_from_cpu(2);
@@ -42,11 +42,11 @@ fn init() -> ::core::ffi::c_int {
         .initialize(mem_region.free_start.cast(), mem_region.end.cast());
     DIST_TABLE.set(L2PDistributionTable::new(ALLOC.get(), PIPE_TABLE));
 
-    #[cfg(feature = "benchmark")]
+    // #[cfg(feature = "benchmark")]
     {
-        let n_requests = super::requester::WORKLOAD_GENERATOR.get().get_n_requests();
-        let l2p_map = L2P_MAPPER.get_mut();
-        l2p_map.prepare_for_benchmark(n_requests);
+        // let n_requests = super::requester::WORKLOAD_GENERATOR.get().get_n_requests();
+        // let l2p_map = L2P_MAPPER.get_mut();
+        // l2p_map.prepare_for_benchmark(n_requests);
     }
 
     0

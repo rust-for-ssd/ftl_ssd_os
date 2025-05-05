@@ -49,12 +49,12 @@ fn init(id: i32) -> i32 {
         .initialize(mem_region.free_start.cast(), mem_region.end.cast());
     L2P_MAPS[id as usize].set(L2pMapper::new(ALLOC.get()));
 
-    #[cfg(feature = "benchmark")]
-    {
-        let n_requests = super::requester::WORKLOAD_GENERATOR.get().get_n_requests();
-        let l2p_map = L2P_MAPPER.get_mut();
-        l2p_map.prepare_for_benchmark(n_requests);
-    }
+    // #[cfg(feature = "benchmark")]
+    // {
+    //     let n_requests = super::requester::WORKLOAD_GENERATOR.get().get_n_requests();
+    //     let l2p_map = L2P_MAPPER.get_mut();
+    //     l2p_map.prepare_for_benchmark(n_requests);
+    // }
 
     0
 }
