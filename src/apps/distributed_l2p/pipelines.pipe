@@ -5,10 +5,7 @@ l2p_media_manager2 l2p_media_manager_stage2
 l2p_media_manager3 l2p_media_manager_stage3
 media_manager_requester media_manager_requester_stage
 media_manager_bbt media_manager_bbt_stage
-l2p_prov0 l2p_prov_stage0
-l2p_prov1 l2p_prov_stage1
-l2p_prov2 l2p_prov_stage2
-l2p_prov3 l2p_prov_stage3
+l2p_prov l2p_prov_stage
 dist_l2p0 dist_l2p_stage0
 dist_l2p1 dist_l2p_stage1
 dist_l2p2 dist_l2p_stage2

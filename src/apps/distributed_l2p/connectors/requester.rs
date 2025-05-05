@@ -1,5 +1,6 @@
 use core::ptr::null_mut;
 
+use crate::bindings::lring::LRingErr;
 use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
@@ -14,11 +15,11 @@ use crate::{
     shared::core_local_cell::CoreLocalCell,
 };
 
-use crate::requester::requester::Request;
+use crate::requester::requester::{CommandType, Request, Status};
 
 make_connector_static!(requester, init, exit, pipe_start, ring, 1);
 
-static lring: LRing<128> = LRing::new();
+static LRING: LRing<128> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
 pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedListAllocator>> =
     CoreLocalCell::new();
@@ -29,10 +30,10 @@ fn init() -> ::core::ffi::c_int {
     crate::shared::macros::dbg_println!("REQUESTER_INIT");
 
     let mut mem_region = MemoryRegion::new_from_cpu(1);
-    let Ok(()) = lring.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
+    let Ok(()) = LRING.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
         panic!("REQUESTER_LRING WAS ALREADY INITIALIZED!");
     };
-    mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
+    mem_region.reserve(LRING.get_lring().unwrap().alloc_mem as usize);
 
     ALLOC.set(LinkedListAllocator::new());
     ALLOC
@@ -61,21 +62,24 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     let Some(entry) = lring_entry::new(entry) else {
         return null_mut();
     };
+    if entry.ctx.is_null() {
+        let workload = WORKLOAD_GENERATOR.get_mut();
 
-    let workload = WORKLOAD_GENERATOR.get_mut();
+        let cur_req: Option<&mut Request> = workload.next_request();
 
-    let cur_req: Option<&mut Request> = workload.next_request();
-
-    match cur_req {
-        Some(req) => {
-            let pipe = ssd_os_get_connection(c"requester", c"requester_l2p");
-            req.start_timer();
-            entry.set_ctx(req);
-            return pipe;
+        match cur_req {
+            Some(req) => {
+                let pipe = ssd_os_get_connection(c"requester", c"requester_l2p");
+                req.start_timer();
+                entry.set_ctx(req);
+                return pipe;
+            }
+            None => {
+                return null_mut();
+            }
         }
-        None => {
-            return null_mut();
-        }
+    } else {
+        return ssd_os_get_connection(c"requester", c"requester_l2p");
     }
 }
 
@@ -87,27 +91,71 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
         return 0;
     };
 
-    req.end_timer();
-    let workload = WORKLOAD_GENERATOR.get_mut();
-    workload.request_returned += 1;
+    match *req {
+        Request {
+            status: Status::DONE,
+            ..
+        } => {
+            req.end_timer();
+            let workload = WORKLOAD_GENERATOR.get_mut();
+            workload.request_returned += 1;
 
-    #[cfg(feature = "debug")]
-    {
-        if !req.data.is_null() {
-            unsafe {
-                println!("request {} data is: {:?}", req.id, req.data.as_ref());
+            #[cfg(feature = "debug")]
+            {
+                if !req.data.is_null() {
+                    unsafe {
+                        println!("request {} data is: {:?}", req.id, req.data.as_ref());
+                    }
+                }
+                println!("REQUEST {} DONE!", req.id);
+                println!(
+                    "Round trip time {} DONE!",
+                    req.calc_round_trip_time_clock_cycles()
+                );
+            }
+
+            if workload.request_returned == workload.get_n_requests() {
+                workload.calculate_stats();
+            }
+
+            return 0;
+        }
+        Request {
+            status: Status::MM_DONE | Status::BAD,
+            cmd: CommandType::WRITE,
+            ..
+        } => {
+            req.end_timer();
+            let workload = WORKLOAD_GENERATOR.get_mut();
+            workload.request_returned += 1;
+
+            #[cfg(feature = "debug")]
+            {
+                if !req.data.is_null() {
+                    unsafe {
+                        println!("request {} data is: {:?}", req.id, req.data.as_ref());
+                    }
+                }
+                println!("REQUEST {} DONE!", req.id);
+                println!(
+                    "Round trip time {} DONE!",
+                    req.calc_round_trip_time_clock_cycles()
+                );
+            }
+
+            if workload.request_returned == workload.get_n_requests() {
+                workload.calculate_stats();
+            }
+
+            match LRING.enqueue(entry) {
+                Ok(()) => return 0,
+                Err(LRingErr::Enqueue(i)) => i,
+                _ => {
+                    println!("DID NOT MATCH RES FROM ENQUEUE!");
+                    return -1;
+                }
             }
         }
-        println!("REQUEST {} DONE!", req.id);
-        println!(
-            "Round trip time {} DONE!",
-            req.calc_round_trip_time_clock_cycles()
-        );
+        _ => todo!(),
     }
-
-    if workload.request_returned == workload.get_n_requests() {
-        workload.calculate_stats();
-    }
-
-    0
 }
