@@ -11,19 +11,20 @@ use crate::{
     media_manager::media_manager::{Geometry, mm_page},
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CommandType {
     READ,
     WRITE,
     ERASE,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Status {
     BAD,
     DONE,
     IN_PROCESS,
     PENDING,
+    MM_DONE,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -35,8 +36,7 @@ pub enum RequestError {
 #[derive(Debug, Clone, Copy)]
 pub enum META_DATA {
     NONE,
-    L2P_OLD_NEW_ID((u8, u8)),
-    L2P_NEW_ID(u8),
+    L2P_OLD_NEW_ID((Option<u8>, u8)),
 }
 
 #[derive(Debug, Clone, Copy)]

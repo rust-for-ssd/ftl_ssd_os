@@ -1,6 +1,6 @@
 use core::ptr::null_mut;
 
-use crate::requester::requester::Request;
+use crate::requester::requester::{CommandType, Request, Status};
 use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
@@ -49,10 +49,15 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 
     let Ok(res) = MM.get_mut().execute_request(req) else {
         println!("MMGR ERROR!: {:?}", MM.get_mut().execute_request(req));
-        ssd_os_get_connection(c"mm", c"media_manager_bbt");
-        return null_mut();
+        req.status = Status::BAD;
+        return ssd_os_get_connection(c"mm", c"media_manager_bbt");
     };
     req.data = res;
+    if req.cmd == CommandType::WRITE {
+        req.status = Status::MM_DONE;
+    } else {
+        req.status = Status::DONE;
+    }
 
     return ssd_os_get_connection(c"mm", c"media_manager_requester");
 }

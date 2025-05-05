@@ -1,7 +1,7 @@
 use core::ffi::CStr;
 use core::ptr::null_mut;
 
-use crate::requester::requester::META_DATA;
+use crate::requester::requester::{META_DATA, Status};
 use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
@@ -80,6 +80,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
+    // TODO: should add 2 requests if comming from provisioner
     match LRING.enqueue(entry) {
         Ok(()) => 0,
         Err(LRingErr::Enqueue(i)) => i,
@@ -102,41 +103,51 @@ fn read_handler(req: &Request) -> *mut pipeline {
 }
 
 fn write_handler(req: &mut Request) -> *mut pipeline {
-    let dist_tbl = DIST_TABLE.get_mut();
-    if req.physical_addr.is_none() {
-        let new_tbl_idx = dist_tbl.pick_table_idx();
-        let res = dist_tbl.set_table_idx(req.logical_addr, new_tbl_idx);
-        match res {
-            Some(old_table_idx) => {
-                req.md = META_DATA::L2P_OLD_NEW_ID((old_table_idx, new_tbl_idx));
-                return ssd_os_get_connection(
-                    l2p_dist.get_name(),
-                    dist_tbl.get_table_pipe_name(new_tbl_idx),
-                );
-            }
-            None => {
-                req.md = META_DATA::L2P_NEW_ID(new_tbl_idx);
-                return ssd_os_get_connection(
-                    l2p_dist.get_name(),
-                    dist_tbl.get_table_pipe_name(new_tbl_idx),
-                );
-            }
+    match *req {
+        Request {
+            physical_addr: None,
+            ..
+        } => return ssd_os_get_connection(l2p_dist.get_name(), c"l2p_prov"),
+        Request {
+            status: Status::MM_DONE,
+            md: META_DATA::L2P_OLD_NEW_ID((Some(old), _)),
+            ..
+        } => {
+            return ssd_os_get_connection(
+                l2p_dist.get_name(),
+                DIST_TABLE.get().get_table_pipe_name(old),
+            );
         }
-    } else {
-        match req.md {
-            META_DATA::L2P_OLD_NEW_ID((old, _)) => {
-                return ssd_os_get_connection(
-                    l2p_dist.get_name(),
-                    dist_tbl.get_table_pipe_name(old),
-                );
-            }
-            META_DATA::L2P_NEW_ID(new) => {
-                return ssd_os_get_connection(
-                    l2p_dist.get_name(),
-                    dist_tbl.get_table_pipe_name(new),
-                );
-            }
-            _ => panic!("DID NOT MATCH ANYTHING"),
+        Request {
+            status: Status::BAD,
+            md: META_DATA::L2P_OLD_NEW_ID((Some(old), new)),
+            logical_addr,
+            ..
+        } => {
+            DIST_TABLE.get_mut().set_table_idx(logical_addr, old);
+            return ssd_os_get_connection(
+                l2p_dist.get_name(),
+                DIST_TABLE.get().get_table_pipe_name(new),
+            );
+        }
+        Request {
+            status: Status::PENDING | Status::IN_PROCESS,
+            logical_addr,
+            ..
+        } => {
+            let tbl_id = DIST_TABLE.get_mut().pick_table_idx();
+            if let Some(prev_id) = DIST_TABLE.get_mut().set_table_idx(logical_addr, tbl_id) {
+                req.md = META_DATA::L2P_OLD_NEW_ID((Some(prev_id), tbl_id));
+            } else {
+                req.md = META_DATA::L2P_OLD_NEW_ID((None, tbl_id));
+            };
+            return ssd_os_get_connection(
+                l2p_dist.get_name(),
+                DIST_TABLE.get().get_table_pipe_name(tbl_id),
+            );
+        }
+        _ => {
+            todo!()
         }
     }
 }
