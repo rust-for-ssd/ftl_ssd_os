@@ -42,7 +42,7 @@ fn init() -> ::core::ffi::c_int {
     #[cfg(feature = "benchmark")]
     {
         WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
-            crate::requester::requester::WorkloadType::READ,
+            crate::requester::requester::WorkloadType::WRITE,
             N_REQUESTS,
             ALLOC.get(),
         ));

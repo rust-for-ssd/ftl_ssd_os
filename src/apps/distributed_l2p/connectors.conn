@@ -9,8 +9,8 @@ l2p_prov0 l2p_0,prov
 l2p_prov1 l2p_1,prov
 l2p_prov2 l2p_2,prov
 l2p_prov3 l2p_3,prov
-dist_l2p_stage0 l2p_dist,l2p_0
-dist_l2p_stage1 l2p_dist,l2p_1
-dist_l2p_stage2 l2p_dist,l2p_2
-dist_l2p_stage3 l2p_dist,l2p_3
+dist_l2p0 l2p_dist,l2p_0
+dist_l2p1 l2p_dist,l2p_1
+dist_l2p2 l2p_dist,l2p_2
+dist_l2p3 l2p_dist,l2p_3
 prov_l2p prov,l2p_dist
