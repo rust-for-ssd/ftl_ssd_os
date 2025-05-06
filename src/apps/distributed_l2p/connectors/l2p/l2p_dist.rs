@@ -119,6 +119,13 @@ fn write_handler(req: &mut Request) -> *mut pipeline {
             );
         }
         Request {
+            status: Status::MM_DONE,
+            md: META_DATA::L2P_OLD_NEW_ID((None, _)),
+            ..
+        } => {
+            return null_mut();
+        }
+        Request {
             status: Status::BAD,
             md: META_DATA::L2P_OLD_NEW_ID((Some(old), new)),
             logical_addr,
@@ -147,6 +154,7 @@ fn write_handler(req: &mut Request) -> *mut pipeline {
             );
         }
         _ => {
+            println!("{:?}", req);
             todo!()
         }
     }

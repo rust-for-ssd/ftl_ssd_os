@@ -62,24 +62,28 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     let Some(entry) = lring_entry::new(entry) else {
         return null_mut();
     };
-    if entry.ctx.is_null() {
-        let workload = WORKLOAD_GENERATOR.get_mut();
 
-        let cur_req: Option<&mut Request> = workload.next_request();
+    match LRING.dequeue_as_mut(entry) {
+        Ok(entry) => {
+            return ssd_os_get_connection(c"requester", c"requester_l2p");
+        }
+        Err(_) => {
+            let workload = WORKLOAD_GENERATOR.get_mut();
 
-        match cur_req {
-            Some(req) => {
-                let pipe = ssd_os_get_connection(c"requester", c"requester_l2p");
-                req.start_timer();
-                entry.set_ctx(req);
-                return pipe;
-            }
-            None => {
-                return null_mut();
+            let cur_req: Option<&mut Request> = workload.next_request();
+
+            match cur_req {
+                Some(req) => {
+                    let pipe = ssd_os_get_connection(c"requester", c"requester_l2p");
+                    req.start_timer();
+                    entry.set_ctx(req);
+                    return pipe;
+                }
+                None => {
+                    return null_mut();
+                }
             }
         }
-    } else {
-        return ssd_os_get_connection(c"requester", c"requester_l2p");
     }
 }
 
