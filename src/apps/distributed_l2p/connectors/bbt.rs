@@ -1,5 +1,6 @@
 use core::ptr::null_mut;
 
+use crate::bindings::safe::ssd_os_get_connection;
 use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
@@ -66,7 +67,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 
     BBT.get_mut().set_bad_block(pba);
 
-    return null_mut();
+    return ssd_os_get_connection(c"bbt", c"bbt_requester");
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
