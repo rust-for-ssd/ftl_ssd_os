@@ -12,8 +12,8 @@ harness = false
 
 [profile.small]
 inherits = "release"
-opt-level = "s"
-lto = true        # Enable Link-Time Optimization
+opt-level = 3
+lto = true
 strip = true # Strip debug symbols
 panic = "abort"   # Reduce binary size by removing panic unwinding
 codegen-units = 1
