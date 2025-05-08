@@ -1,0 +1,26 @@
+SHELL = /bin/sh
+MARCH = rv32g
+MABI = ilp32d
+CC = $(TARGET_TRIPLET)-gcc
+IDIR = ../../include
+BDIR = build
+# CFLAGS = -Wall -I $(IDIR) -Os -mcmodel=medany -Wno-implicit-function-declaration -fno-function-sections -fno-unwind-tables -nostdlib -flto=full
+CFLAGS = -Wall -I $(IDIR) -O3 -mcmodel=medany -Wno-implicit-function-declaration -g0 -fno-builtin-memset -ffreestanding
+
+SFLAGS = -I $(IDIR)
+C_SRCS = $(wildcard *.c)
+I_SRCS = $(wildcard $(IDIR)/*.h)
+C_OBJS = $(C_SRCS:%.c=$(BDIR)/%.o)
+
+
+all: clean build $(C_OBJS)
+
+clean:
+	rm -f $(BDIR)/*.o
+
+
+$(BDIR)/%.o: %.c
+	    $(CC) -march=$(MARCH) -mabi=$(MABI) $(CFLAGS) -c $< -o $@
+
+build:
+	mkdir $@

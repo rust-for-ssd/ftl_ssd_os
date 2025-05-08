@@ -1,10 +1,10 @@
 use ::core::ffi::c_void;
-use core::ptr::{null, null_mut};
+use core::{ffi::c_int, ptr::{null, null_mut}};
 
 use crate::{bindings::{generated::{lring_entry, pipeline, ssd_os_lring_dequeue, ssd_os_sleep, ssd_os_timer_interrupt_on, ssd_os_usleep, TICKS_SEC}, lring::LRing, mem::MemoryRegion, safe::ssd_os_get_connection}, make_connector_static, make_stage_static, shared::macros::{ensure_unique, println}};
 
-make_connector_static!(cpath_conn1, conn1_init, conn1_exit, conn1_fn, conn1_ring_fn, 0);
-make_connector_static!(cpath_conn2, conn2_init, conn2_exit, conn2_fn, conn2_ring_fn, 0);
+make_connector_static!(round_trip_conn1, conn1_init, conn1_exit, conn1_fn, conn1_ring_fn, 0);
+make_connector_static!(round_trip_conn2, conn2_init, conn2_exit, conn2_fn, conn2_ring_fn, 0);
 
 make_stage_static!(stage1_1, stage_init_fn, stage_exit_fn, stage1_1_fn);
 make_stage_static!(stage1_2, stage_init_fn, stage_exit_fn, stage1_2_fn);
@@ -113,12 +113,12 @@ fn get_index_from_ptr(ptr: *const Numbers) -> Option<usize> {
 fn timer_fn() {
     unsafe {
         let cur = COUNT;
-        let diff = cur.wrapping_sub(LAST_COUNT);
+        let diff = cur - LAST_COUNT;
         LAST_COUNT = cur;
         
-        println!("");
         println!("op/sec       : {:?}", diff);
         println!("stages/sec   : {:?}", 6*diff); // we have 6 stages 
+        println!("{:?}", 6*diff); // for benchmark
         println!("in the rings : {:?}", AMOUNT);
         println!("total        : {:?}", COUNT);
         println!("submitted    : {:?}", SUBMITTED);
@@ -130,7 +130,7 @@ extern "C" fn timer_callback() {
 }
 
 // ------- Connection functions --------
-fn conn1_init() -> ::core::ffi::c_int {
+fn conn1_init() -> c_int {
     ensure_unique!();
     println!("Connector 1 initializing");
     
@@ -141,7 +141,7 @@ fn conn1_init() -> ::core::ffi::c_int {
     0
 }
 
-fn conn2_init() -> ::core::ffi::c_int {
+fn conn2_init() -> c_int {
     let mut mem_region = MemoryRegion::new_from_cpu(0);
     let Ok(()) = LRING.init(c"CONN2_LRING", mem_region.free_start, 0) else {
         panic!("LRING WAS ALREADY INITIALIZED!");
@@ -152,11 +152,11 @@ fn conn2_init() -> ::core::ffi::c_int {
     0
 }
 
-fn conn1_exit() -> ::core::ffi::c_int {
+fn conn1_exit() -> c_int {
     0
 }
 
-fn conn2_exit() -> ::core::ffi::c_int {
+fn conn2_exit() -> c_int {
     0
 }
 
@@ -179,7 +179,7 @@ fn conn1_fn(entry: *mut lring_entry) -> *mut pipeline {
         }
         
         if PIPE1.is_null() {
-            PIPE1 = ssd_os_get_connection(c"cpath_conn1", c"cpath_pipe1");
+            PIPE1 = ssd_os_get_connection(c"round_trip_conn1", c"round_trip_pipe1");
         }
         
         PIPE1
@@ -192,13 +192,13 @@ fn conn2_fn(entry: *mut lring_entry) -> *mut pipeline {
         
     unsafe {
         if PIPE2.is_null() {
-            PIPE2 = ssd_os_get_connection(c"cpath_conn2", c"cpath_pipe2");
+            PIPE2 = ssd_os_get_connection(c"round_trip_conn2", c"round_trip_pipe2");
         }
         return PIPE2;
     }
 }
 
-fn conn1_ring_fn(entry: *mut lring_entry) -> ::core::ffi::c_int {
+fn conn1_ring_fn(entry: *mut lring_entry) -> c_int {
     ensure_unique!();
 
     let Some(entry_ref) = lring_entry::new(entry) else {
@@ -232,17 +232,16 @@ fn conn1_ring_fn(entry: *mut lring_entry) -> ::core::ffi::c_int {
     0
 }
 
-fn conn2_ring_fn(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    // println!("CONN2 ring function called");
+fn conn2_ring_fn(entry: *mut lring_entry) -> c_int {
     ensure_unique!();
 
     match LRING.enqueue(entry) {
         Ok(()) => {
-            // println!("Successfully enqueued to LRING");
+            println!("Successfully enqueued to LRING");
             0
         },
         Err(_) => {
-            // println!("Failed to enqueue to LRING");
+            println!("Failed to enqueue to LRING");
             1
         }
     }
@@ -251,12 +250,12 @@ fn conn2_ring_fn(entry: *mut lring_entry) -> ::core::ffi::c_int {
 
 // ------- Stage functions --------
 
-fn stage_init_fn() -> ::core::ffi::c_int {
+fn stage_init_fn() -> c_int {
     ensure_unique!();
     0
 }
 
-fn stage_exit_fn() -> ::core::ffi::c_int {
+fn stage_exit_fn() -> c_int {
     ensure_unique!();
     0
 }
@@ -266,9 +265,7 @@ fn add_fn(ctx: *mut c_void) -> *mut c_void {
     if !ctx.is_null() {
         let n = ctx as *mut Numbers;
         unsafe {
-            // println!("Before add: {:?}", *n);
             (*n).value = (*n).value.wrapping_add((*n).add);
-            // println!("After add: {:?}", *n);
         }
     }
     ctx
@@ -280,9 +277,7 @@ fn stage1_1_fn(context: *mut c_void) -> *mut c_void {
     if context.is_null() {
         return context;
     }
-    
-    // println!("stage 1");
-    
+        
     add_fn(context)
 }
 
@@ -292,7 +287,6 @@ fn stage1_2_fn(context: *mut c_void) -> *mut c_void {
     if context.is_null() {
         return context;
     }
-    // println!("stage 2");
 
     add_fn(context)
 }
@@ -302,7 +296,6 @@ fn stage1_3_fn(context: *mut c_void) -> *mut c_void {
     if context.is_null() {
         return context;
     }
-    // println!("stage 3");
 
     add_fn(context)
 }
@@ -313,8 +306,7 @@ fn stage2_1_fn(context: *mut c_void) -> *mut c_void {
     if context.is_null() {
         return context;
     }
-    // println!("stage 2.1");
-
+    
     add_fn(context)
 }
 
@@ -324,8 +316,6 @@ fn stage2_2_fn(context: *mut c_void) -> *mut c_void {
     if context.is_null() {
         return context;
     }
-    // println!("stage 2.2");
-
     add_fn(context)
 }
 
@@ -335,7 +325,5 @@ fn stage2_3_fn(context: *mut c_void) -> *mut c_void {
     if context.is_null() {
         return context;
     }
-    // println!("stage 3.3");
-
     add_fn(context)
 }
