@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  llvm_compilation:
+    platform: linux/amd64
+    build: 
+      context: .
+    image: llvm_compilation
+    stdin_open: true  # equivalent to -i flag
+    tty: true         # equivalent to -t flag
+    volumes:
+      - .:/app

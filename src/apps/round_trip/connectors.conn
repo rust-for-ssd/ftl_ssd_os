@@ -1,2 +1,2 @@
-cpath_pipe1 cpath_conn1,cpath_conn2
-cpath_pipe2 cpath_conn2,cpath_conn1
+round_trip_pipe1 round_trip_conn1,round_trip_conn2
+round_trip_pipe2 round_trip_conn2,round_trip_conn1
