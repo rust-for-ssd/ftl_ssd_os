@@ -147,6 +147,7 @@ static void timer_fn (void)
     ssd_os_print_sis (" in the rings: ", amount, "\n");
     ssd_os_print_sis (" total       : ", count, "\n");
     ssd_os_print_sis (" submitted   : ", submitted, "\n");
+    ssd_os_print_sis ("", diff * 6, "\n"); // for benchmark
     ssd_os_print_unlock ();
 }
 
