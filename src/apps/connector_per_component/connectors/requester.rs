@@ -27,12 +27,15 @@ pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedList
 
 pub const N_REQUESTS: usize = 1024;
 
-pub static mut AMOUNT: u32 = 0;
+#[unsafe(no_mangle)]
+pub static mut AMOUNT_IN_LRING: i32 = 0;
 pub static mut COUNT: u32 = 0;
 pub static mut SUBMITTED: u32 = 0;
 pub static mut LAST_COUNT: u32 = 0;
 
-static POOL_SIZE: usize = 1000;
+pub static DATA_TO_WRITE : [u8; 2] = [99, 99];
+
+static POOL_SIZE: usize = 4000;
 static RING_SIZE: usize = 128;
 
 // ----- SUSTAINED THROUGHPUT EXPERIMENT ---------
@@ -50,6 +53,7 @@ fn get_free_message_index() -> Option<usize> {
             }
         }
     }
+    println!("No Messages left");
     None
 }
 
@@ -60,6 +64,8 @@ fn release_message(index: usize) {
             MSG_USAGE_BITMAP[index] = false;
             MESSAGE_POOL[index] = Request::empty();
         }
+    } else {
+        panic!("something is wrong")
     }
 }
 
@@ -99,7 +105,7 @@ fn timer_fn() {
         // println!("op/sec       : {:?}", diff);
         // println!("stages/sec   : {:?}", 6*diff); // we have 6 stages 
         println!("{:?}", diff); // for benchmark
-        // println!("in the rings : {:?}", AMOUNT);
+        // println!("in the rings : {:?}", AMOUNT_IN_LRING);
         // println!("total        : {:?}", COUNT);
         // println!("submitted    : {:?}", SUBMITTED);
     }
@@ -112,6 +118,13 @@ extern "C" fn timer_callback() {
 
 // ----- SUSTAINED THROUGHPUT EXPERIMENT ---------
 fn init() -> ::core::ffi::c_int {
+    
+    unsafe {
+        AMOUNT_IN_LRING = 0; 
+    }
+    
+    
+    // println!("AMOUNT: {}", unsafe {AMOUNT});
     crate::shared::macros::dbg_println!("REQUESTER_INIT");
 
     let mut mem_region = MemoryRegion::new_from_cpu(1);
@@ -147,6 +160,7 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
+    // println!("AMOUNT: {}", unsafe {AMOUNT});
     // let Some(entry) = lring_entry::new(entry) else {
     //     return null_mut();
     // };
@@ -159,19 +173,31 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     // 
     // 
     unsafe {
-        if AMOUNT < RING_SIZE as u32 {
+        if AMOUNT_IN_LRING < RING_SIZE as i32 {
             if let Some(idx) = get_free_message_index() {
+                // println!(idx as u32 % N_REQUESTS as u32);
+                // idx as u32 % N_REQUESTS as u32
                 let msg_ptr = get_message_ptr(idx);
                 (*msg_ptr).id = idx as u32;
                 (*msg_ptr).logical_addr = 0x1;
-                (*msg_ptr).cmd = CommandType::READ;
+                (*msg_ptr).cmd = CommandType::WRITE;
+
+                // (*msg_ptr).cmd = {
+                //         if idx % 2 == 0 {
+                //             CommandType::READ
+                //         } else {
+                //             CommandType::WRITE
+                //         }
+                // };
+                (*msg_ptr).data = DATA_TO_WRITE.as_ptr().cast_mut().cast();
                     
                     
                 SUBMITTED += 1;
+                AMOUNT_IN_LRING += 1;
+
                 
                 (*entry).ctx = msg_ptr as *mut c_void;
                 
-                AMOUNT += 1;
             }
         }
     }
@@ -192,6 +218,8 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
+    // println!("WUP RING");
+
     let Some(res) = lring_entry::new(entry) else {
         return 0;
     };
@@ -203,15 +231,17 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
         }
     };
     
-    unsafe {
-        COUNT += 1;
-    }
+
     
     // Release the message back to the pool
     if let Some(idx) = get_index_from_ptr(res) {
         release_message(idx);
     }
 
+    unsafe {
+        COUNT += 1;
+        AMOUNT_IN_LRING -= 1
+    }
     // req.end_timer();
     // let workload = WORKLOAD_GENERATOR.get_mut();
     // workload.request_returned += 1;

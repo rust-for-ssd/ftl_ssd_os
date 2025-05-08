@@ -1,5 +1,4 @@
 use core::ptr::null_mut;
-
 use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
@@ -15,7 +14,7 @@ use crate::{
     shared::core_local_cell::CoreLocalCell,
 };
 
-use super::requester::{AMOUNT, COUNT};
+use super::requester::{AMOUNT_IN_LRING, COUNT};
 
 make_connector_static!(l2p, init, exit, pipe_start, ring, 1);
 
@@ -58,7 +57,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     let Some(req) = res.get_ctx_as_mut::<Request>() else {
         return null_mut();
     };
-
+    
     match req.cmd {
         CommandType::READ => {
             req.physical_addr = l2p_mapper.get_mut().lookup(req.logical_addr);
@@ -69,10 +68,11 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
         }
         CommandType::WRITE if req.physical_addr.is_some() => {
             // WARNING: ASSUMING that the physical addr is only set from the provisioner in the write path.
+            // println!("WUP");
             l2p_mapper
                 .get_mut()
                 .map(req.logical_addr, req.physical_addr.unwrap());
-
+            
             return ssd_os_get_connection(c"l2p", c"l2p_media_manager");
         }
         _ => {
@@ -85,9 +85,6 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
     match lring.enqueue(entry) {
         Ok(()) => {
-            unsafe {
-                AMOUNT -= 1;
-            }
             0
         }
         Err(LRingErr::Enqueue(i)) => i,

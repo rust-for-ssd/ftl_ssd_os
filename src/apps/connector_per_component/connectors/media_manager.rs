@@ -47,6 +47,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
         return null_mut();
     };
 
+    // println!("WOW");
     let Ok(res) = MM.get_mut().execute_request(req) else {
         println!("MMGR ERROR!: {:?}", MM.get_mut().execute_request(req));
         ssd_os_get_connection(c"mm", c"media_manager_bbt");
