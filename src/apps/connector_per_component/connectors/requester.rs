@@ -1,5 +1,7 @@
+use core::ffi::c_void;
 use core::ptr::null_mut;
 
+use crate::bindings::generated::{ssd_os_timer_interrupt_on, TICKS_SEC};
 use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
@@ -14,7 +16,7 @@ use crate::{
     shared::core_local_cell::CoreLocalCell,
 };
 
-use crate::requester::requester::Request;
+use crate::requester::requester::{CommandType, Request};
 
 make_connector_static!(requester, init, exit, pipe_start, ring, 1);
 
@@ -25,6 +27,90 @@ pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedList
 
 pub const N_REQUESTS: usize = 1024;
 
+pub static mut AMOUNT: u32 = 0;
+pub static mut COUNT: u32 = 0;
+pub static mut SUBMITTED: u32 = 0;
+pub static mut LAST_COUNT: u32 = 0;
+
+static POOL_SIZE: usize = 1000;
+static RING_SIZE: usize = 128;
+
+// ----- SUSTAINED THROUGHPUT EXPERIMENT ---------
+static mut MESSAGE_POOL: [Request; POOL_SIZE] = [Request::empty(); POOL_SIZE];
+static mut MSG_USAGE_BITMAP: [bool; POOL_SIZE] = [false; POOL_SIZE];
+
+
+
+fn get_free_message_index() -> Option<usize> {
+    unsafe {
+        for i in 0..POOL_SIZE {
+            if !MSG_USAGE_BITMAP[i] {
+                MSG_USAGE_BITMAP[i] = true;
+                return Some(i);
+            }
+        }
+    }
+    None
+}
+
+// Release a message back to the pool
+fn release_message(index: usize) {
+    if index < POOL_SIZE {
+        unsafe {
+            MSG_USAGE_BITMAP[index] = false;
+            MESSAGE_POOL[index] = Request::empty();
+        }
+    }
+}
+
+// Helper to get a pointer to a message from the pool
+fn get_message_ptr(index: usize) -> *mut Request {
+    if index < POOL_SIZE {
+        unsafe { &mut MESSAGE_POOL[index] as *mut Request }
+    } else {
+        null_mut()
+    }
+}
+
+// Helper to get index from a pointer
+fn get_index_from_ptr(ptr: *const Request) -> Option<usize> {
+    if ptr.is_null() {
+        return None;
+    }
+    
+    unsafe {
+        let base_addr = &MESSAGE_POOL[0] as *const Request;
+        let offset = (ptr as usize - base_addr as usize) / core::mem::size_of::<Request>();
+        
+        if offset < POOL_SIZE {
+            Some(offset)
+        } else {
+            None
+        }
+    }
+}
+
+fn timer_fn() {
+    unsafe {
+        let cur = COUNT;
+        let diff = cur - LAST_COUNT;
+        LAST_COUNT = cur;
+        
+        // println!("op/sec       : {:?}", diff);
+        // println!("stages/sec   : {:?}", 6*diff); // we have 6 stages 
+        println!("{:?}", diff); // for benchmark
+        // println!("in the rings : {:?}", AMOUNT);
+        // println!("total        : {:?}", COUNT);
+        // println!("submitted    : {:?}", SUBMITTED);
+    }
+}
+
+extern "C" fn timer_callback() {
+    timer_fn();
+}
+
+
+// ----- SUSTAINED THROUGHPUT EXPERIMENT ---------
 fn init() -> ::core::ffi::c_int {
     crate::shared::macros::dbg_println!("REQUESTER_INIT");
 
@@ -39,16 +125,19 @@ fn init() -> ::core::ffi::c_int {
         .get()
         .initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
-    #[cfg(feature = "benchmark")]
-    {
+    unsafe { 
+        ssd_os_timer_interrupt_on(TICKS_SEC as i32, timer_callback as *mut c_void)
+    };
+    // #[cfg(feature = "benchmark")]
+    // {
         WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
             crate::requester::requester::WorkloadType::READ,
             N_REQUESTS,
             ALLOC.get(),
         ));
-        let workload = WORKLOAD_GENERATOR.get_mut();
-        workload.init_workload();
-    }
+    //     let workload = WORKLOAD_GENERATOR.get_mut();
+    //     workload.init_workload();
+    // }
 
     0
 }
@@ -58,38 +147,74 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    let Some(entry) = lring_entry::new(entry) else {
-        return null_mut();
-    };
+    // let Some(entry) = lring_entry::new(entry) else {
+    //     return null_mut();
+    // };
 
-    let workload = WORKLOAD_GENERATOR.get_mut();
+    // let workload = WORKLOAD_GENERATOR.get_mut();
 
-    let cur_req: Option<&mut Request> = workload.next_request();
-
-    match cur_req {
-        Some(req) => {
-            let pipe = ssd_os_get_connection(c"requester", c"requester_l2p");
-            req.start_timer();
-            entry.set_ctx(req);
-            return pipe;
-        }
-        None => {
-            return null_mut();
+    // let cur_req: Option<&mut Request> = workload.next_request();
+    // 
+    // 
+    // 
+    // 
+    unsafe {
+        if AMOUNT < RING_SIZE as u32 {
+            if let Some(idx) = get_free_message_index() {
+                let msg_ptr = get_message_ptr(idx);
+                (*msg_ptr).id = idx as u32;
+                (*msg_ptr).logical_addr = 0x1;
+                (*msg_ptr).cmd = CommandType::READ;
+                    
+                    
+                SUBMITTED += 1;
+                
+                (*entry).ctx = msg_ptr as *mut c_void;
+                
+                AMOUNT += 1;
+            }
         }
     }
+    
+    return  ssd_os_get_connection(c"requester", c"requester_l2p");
+
+    // match cur_req {
+    //     Some(req) => {
+    //         let pipe = ssd_os_get_connection(c"requester", c"requester_l2p");
+    //         req.start_timer();
+    //         entry.set_ctx(req);
+    //         return pipe;
+    //     }
+    //     None => {
+    //         return null_mut();
+    //     }
+    // }
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
     let Some(res) = lring_entry::new(entry) else {
         return 0;
     };
-    let Some(req) = res.get_ctx_as_mut::<Request>() else {
-        return 0;
+    let res = match res.get_ctx_as_mut::<Request>() {
+        Some(existing) => existing,
+        None => {
+            println!("Failed to get context as Request");
+            return 1;
+        }
     };
+    
+    unsafe {
+        COUNT += 1;
+    }
+    
+    // Release the message back to the pool
+    if let Some(idx) = get_index_from_ptr(res) {
+        release_message(idx);
+    }
 
-    req.end_timer();
-    let workload = WORKLOAD_GENERATOR.get_mut();
-    workload.request_returned += 1;
+    // req.end_timer();
+    // let workload = WORKLOAD_GENERATOR.get_mut();
+    // workload.request_returned += 1;
 
     #[cfg(feature = "debug")]
     {
@@ -105,9 +230,9 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
         );
     }
 
-    if workload.request_returned == workload.get_n_requests() {
-        workload.calculate_stats();
-    }
+    // if workload.request_returned == workload.get_n_requests() {
+    //     workload.calculate_stats();
+    // }
 
     0
 }

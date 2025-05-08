@@ -1,0 +1,6 @@
+Statistics for Round Trip Time (RTT):
+Mean: 0.8204 ms
+Median: 0.5910 ms
+Standard Deviation: 0.6794 ms
+Minimum: 0.2660 ms
+Maximum: 2.6590 ms
