@@ -57,14 +57,16 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
         return null_mut();
     };
 
-    let Ok(ppa) = provisioner.get_mut().provision_page() else {
-        return null_mut();
-    };
+    // let Ok(ppa) = provisioner.get_mut().provision_page() else {
+    //     return null_mut();
+    // };
 
     // TODO: problem because we cannot work with u64 as per 23/5
     // let nvm_ppa: nvm_ppa_addr = ppa.into();
     // req.physical_addr = Some(unsafe { nvm_ppa.__bindgen_anon_1.ppa } as u32);
-    req.physical_addr = Some(ppa.into());
+    // req.physical_addr = Some(ppa.into());
+    req.physical_addr = Some(0x1);
+
 
     return ssd_os_get_connection(c"prov", c"prov_l2p");
 }

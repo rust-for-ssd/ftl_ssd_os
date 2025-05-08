@@ -1,7 +1,7 @@
 use crate::{
     bindings::generated::nvm_mmgr_geometry,
     l2p::l2p::PhysicalAddr,
-    requester::requester::{CommandType, Request},
+    requester::requester::{CommandType, Request}, shared::macros::println,
 };
 use alloc::collections::BTreeMap;
 use core::{alloc::Allocator, ptr::null_mut};
@@ -54,7 +54,7 @@ impl<A: Allocator + 'static> MediaManager<A> {
     }
 
     pub fn execute_request(&mut self, request: &Request) -> Result<*mut mm_page, MM_ERR> {
-        // println!("HERE1");
+        // println!("HERE1")
         match request.cmd {
             CommandType::READ => {
                 // println!("HERE2");
@@ -78,6 +78,7 @@ impl<A: Allocator + 'static> MediaManager<A> {
                     return Err(MM_ERR::NoPPAInReq);
                 };
 
+                // println!("WRITING");
                 self.data_buffer
                     .insert(ppa, unsafe { *request.data.clone() });
                 // println!("WROTE DATA SUCESSFULLY");
