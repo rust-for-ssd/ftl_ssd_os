@@ -1,0 +1,14 @@
+requester_l2p requester,l2p_dist
+l2p_media_manager0 l2p_0,mm
+l2p_media_manager1 l2p_1,mm
+l2p_media_manager2 l2p_2,mm
+l2p_media_manager3 l2p_3,mm
+media_manager_requester mm,requester
+media_manager_bbt mm,bbt
+bbt_requester bbt,requester
+dist_l2p0 l2p_dist,l2p_0
+dist_l2p1 l2p_dist,l2p_1
+dist_l2p2 l2p_dist,l2p_2
+dist_l2p3 l2p_dist,l2p_3
+prov_l2p prov,l2p_dist
+l2p_prov l2p_dist,prov

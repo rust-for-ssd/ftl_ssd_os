@@ -1,5 +1,6 @@
 use core::alloc::Allocator;
 use core::ffi::c_void;
+use core::u8;
 
 use alloc::vec::Vec;
 
@@ -10,25 +11,32 @@ use crate::{
     media_manager::media_manager::{Geometry, mm_page},
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CommandType {
     READ,
     WRITE,
     ERASE,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Status {
     BAD,
     DONE,
     IN_PROCESS,
     PENDING,
+    MM_DONE,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum RequestError {
     ConnectorError,
     StageError,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum META_DATA {
+    NONE,
+    L2P_OLD_NEW_ID((Option<u8>, u8)),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -39,6 +47,7 @@ pub struct Request {
     pub logical_addr: u32,
     pub physical_addr: Option<u32>,
     pub data: *mut mm_page,
+    pub md: META_DATA,
 
     // Timing metadata
     pub start_time: u32,
@@ -56,6 +65,7 @@ impl Default for Request {
             start_time: 0,
             end_time: 0,
             status: Status::IN_PROCESS,
+            md: META_DATA::NONE,
         }
     }
 }
@@ -71,6 +81,7 @@ impl Request {
             data: data,
             start_time: 0,
             end_time: 0,
+            md: META_DATA::NONE,
         }
     }
 
