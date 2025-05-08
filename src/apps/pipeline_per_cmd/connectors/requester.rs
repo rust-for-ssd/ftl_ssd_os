@@ -21,7 +21,7 @@ static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
 pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedListAllocator>> =
     CoreLocalCell::new();
 
-pub const N_REQUESTS: usize = 10000;
+pub const N_REQUESTS: usize = 1024;
 
 fn init() -> ::core::ffi::c_int {
     let mem_region = MemoryRegion::new_from_cpu(1);

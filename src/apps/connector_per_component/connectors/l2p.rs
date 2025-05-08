@@ -15,6 +15,8 @@ use crate::{
     shared::core_local_cell::CoreLocalCell,
 };
 
+use super::requester::{AMOUNT, COUNT};
+
 make_connector_static!(l2p, init, exit, pipe_start, ring, 1);
 
 static lring: LRing<128> = LRing::new();
@@ -82,7 +84,12 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
     match lring.enqueue(entry) {
-        Ok(()) => 0,
+        Ok(()) => {
+            unsafe {
+                AMOUNT -= 1;
+            }
+            0
+        }
         Err(LRingErr::Enqueue(i)) => i,
         _ => {
             println!("DID NOT MATCH RES FROM ENQUEUE!");

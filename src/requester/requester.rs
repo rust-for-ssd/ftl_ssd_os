@@ -55,7 +55,7 @@ pub struct Request {
 }
 
 impl Default for Request {
-    fn default() -> Self {
+     fn default() -> Self {
         Self {
             id: 0,
             cmd: CommandType::READ,
@@ -69,6 +69,10 @@ impl Default for Request {
         }
     }
 }
+
+
+
+
 
 impl Request {
     pub fn new(id: u32, cmd: CommandType, logical_addr: LogicalAddr, data: *mut mm_page) -> Self {
@@ -84,6 +88,20 @@ impl Request {
             md: META_DATA::NONE,
         }
     }
+    
+    pub const fn empty() -> Self {
+       Self {
+           id: 0,
+           cmd: CommandType::READ,
+           logical_addr: 0,
+           physical_addr: None,
+           data: core::ptr::null_mut(),
+           start_time: 0,
+           end_time: 0,
+           status: Status::IN_PROCESS,
+           md: META_DATA::NONE,
+       }
+   }
 
     pub fn calc_round_trip_time_clock_cycles(&self) -> u32 {
         // println!("Start time {:?}", self.start_time);
