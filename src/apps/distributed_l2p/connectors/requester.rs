@@ -1,7 +1,7 @@
 use core::ffi::c_void;
 use core::ptr::null_mut;
 
-use crate::bindings::generated::{ssd_os_timer_interrupt_on, TICKS_SEC};
+use crate::bindings::generated::{TICKS_SEC, ssd_os_timer_interrupt_on};
 use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
@@ -33,7 +33,7 @@ pub static mut COUNT: u32 = 0;
 pub static mut SUBMITTED: u32 = 0;
 pub static mut LAST_COUNT: u32 = 0;
 
-pub static DATA_TO_WRITE : [u8; 2] = [99, 99];
+pub static DATA_TO_WRITE: [u8; 2] = [99, 99];
 
 static POOL_SIZE: usize = 4000;
 static RING_SIZE: usize = 128;
@@ -41,8 +41,6 @@ static RING_SIZE: usize = 128;
 // ----- SUSTAINED THROUGHPUT EXPERIMENT ---------
 static mut MESSAGE_POOL: [Request; POOL_SIZE] = [Request::empty(); POOL_SIZE];
 static mut MSG_USAGE_BITMAP: [bool; POOL_SIZE] = [false; POOL_SIZE];
-
-
 
 fn get_free_message_index() -> Option<usize> {
     unsafe {
@@ -83,11 +81,11 @@ fn get_index_from_ptr(ptr: *const Request) -> Option<usize> {
     if ptr.is_null() {
         return None;
     }
-    
+
     unsafe {
         let base_addr = &MESSAGE_POOL[0] as *const Request;
         let offset = (ptr as usize - base_addr as usize) / core::mem::size_of::<Request>();
-        
+
         if offset < POOL_SIZE {
             Some(offset)
         } else {
@@ -101,9 +99,9 @@ fn timer_fn() {
         let cur = COUNT;
         let diff = cur - LAST_COUNT;
         LAST_COUNT = cur;
-        
+
         println!("op/sec       : {:?}", diff);
-        // println!("stages/sec   : {:?}", 6*diff); // we have 6 stages 
+        // println!("stages/sec   : {:?}", 6*diff); // we have 6 stages
         // println!("{:?}", diff); // for benchmark
         println!("in the rings : {:?}", AMOUNT_IN_LRING);
         println!("total        : {:?}", COUNT);
@@ -115,15 +113,12 @@ extern "C" fn timer_callback() {
     timer_fn();
 }
 
-
 // ----- SUSTAINED THROUGHPUT EXPERIMENT ---------
 fn init() -> ::core::ffi::c_int {
-    
     unsafe {
-        AMOUNT_IN_LRING = 0; 
+        AMOUNT_IN_LRING = 0;
     }
-    
-    
+
     // println!("AMOUNT: {}", unsafe {AMOUNT});
     crate::shared::macros::dbg_println!("REQUESTER_INIT");
 
@@ -138,16 +133,14 @@ fn init() -> ::core::ffi::c_int {
         .get()
         .initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
-    unsafe { 
-        ssd_os_timer_interrupt_on(TICKS_SEC as i32, timer_callback as *mut c_void)
-    };
+    unsafe { ssd_os_timer_interrupt_on(TICKS_SEC as i32, timer_callback as *mut c_void) };
     // #[cfg(feature = "benchmark")]
     // {
-        WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
-            crate::requester::requester::WorkloadType::READ,
-            N_REQUESTS,
-            ALLOC.get(),
-        ));
+    WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
+        crate::requester::requester::WorkloadType::READ,
+        N_REQUESTS,
+        ALLOC.get(),
+    ));
     //     let workload = WORKLOAD_GENERATOR.get_mut();
     //     workload.init_workload();
     // }
@@ -168,10 +161,10 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     // let workload = WORKLOAD_GENERATOR.get_mut();
 
     // let cur_req: Option<&mut Request> = workload.next_request();
-    // 
-    // 
-    // 
-    // 
+    //
+    //
+    //
+    //
     unsafe {
         if AMOUNT_IN_LRING < RING_SIZE as i32 {
             if let Some(idx) = get_free_message_index() {
@@ -180,7 +173,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
                 let msg_ptr = get_message_ptr(idx);
                 (*msg_ptr).id = idx as u32;
                 (*msg_ptr).logical_addr = 0x1;
-                (*msg_ptr).cmd = CommandType::WRITE;
+                (*msg_ptr).cmd = CommandType::READ;
 
                 // (*msg_ptr).cmd = {
                 //         if idx % 2 == 0 {
@@ -190,19 +183,16 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
                 //         }
                 // };
                 (*msg_ptr).data = DATA_TO_WRITE.as_ptr().cast_mut().cast();
-                    
-                    
+
                 SUBMITTED += 1;
                 AMOUNT_IN_LRING += 1;
 
-                
                 (*entry).ctx = msg_ptr as *mut c_void;
-                
             }
         }
     }
-    
-    return  ssd_os_get_connection(c"requester", c"requester_l2p");
+
+    return ssd_os_get_connection(c"requester", c"requester_l2p");
 
     // match cur_req {
     //     Some(req) => {
@@ -230,9 +220,7 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
             return 1;
         }
     };
-    
 
-    
     // Release the message back to the pool
     if let Some(idx) = get_index_from_ptr(res) {
         release_message(idx);

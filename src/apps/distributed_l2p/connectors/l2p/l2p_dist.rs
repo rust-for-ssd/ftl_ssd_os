@@ -42,9 +42,12 @@ fn init() -> ::core::ffi::c_int {
         .initialize(mem_region.free_start.cast(), mem_region.end.cast());
     DIST_TABLE.set(L2PDistributionTable::new(ALLOC.get(), PIPE_TABLE));
 
-    // #[cfg(feature = "benchmark")]
+    #[cfg(feature = "benchmark")]
     {
-        // let n_requests = super::requester::WORKLOAD_GENERATOR.get().get_n_requests();
+        let n_requests = crate::apps::distributed_l2p::connectors::requester::WORKLOAD_GENERATOR
+            .get()
+            .get_n_requests();
+        DIST_TABLE.get_mut().prepare_for_benchmark(n_requests);
         // let l2p_map = L2P_MAPPER.get_mut();
         // l2p_map.prepare_for_benchmark(n_requests);
     }
