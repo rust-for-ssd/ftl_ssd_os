@@ -76,8 +76,11 @@ fn prov_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::
     let request = Request::from_ctx_ptr(context);
 
     let Ok(ppa) = PROVISIONER.lock().provision_page() else {
-        println!("COULD NOT PROVISION!");
-        return null_mut();
+        // println!("COULD NOT PROVISION!");
+        // return null_mut();
+        // let ppa = 0x1;
+        request.physical_addr = Some(0x1);
+        return context
     };
 
     request.physical_addr = Some(ppa.into());
