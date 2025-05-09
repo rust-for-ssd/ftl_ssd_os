@@ -35,4 +35,10 @@ impl<A: Allocator + 'static, const CAPACITY: usize> L2PDistributionTable<A, CAPA
     pub fn get_table_pipe_name(&self, table_idx: u8) -> &CStr {
         self.pipe_names[table_idx as usize]
     }
+
+    pub fn prepare_for_benchmark(&mut self, n_reqs: usize) {
+        for i in 0..n_reqs {
+            self.table.insert(i as u32, (i % CAPACITY) as u8);
+        }
+    }
 }
