@@ -29,7 +29,9 @@ palette = sns.color_palette("colorblind")
 
 # Read data from the connector_per_component folder
 # data_folder = 'benchmark/sustained_throughput/connector_per_component'
-data_folder = 'benchmark/sustained_throughput/pipeline_per_cmd'
+# data_folder = 'benchmark/sustained_throughput/pipeline_per_cmd'
+data_folder = 'benchmark/sustained_throughput/distributed_l2p'
+
 
 with open(os.path.join(data_folder, 'write.txt'), 'r') as f:
     write_data = np.array([float(line.strip()) for line in f if line.strip()])

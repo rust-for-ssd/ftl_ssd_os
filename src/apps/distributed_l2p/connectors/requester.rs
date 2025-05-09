@@ -100,12 +100,12 @@ fn timer_fn() {
         let diff = cur - LAST_COUNT;
         LAST_COUNT = cur;
 
-        println!("op/sec       : {:?}", diff);
+        // println!("op/sec       : {:?}", diff);
         // println!("stages/sec   : {:?}", 6*diff); // we have 6 stages
-        // println!("{:?}", diff); // for benchmark
-        println!("in the rings : {:?}", AMOUNT_IN_LRING);
-        println!("total        : {:?}", COUNT);
-        println!("submitted    : {:?}", SUBMITTED);
+        println!("{:?}", diff); // for benchmark
+        // println!("in the rings : {:?}", AMOUNT_IN_LRING);
+        // println!("total        : {:?}", COUNT);
+        // println!("submitted    : {:?}", SUBMITTED);
     }
 }
 
@@ -172,8 +172,9 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
                 // idx as u32 % N_REQUESTS as u32
                 let msg_ptr = get_message_ptr(idx);
                 (*msg_ptr).id = idx as u32;
-                (*msg_ptr).logical_addr = 0x1;
-                (*msg_ptr).cmd = CommandType::READ;
+                // (*msg_ptr).logical_addr = 0x1;
+                (*msg_ptr).logical_addr = (idx % 5) as u32;
+                (*msg_ptr).cmd = CommandType::WRITE;
 
                 // (*msg_ptr).cmd = {
                 //         if idx % 2 == 0 {
