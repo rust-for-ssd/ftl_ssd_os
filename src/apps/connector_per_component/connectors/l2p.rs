@@ -1,4 +1,3 @@
-use core::ptr::null_mut;
 use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
@@ -13,6 +12,7 @@ use crate::{
     requester::requester::{CommandType, Request},
     shared::core_local_cell::CoreLocalCell,
 };
+use core::ptr::null_mut;
 
 use super::requester::{AMOUNT_IN_LRING, COUNT};
 
@@ -20,7 +20,7 @@ make_connector_static!(l2p, init, exit, pipe_start, ring, 1);
 
 static lring: LRing<128> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
-static l2p_mapper: CoreLocalCell<L2pMapper<LinkedListAllocator>> = CoreLocalCell::new();
+static l2p_mapper: CoreLocalCell<L2pMapper<1024, LinkedListAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
     let mut mem_region = MemoryRegion::new_from_cpu(2);
@@ -57,7 +57,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     let Some(req) = res.get_ctx_as_mut::<Request>() else {
         return null_mut();
     };
-    
+
     match req.cmd {
         CommandType::READ => {
             req.physical_addr = l2p_mapper.get_mut().lookup(req.logical_addr);
@@ -72,7 +72,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
             l2p_mapper
                 .get_mut()
                 .map(req.logical_addr, req.physical_addr.unwrap());
-            
+
             return ssd_os_get_connection(c"l2p", c"l2p_media_manager");
         }
         _ => {
@@ -84,9 +84,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
     match lring.enqueue(entry) {
-        Ok(()) => {
-            0
-        }
+        Ok(()) => 0,
         Err(LRingErr::Enqueue(i)) => i,
         _ => {
             println!("DID NOT MATCH RES FROM ENQUEUE!");
