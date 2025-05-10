@@ -1,7 +1,8 @@
 use crate::{
     bindings::generated::nvm_mmgr_geometry,
     l2p::l2p::PhysicalAddr,
-    requester::requester::{CommandType, Request}, shared::macros::println,
+    requester::requester::{CommandType, Request},
+    shared::macros::println,
 };
 use alloc::collections::BTreeMap;
 use core::{alloc::Allocator, ptr::null_mut};
@@ -54,23 +55,18 @@ impl<A: Allocator + 'static> MediaManager<A> {
     }
 
     pub fn execute_request(&mut self, request: &Request) -> Result<*mut mm_page, MM_ERR> {
-        // println!("HERE1")
         match request.cmd {
             CommandType::READ => {
-                // println!("HERE2");
+                let Some(ppa) = request.physical_addr else {
+                    return Err(MM_ERR::NoPPAInReq);
+                };
 
                 #[cfg(feature = "benchmark")]
                 return Ok(&dummy as *const mm_page as *mut mm_page);
 
-                // println!("HERE4");
-
-                let Some(ppa) = request.physical_addr else {
-                    return Err(MM_ERR::NoPPAInReq);
-                };
                 let Some(res) = self.data_buffer.get(&ppa) else {
                     return Err(MM_ERR::PPANotFound);
                 };
-                // println!("READ DATA SUCESSFULLY");
                 Ok(res.as_ptr().cast_mut().cast())
             }
             CommandType::WRITE => {
@@ -78,10 +74,10 @@ impl<A: Allocator + 'static> MediaManager<A> {
                     return Err(MM_ERR::NoPPAInReq);
                 };
 
-                // println!("WRITING");
+                #[cfg(not(feature = "benchmark"))]
                 self.data_buffer
                     .insert(ppa, unsafe { *request.data.clone() });
-                // println!("WROTE DATA SUCESSFULLY");
+
                 Ok(null_mut())
             }
             CommandType::ERASE => {
@@ -89,7 +85,6 @@ impl<A: Allocator + 'static> MediaManager<A> {
                     return Err(MM_ERR::NoPPAInReq);
                 };
                 self.data_buffer.remove(&ppa);
-                // println!("ERASED DATA SUCESSFULLY");
                 Ok(null_mut())
             }
         }
