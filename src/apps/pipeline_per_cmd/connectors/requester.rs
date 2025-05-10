@@ -1,8 +1,5 @@
-use core::ffi::c_void;
 use core::ptr::null_mut;
 
-use crate::bindings::generated::{TICKS_SEC, ssd_os_timer_interrupt_on};
-use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
     bindings::{
@@ -16,13 +13,11 @@ use crate::{
     shared::core_local_cell::CoreLocalCell,
 };
 
-use crate::requester::requester::{
-    CommandType, Request, get_current_num_submissions, set_timer_interupt,
-};
+use crate::requester::requester::{CommandType, Request, get_current_num_submissions};
 
 make_connector_static!(requester1, init, exit, pipe_start, ring, 1);
 
-static lring: LRing<128> = LRing::new();
+static LRING: LRing<128> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
 pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedListAllocator>> =
     CoreLocalCell::new();
@@ -32,10 +27,10 @@ const RING_CAPACITY: usize = 128;
 
 fn init() -> ::core::ffi::c_int {
     let mut mem_region = MemoryRegion::new_from_cpu(1);
-    let Ok(()) = lring.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
+    let Ok(()) = LRING.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
         panic!("REQUESTER_LRING WAS ALREADY INITIALIZED!");
     };
-    mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
+    mem_region.reserve(LRING.get_lring().unwrap().alloc_mem as usize);
 
     ALLOC.set(LinkedListAllocator::new());
     ALLOC

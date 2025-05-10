@@ -61,8 +61,6 @@ fn exit() -> ::core::ffi::c_int {
     0
 }
 
-static mut INIT_ENQUED: usize = 0;
-
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     match LRING.dequeue_as_mut(entry) {
         Ok(_entry) => {
