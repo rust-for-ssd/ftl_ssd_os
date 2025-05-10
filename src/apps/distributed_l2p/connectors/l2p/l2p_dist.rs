@@ -42,15 +42,15 @@ fn init() -> ::core::ffi::c_int {
         .initialize(mem_region.free_start.cast(), mem_region.end.cast());
     DIST_TABLE.set(L2PDistributionTable::new(ALLOC.get(), PIPE_TABLE));
 
-    #[cfg(feature = "benchmark")]
-    {
-        let n_requests = crate::apps::distributed_l2p::connectors::requester::WORKLOAD_GENERATOR
-            .get()
-            .get_n_requests();
-        DIST_TABLE.get_mut().prepare_for_benchmark(n_requests);
-        // let l2p_map = L2P_MAPPER.get_mut();
-        // l2p_map.prepare_for_benchmark(n_requests);
-    }
+    // #[cfg(feature = "benchmark")]
+    // {
+    let n_requests = crate::apps::distributed_l2p::connectors::requester::WORKLOAD_GENERATOR
+        .get()
+        .get_n_requests();
+    DIST_TABLE.get_mut().prepare_for_benchmark(n_requests);
+    // let l2p_map = L2P_MAPPER.get_mut();
+    // l2p_map.prepare_for_benchmark(n_requests);
+    // }
 
     0
 }
@@ -67,6 +67,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     let Some(req) = res.get_ctx_as_mut::<Request>() else {
         return null_mut();
     };
+    // println!("REQ: {:?}", req);
 
     match req.cmd {
         CommandType::READ => {
@@ -83,7 +84,6 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    // TODO: should add 2 requests if comming from provisioner
     match LRING.enqueue(entry) {
         Ok(()) => 0,
         Err(LRingErr::Enqueue(i)) => i,
@@ -151,13 +151,14 @@ fn write_handler(req: &mut Request) -> *mut pipeline {
             } else {
                 req.md = META_DATA::L2P_OLD_NEW_ID((None, tbl_id));
             };
+
             return ssd_os_get_connection(
                 l2p_dist.get_name(),
                 DIST_TABLE.get().get_table_pipe_name(tbl_id),
             );
         }
         _ => {
-            println!("{:?}", req);
+            println!("L2P DIST NO MATCH: {:?}", req);
             todo!()
         }
     }

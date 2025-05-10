@@ -1,7 +1,9 @@
 use core::alloc::Allocator;
 use core::ffi::c_void;
+use core::ptr::null_mut;
 use core::u8;
 
+use alloc::collections::VecDeque;
 use alloc::vec::Vec;
 
 use crate::shared::macros::println;
@@ -140,6 +142,7 @@ pub enum WorkloadType {
 
 pub struct RequestWorkloadGenerator<A: Allocator + 'static> {
     requests: Vec<Request, &'static A>,
+    pending: VecDeque<usize, &'static A>,
     cur_request_idx: usize,
     pub request_returned: usize,
     workload_type: WorkloadType,
@@ -152,6 +155,7 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
     pub fn new(workload_type: WorkloadType, size: usize, alloc: &'static A) -> Self {
         RequestWorkloadGenerator {
             requests: Vec::with_capacity_in(size, alloc),
+            pending: VecDeque::with_capacity_in(size, alloc),
             cur_request_idx: 0,
             request_returned: 0,
             workload_type: workload_type,
@@ -195,12 +199,29 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
                 }
             }
         }
+        for i in 0..self.requests.len() {
+            self.pending.push_back(i);
+        }
     }
 
-    pub fn next_request(&mut self) -> Option<&mut Request> {
-        let res = self.requests.get_mut(self.cur_request_idx);
-        self.cur_request_idx += 1;
-        res
+    pub fn next_request(&mut self) -> Option<&Request> {
+        // let res = self.requests.get(self.cur_request_idx);
+        // self.cur_request_idx = (self.cur_request_idx + 1) % { self.requests.len() };
+        // res
+        let id = self.pending.pop_front()?;
+        self.requests.get(id)
+    }
+
+    pub fn reset_request(&mut self, req: &mut Request) {
+        // println!("reset: {:?}", req);
+        req.status = Status::PENDING;
+        req.physical_addr = None;
+        req.md = META_DATA::NONE;
+        req.data = &self.write_data as *const mm_page as *mut mm_page;
+        if self.pending.len() >= 1022 {
+            println!("LONG AS VECDEQUE");
+        }
+        self.pending.push_back(req.id as usize)
     }
 
     pub fn calculate_stats(&mut self) {
@@ -222,7 +243,6 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
         let n_pages = n_of_ch * lun_per_ch * blk_per_lun * pg_per_blk;
         let total = self.requests.len();
         assert!(total <= n_pages);
-        println!("MAXIMUM NUMBER OF PAGES: {}", n_pages);
         Geometry {
             n_of_ch: n_of_ch as u8,
             n_of_planes,
