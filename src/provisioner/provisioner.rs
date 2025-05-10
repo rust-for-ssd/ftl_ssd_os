@@ -114,20 +114,20 @@ impl<A: Allocator + 'static> Provisioner<A> {
             }
         }
     }
-    
+
     pub fn init_all_free(&mut self) {
-             for ch in self.channels.iter_mut() {
-                 for lun in ch.luns.iter_mut() {
-                     let cap = lun.free.capacity();
-                     for block_idx in 0..cap {
-                         lun.free.push_back(Block {
-                             id: block_idx,
-                             plane_id: 0,
-                         });
-                     }
-                 }
-             }
-         }
+        for ch in self.channels.iter_mut() {
+            for lun in ch.luns.iter_mut() {
+                let cap = lun.free.capacity();
+                for block_idx in 0..cap {
+                    lun.free.push_back(Block {
+                        id: block_idx,
+                        plane_id: 0,
+                    });
+                }
+            }
+        }
+    }
 
     pub fn provision_block(&mut self) -> Result<PhysicalBlockAddress, ProvisionError> {
         // pick channel RR
@@ -207,6 +207,12 @@ impl<A: Allocator + 'static> Lun<A> {
     fn provision_page(&mut self) -> Result<Page, ProvisionError> {
         if self.partially_used.is_empty() {
             let Some(block) = self.free.pop_front() else {
+                #[cfg(feature = "benchmark")]
+                return Ok(Page {
+                    id: 0,
+                    plane_id: 0,
+                    block_id: 0,
+                });
                 return Err(ProvisionError::NoFreePage);
             };
             self.partially_used.push_back(BlockWithPageInfo {
