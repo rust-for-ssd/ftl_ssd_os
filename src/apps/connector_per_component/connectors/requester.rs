@@ -38,17 +38,17 @@ fn init() -> ::core::ffi::c_int {
         .get()
         .initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
-    // #[cfg(feature = "benchmark")]
-    // {
-    WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
-        crate::requester::requester::WorkloadType::MIXED,
-        N_REQUESTS,
-        ALLOC.get(),
-    ));
-    let workload = WORKLOAD_GENERATOR.get_mut();
-    workload.init_workload();
-    set_timer_interupt();
-    // }
+    #[cfg(feature = "benchmark")]
+    {
+        WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
+            crate::requester::requester::WorkloadType::MIXED,
+            N_REQUESTS,
+            ALLOC.get(),
+        ));
+        let workload = WORKLOAD_GENERATOR.get_mut();
+        workload.init_workload();
+        set_timer_interupt();
+    }
 
     0
 }
