@@ -10,6 +10,7 @@ pub enum LRingErr {
     Enqueue(i32),
     Dequeue(i32),
     AlreadyInit(i32),
+    NoCtx,
 }
 
 pub struct LRing<const Capacity: usize> {
@@ -84,6 +85,14 @@ impl<const Capacity: usize> LRing<Capacity> {
                 .map_or(Err(LRingErr::Dequeue(-1)), |lring_entry| Ok(lring_entry))
         }
     }
+
+    pub fn dequeue_as_mut_ctx<T>(&self, entry: *mut lring_entry) -> Result<&mut T, LRingErr> {
+        let entry = self.dequeue_as_mut(entry)?;
+        let Some(ctx) = entry.get_ctx_as_mut() else {
+            return Err(LRingErr::NoCtx);
+        };
+        Ok(ctx)
+    }
 }
 
 impl lring_entry {
@@ -96,14 +105,19 @@ impl lring_entry {
         // SAFETY: as_ref() returns None if the ptr is Null
         unsafe { self.ctx.cast::<T>().as_ref() }
     }
-    
+
     pub fn get_ctx_as_mut<T>(&mut self) -> Option<&mut T> {
         // SAFETY: as_ref() returns None if the ptr is Null
         unsafe { self.ctx.cast::<T>().as_mut() }
     }
-    
+
     pub fn set_ctx<T>(&mut self, new_ctx: &T) {
         let new_ctx_ptr: *const T = new_ctx;
         self.ctx = new_ctx_ptr.cast_mut().cast();
+    }
+
+    pub fn get_mut_ctx_raw<'r, T>(entry: *mut Self) -> Option<&'r mut T> {
+        let entry: &mut Self = unsafe { entry.as_mut()? };
+        unsafe { entry.ctx.cast::<T>().as_mut() }
     }
 }

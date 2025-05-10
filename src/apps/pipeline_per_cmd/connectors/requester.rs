@@ -39,12 +39,7 @@ fn timer_fn() {
         let diff = cur - LAST_COUNT;
         LAST_COUNT = cur;
 
-        // println!("op/sec       : {:?}", diff);
-        // println!("stages/sec   : {:?}", 6*diff); // we have 6 stages
-        println!("{:?}", diff); // for benchmark
-        // println!("in the rings : {:?}", AMOUNT_IN_LRING);
-        // println!("total        : {:?}", COUNT);
-        // println!("submitted    : {:?}", SUBMITTED);
+        println!("{:?}", diff);
     }
 }
 

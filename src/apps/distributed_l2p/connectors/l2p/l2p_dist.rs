@@ -60,14 +60,9 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    let Ok(res) = LRING.dequeue_as_mut(entry) else {
+    let Ok(req): Result<&mut Request, LRingErr> = LRING.dequeue_as_mut_ctx(entry) else {
         return null_mut();
     };
-
-    let Some(req) = res.get_ctx_as_mut::<Request>() else {
-        return null_mut();
-    };
-    // println!("REQ: {:?}", req);
 
     match req.cmd {
         CommandType::READ => {

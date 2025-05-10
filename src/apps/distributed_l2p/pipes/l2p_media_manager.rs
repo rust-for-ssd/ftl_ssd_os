@@ -52,12 +52,6 @@ fn context_handler_l2p_media_manager0(
     context: *mut ::core::ffi::c_void,
 ) -> *mut ::core::ffi::c_void {
     ensure_unique!();
-    unsafe {
-        let req = context as *mut Request;
-        if (*req).physical_addr.is_none() {
-            println!("Stage is none: {:?}", *req);
-        }
-    }
     context
 }
 #[inline(never)]
@@ -66,12 +60,6 @@ fn context_handler_l2p_media_manager1(
     context: *mut ::core::ffi::c_void,
 ) -> *mut ::core::ffi::c_void {
     ensure_unique!();
-    unsafe {
-        let req = context as *mut Request;
-        if (*req).physical_addr.is_none() {
-            println!("Stage is none: {:?}", *req);
-        }
-    }
     context
 }
 #[inline(never)]
@@ -80,12 +68,6 @@ fn context_handler_l2p_media_manager2(
     context: *mut ::core::ffi::c_void,
 ) -> *mut ::core::ffi::c_void {
     ensure_unique!();
-    unsafe {
-        let req = context as *mut Request;
-        if (*req).physical_addr.is_none() {
-            println!("Stage is none: {:?}", *req);
-        }
-    }
     context
 }
 #[inline(never)]
@@ -94,11 +76,5 @@ fn context_handler_l2p_media_manager3(
     context: *mut ::core::ffi::c_void,
 ) -> *mut ::core::ffi::c_void {
     ensure_unique!();
-    unsafe {
-        let req = context as *mut Request;
-        if (*req).physical_addr.is_none() {
-            println!("Stage is none: {:?}", *req);
-        }
-    }
     context
 }

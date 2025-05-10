@@ -19,16 +19,16 @@ use super::requester::WORKLOAD_GENERATOR;
 
 make_connector_static!(bbt, init, exit, pipe_start, ring, 1);
 
-static lring: LRing<128> = LRing::new();
+static LRING: LRing<128> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
 pub static BBT: CoreLocalCell<BadBlockTable<LinkedListAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
     let mut mem_region = MemoryRegion::new_from_cpu(5);
-    let Ok(()) = lring.init(c"BBT_LRING", mem_region.free_start, 0) else {
+    let Ok(()) = LRING.init(c"BBT_LRING", mem_region.free_start, 0) else {
         panic!("BBT_LRING WAS ALREADY INITIALIZED!");
     };
-    mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
+    mem_region.reserve(LRING.get_lring().unwrap().alloc_mem as usize);
 
     ALLOC.set(LinkedListAllocator::new());
     ALLOC
@@ -45,10 +45,7 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    let Ok(res) = lring.dequeue_as_mut(entry) else {
-        return null_mut();
-    };
-    let Some(req) = res.get_ctx_as_mut::<Request>() else {
+    let Ok(req): Result<&mut Request, LRingErr> = LRING.dequeue_as_mut_ctx(entry) else {
         return null_mut();
     };
 
@@ -71,7 +68,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    match lring.enqueue(entry) {
+    match LRING.enqueue(entry) {
         Ok(()) => 0,
         Err(LRingErr::Enqueue(i)) => i,
         _ => {
