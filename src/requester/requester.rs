@@ -1,6 +1,5 @@
 use core::alloc::Allocator;
 use core::ffi::c_void;
-use core::ptr::null_mut;
 use core::u8;
 
 use alloc::collections::VecDeque;
@@ -102,9 +101,6 @@ impl Request {
     }
 
     pub fn calc_round_trip_time_clock_cycles(&self) -> u32 {
-        // println!("Start time {:?}", self.start_time);
-        // println!("End time {:?}", self.end_time);
-        // println!(self.end_time)
         self.end_time - self.start_time
     }
     pub fn start_timer(&mut self) -> () {
@@ -158,7 +154,7 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
             pending: VecDeque::with_capacity_in(size, alloc),
             cur_request_idx: 0,
             request_returned: 0,
-            workload_type: workload_type,
+            workload_type,
             start_time: 0,
             end_time: 0,
             write_data: [42, 42],
@@ -205,15 +201,11 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
     }
 
     pub fn next_request(&mut self) -> Option<&Request> {
-        // let res = self.requests.get(self.cur_request_idx);
-        // self.cur_request_idx = (self.cur_request_idx + 1) % { self.requests.len() };
-        // res
         let id = self.pending.pop_front()?;
         self.requests.get(id)
     }
 
     pub fn reset_request(&mut self, req: &mut Request) {
-        // println!("reset: {:?}", req);
         req.status = Status::PENDING;
         req.physical_addr = None;
         req.md = META_DATA::NONE;

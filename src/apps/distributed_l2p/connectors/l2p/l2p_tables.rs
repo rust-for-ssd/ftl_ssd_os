@@ -93,13 +93,10 @@ fn pipe_start3(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn pipe_start(id: usize, entry: *mut lring_entry) -> *mut pipeline {
-    let Ok(res) = LRINGS[id].dequeue_as_mut(entry) else {
+    let Ok(req): Result<&mut Request, LRingErr> = LRINGS[id].dequeue_as_mut_ctx(entry) else {
         return null_mut();
     };
 
-    let Some(req) = res.get_ctx_as_mut::<Request>() else {
-        return null_mut();
-    };
     match *req {
         Request {
             cmd: CommandType::READ,
@@ -136,7 +133,6 @@ fn pipe_start(id: usize, entry: *mut lring_entry) -> *mut pipeline {
             return get_mmgr_conn(id);
             // TODO: should free the physical address
             // maybe by going to GC?
-            // return null_mut();
         }
         _ => todo!(),
     }

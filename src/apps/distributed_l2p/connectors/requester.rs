@@ -40,13 +40,7 @@ fn timer_fn() {
         let cur = COUNT;
         let diff = cur - LAST_COUNT;
         LAST_COUNT = cur;
-
-        // println!("op/sec       : {:?}", diff);
-        // println!("stages/sec   : {:?}", 6*diff); // we have 6 stages
-        println!("{:?}", diff); // for benchmark
-        // println!("in the rings : {:?}", AMOUNT_IN_LRING);
-        // println!("total        : {:?}", COUNT);
-        // println!("submitted    : {:?}", SUBMITTED);
+        println!("{:?}", diff);
     }
 }
 
@@ -70,7 +64,7 @@ fn init() -> ::core::ffi::c_int {
     // #[cfg(feature = "benchmark")]
     // {
     WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
-        WorkloadType::WRITE,
+        WorkloadType::MIXED,
         N_REQUESTS,
         ALLOC.get(),
     ));
@@ -93,7 +87,6 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
             let Some(req) = entry.get_ctx_as_mut::<Request>() else {
                 return null_mut();
             };
-            // println!("start: {:?}", req);
 
             if req.status != Status::MM_DONE {
                 unsafe {
@@ -131,10 +124,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    let Some(res) = lring_entry::new(entry) else {
-        return 0;
-    };
-    let Some(req) = res.get_ctx_as_mut::<Request>() else {
+    let Some(req) = lring_entry::get_mut_ctx_raw(entry) else {
         return 0;
     };
 
@@ -148,17 +138,6 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
                 AMOUNT_IN_LRING -= 1
             }
             WORKLOAD_GENERATOR.get_mut().reset_request(req);
-            // println!("end: {:?}", req);
-            // req.status = Status::PENDING;
-            // req.physical_addr = None;
-            // match LRING.enqueue(entry) {
-            //     Ok(()) => return 0,
-            //     Err(LRingErr::Enqueue(i)) => return i,
-            //     _ => {
-            //         println!("DID NOT MATCH RES FROM ENQUEUE!");
-            //         return -1;
-            //     }
-            // }
             return 0;
         }
         Request {

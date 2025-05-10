@@ -16,11 +16,11 @@ use crate::{
     shared::core_local_cell::CoreLocalCell,
 };
 
-use crate::requester::requester::{CommandType, Request};
+use crate::requester::requester::Request;
 
 make_connector_static!(requester, init, exit, pipe_start, ring, 1);
 
-static lring: LRing<128> = LRing::new();
+static LRING: LRing<128> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
 pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedListAllocator>> =
     CoreLocalCell::new();
@@ -40,13 +40,7 @@ fn timer_fn() {
         let cur = COUNT;
         let diff = cur - LAST_COUNT;
         LAST_COUNT = cur;
-
-        // println!("op/sec       : {:?}", diff);
-        // println!("stages/sec   : {:?}", 6*diff); // we have 6 stages
-        println!("{:?}", diff); // for benchmark
-        // println!("in the rings : {:?}", AMOUNT_IN_LRING);
-        // println!("total        : {:?}", COUNT);
-        // println!("submitted    : {:?}", SUBMITTED);
+        println!("{:?}", diff);
     }
 }
 
@@ -57,10 +51,10 @@ extern "C" fn timer_callback() {
 // ----- SUSTAINED THROUGHPUT EXPERIMENT ---------
 fn init() -> ::core::ffi::c_int {
     let mut mem_region = MemoryRegion::new_from_cpu(1);
-    let Ok(()) = lring.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
+    let Ok(()) = LRING.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
         panic!("REQUESTER_LRING WAS ALREADY INITIALIZED!");
     };
-    mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
+    mem_region.reserve(LRING.get_lring().unwrap().alloc_mem as usize);
 
     ALLOC.set(LinkedListAllocator::new());
     ALLOC
@@ -110,13 +104,11 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    let Some(res) = lring_entry::new(entry) else {
+    let Some(ctx): Option<&mut Request> = lring_entry::get_mut_ctx_raw(entry) else {
         return 0;
     };
-    let Some(req) = res.get_ctx_as_mut::<Request>() else {
-        return 0;
-    };
-    WORKLOAD_GENERATOR.get_mut().reset_request(req);
+
+    WORKLOAD_GENERATOR.get_mut().reset_request(ctx);
 
     unsafe {
         COUNT += 1;
