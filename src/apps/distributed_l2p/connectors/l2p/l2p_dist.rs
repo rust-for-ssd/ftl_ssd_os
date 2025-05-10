@@ -17,7 +17,7 @@ use crate::{
 };
 
 use super::l2p_dist_table::L2PDistributionTable;
-use super::l2p_tables::{self, N_TABLES};
+use super::l2p_tables::N_TABLES;
 
 make_connector_static!(l2p_dist, init, exit, pipe_start, ring, 1);
 

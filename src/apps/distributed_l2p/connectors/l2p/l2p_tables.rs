@@ -126,9 +126,11 @@ fn pipe_start(id: usize, entry: *mut lring_entry) -> *mut pipeline {
             ..
         } => {
             L2P_MAPS[id].get_mut().unmap(logical_addr);
+            req.status = Status::DONE;
+            return get_mmgr_conn(id);
             // TODO: should free the physical address
             // maybe by going to GC?
-            return null_mut();
+            // return null_mut();
         }
         _ => todo!(),
     }
