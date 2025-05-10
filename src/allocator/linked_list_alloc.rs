@@ -153,9 +153,17 @@ unsafe impl Allocator for LinkedListAllocator {
         };
 
         if ptr.as_ptr() < *start {
-            panic!("Deallocation attempted with pointer below allocator range");
+            panic!(
+                "Deallocation attempted with pointer below allocator range: {:p} < {:p}",
+                ptr.as_ptr(),
+                *start
+            );
         } else if ptr.as_ptr() >= *end {
-            panic!("Deallocation attempted with pointer beyond allocator range");
+            panic!(
+                "Deallocation attempted with pointer beyond allocator range: {:p} >= {:p}",
+                ptr.as_ptr(),
+                *end
+            );
         }
 
         let size = layout.size().max(mem::size_of::<FreeBlock>());
