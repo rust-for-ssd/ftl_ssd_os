@@ -9,7 +9,7 @@ use crate::make_stage_static;
 use crate::media_manager::media_manager::MediaManager;
 use crate::provisioner::provisioner::Provisioner;
 use crate::shared::addresses::PhysicalBlockAddress;
-use crate::shared::macros::ensure_unique;
+use crate::shared::macros::{ensure_unique, println};
 use crate::shared::semaphore::Semaphore;
 
 use crate::requester::requester::Request;
@@ -75,8 +75,8 @@ fn prov_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::
     let request = Request::from_ctx_ptr(context);
 
     let Ok(ppa) = PROVISIONER.lock().provision_page() else {
-        request.physical_addr = Some(0x1);
-        return context;
+        println!("COULD NOT PROVISION!");
+        return null_mut();
     };
 
     request.physical_addr = Some(ppa.into());

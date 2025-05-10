@@ -9,7 +9,7 @@ use crate::{
         safe::ssd_os_get_connection,
     },
     make_connector_static,
-    requester::requester::RequestWorkloadGenerator,
+    requester::requester::{RequestWorkloadGenerator, set_timer_interupt},
     shared::core_local_cell::CoreLocalCell,
 };
 
