@@ -15,7 +15,7 @@ fn alloc_init() -> &'static LinkedListAllocator {
 #[test_case]
 pub fn test_l2p_mapping() {
     let allocator = alloc_init();
-    let mut mapper = L2pMapper::new(allocator);
+    let mut mapper: L2pMapper<10_000, LinkedListAllocator> = L2pMapper::new(allocator);
 
     let physical_addr1 = 0x1234;
     let physical_addr2 = 0x5678;
@@ -24,11 +24,11 @@ pub fn test_l2p_mapping() {
     mapper.map(0x200, physical_addr2);
 
     assert!(
-        mapper.is_mapped(0x100),
+        mapper.lookup(0x100).is_some(),
         "Logical address 0x100 should be mapped"
     );
     assert!(
-        mapper.is_mapped(0x200),
+        mapper.lookup(0x200).is_some(),
         "Logical address 0x200 should be mapped"
     );
 }
@@ -36,7 +36,7 @@ pub fn test_l2p_mapping() {
 #[test_case]
 pub fn test_l2p_lookup() {
     let allocator = alloc_init();
-    let mut mapper = L2pMapper::new(allocator);
+    let mut mapper: L2pMapper<10_000, LinkedListAllocator> = L2pMapper::new(allocator);
 
     let physical_addr1 = 0x1234;
     let physical_addr2 = 0x5678;
@@ -60,7 +60,7 @@ pub fn test_l2p_lookup() {
 #[test_case]
 pub fn test_l2p_unmapping() {
     let allocator = alloc_init();
-    let mut mapper = L2pMapper::new(allocator);
+    let mut mapper: L2pMapper<10_000, LinkedListAllocator> = L2pMapper::new(allocator);
 
     let physical_addr1 = 0x1234;
     mapper.map(0x100, physical_addr1);
@@ -74,23 +74,9 @@ pub fn test_l2p_unmapping() {
 }
 
 #[test_case]
-pub fn test_l2p_length() {
-    let allocator = alloc_init();
-    let mut mapper = L2pMapper::new(allocator);
-
-    let physical_addr1 = 0x1234;
-    let physical_addr2 = 0x5678;
-
-    mapper.map(0x100, physical_addr1);
-    mapper.map(0x200, physical_addr2);
-
-    assert_eq!(mapper.len(), 2);
-}
-
-#[test_case]
 pub fn test_l2p_clear() {
     let allocator = alloc_init();
-    let mut mapper = L2pMapper::new(allocator);
+    let mut mapper: L2pMapper<10_000, LinkedListAllocator> = L2pMapper::new(allocator);
 
     let physical_addr1 = 0x1234;
     let physical_addr2 = 0x5678;
