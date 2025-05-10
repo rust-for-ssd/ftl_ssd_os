@@ -1,7 +1,5 @@
-use core::ffi::c_void;
 use core::ptr::null_mut;
 
-use crate::bindings::generated::{TICKS_SEC, ssd_os_timer_interrupt_on};
 use crate::bindings::lring::LRingErr;
 use crate::shared::macros::println;
 use crate::{
@@ -17,7 +15,9 @@ use crate::{
     shared::core_local_cell::CoreLocalCell,
 };
 
-use crate::requester::requester::{CommandType, Request, Status, WorkloadType};
+use crate::requester::requester::{
+    CommandType, Request, Status, WorkloadType, get_current_num_submissions, set_timer_interupt,
+};
 
 make_connector_static!(requester, init, exit, pipe_start, ring, 1);
 
@@ -29,24 +29,6 @@ pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedList
     CoreLocalCell::new();
 
 pub const N_REQUESTS: usize = 1024;
-
-pub static mut AMOUNT_IN_LRING: i32 = 0;
-pub static mut COUNT: u32 = 0;
-pub static mut SUBMITTED: u32 = 0;
-pub static mut LAST_COUNT: u32 = 0;
-
-fn timer_fn() {
-    unsafe {
-        let cur = COUNT;
-        let diff = cur - LAST_COUNT;
-        LAST_COUNT = cur;
-        println!("{:?}", diff);
-    }
-}
-
-extern "C" fn timer_callback() {
-    timer_fn();
-}
 
 fn init() -> ::core::ffi::c_int {
     let mut mem_region = MemoryRegion::new_from_cpu(1);
@@ -60,7 +42,6 @@ fn init() -> ::core::ffi::c_int {
         .get()
         .initialize(mem_region.free_start.cast(), mem_region.end.cast());
 
-    unsafe { ssd_os_timer_interrupt_on(TICKS_SEC as i32, timer_callback as *mut c_void) };
     // #[cfg(feature = "benchmark")]
     // {
     WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
@@ -70,6 +51,7 @@ fn init() -> ::core::ffi::c_int {
     ));
     let workload = WORKLOAD_GENERATOR.get_mut();
     workload.init_workload();
+    set_timer_interupt();
     // }
 
     0
@@ -83,23 +65,12 @@ static mut INIT_ENQUED: usize = 0;
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
     match LRING.dequeue_as_mut(entry) {
-        Ok(entry) => {
-            let Some(req) = entry.get_ctx_as_mut::<Request>() else {
-                return null_mut();
-            };
-
-            if req.status != Status::MM_DONE {
-                unsafe {
-                    SUBMITTED += 1;
-                    AMOUNT_IN_LRING += 1;
-                }
-            }
-
+        Ok(_entry) => {
             return ssd_os_get_connection(c"requester", c"requester_l2p");
         }
         Err(_) => {
             // TODO: should check be removed???
-            if unsafe { AMOUNT_IN_LRING } < RING_CAPACITY as i32 {
+            if get_current_num_submissions() < RING_CAPACITY {
                 let Some(entry) = lring_entry::new(entry) else {
                     return null_mut();
                 };
@@ -109,11 +80,6 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
                 };
 
                 entry.set_ctx(req);
-
-                unsafe {
-                    SUBMITTED += 1;
-                    AMOUNT_IN_LRING += 1;
-                }
 
                 return ssd_os_get_connection(c"requester", c"requester_l2p");
             } else {
@@ -133,10 +99,6 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
             status: Status::DONE,
             ..
         } => {
-            unsafe {
-                COUNT += 1;
-                AMOUNT_IN_LRING -= 1
-            }
             WORKLOAD_GENERATOR.get_mut().reset_request(req);
             return 0;
         }
