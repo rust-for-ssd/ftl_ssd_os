@@ -20,7 +20,7 @@ pub static PROVISIONER: Semaphore<Provisioner<SemaphoreAllocator>> = Semaphore::
 pub static BBT: Semaphore<BadBlockTable<SemaphoreAllocator>> = Semaphore::new();
 
 pub static L2P_ALLOC: SemaphoreAllocator = SemaphoreAllocator::new();
-pub static L2P_MAPPER: Semaphore<L2pMapper<SemaphoreAllocator>> = Semaphore::new();
+pub static L2P_MAPPER: Semaphore<L2pMapper<1024, SemaphoreAllocator>> = Semaphore::new();
 
 pub static MM_ALLOC: SemaphoreAllocator = SemaphoreAllocator::new();
 pub static MM: Semaphore<MediaManager<SemaphoreAllocator>> = Semaphore::new();
@@ -80,7 +80,7 @@ fn prov_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::
         // return null_mut();
         // let ppa = 0x1;
         request.physical_addr = Some(0x1);
-        return context
+        return context;
     };
 
     request.physical_addr = Some(ppa.into());
