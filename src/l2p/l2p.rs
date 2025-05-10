@@ -1,14 +1,11 @@
-use alloc::{collections::BTreeMap, vec::Vec};
+use alloc::vec::Vec;
 use core::alloc::Allocator;
-
-use crate::shared::macros::println;
 
 pub type LogicalAddr = u32;
 pub type PhysicalAddr = u32;
 
 #[derive(Debug)]
 pub struct L2pMapper<const CAPACITY: usize, A: Allocator + 'static> {
-    // entries: BTreeMap<LogicalAddr, PhysicalAddr, &'static A>,
     entries: Vec<Option<PhysicalAddr>, &'static A>,
     alloc: &'static A,
 }
