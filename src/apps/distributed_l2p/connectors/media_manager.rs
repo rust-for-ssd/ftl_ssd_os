@@ -47,16 +47,18 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
         return null_mut();
     };
 
-    let Ok(res) = MM.get_mut().execute_request(req) else {
-        println!("MMGR ERROR!: {:?}", MM.get_mut().execute_request(req));
-        req.status = Status::BAD;
-        return ssd_os_get_connection(c"mm", c"media_manager_bbt");
-    };
-    req.data = res;
-    if req.cmd == CommandType::WRITE {
-        req.status = Status::MM_DONE;
-    } else {
-        req.status = Status::DONE;
+    if req.status != Status::DONE {
+        let Ok(res) = MM.get_mut().execute_request(req) else {
+            println!("MMGR ERROR!: {:?}", MM.get_mut().execute_request(req));
+            req.status = Status::BAD;
+            return ssd_os_get_connection(c"mm", c"media_manager_bbt");
+        };
+        req.data = res;
+        if req.cmd == CommandType::WRITE {
+            req.status = Status::MM_DONE;
+        } else {
+            req.status = Status::DONE;
+        }
     }
 
     return ssd_os_get_connection(c"mm", c"media_manager_requester");
