@@ -1,6 +1,7 @@
 use core::ffi::CStr;
 use core::ptr::null_mut;
 
+use crate::apps::distributed_l2p::connectors::requester::WORKLOAD_GENERATOR;
 use crate::requester::requester::Status;
 use crate::shared::macros::println;
 use crate::{
@@ -34,7 +35,7 @@ pub const N_TABLES: usize = 4;
 
 static LRINGS: [LRing<L2P_LRING_CAPACITY>; N_TABLES] = [const { LRing::new() }; N_TABLES];
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
-static L2P_MAPS: [CoreLocalCell<L2pMapper<LinkedListAllocator>>; N_TABLES] =
+static L2P_MAPS: [CoreLocalCell<L2pMapper<1024, LinkedListAllocator>>; N_TABLES] =
     [const { CoreLocalCell::new() }; N_TABLES];
 
 fn init(id: i32) -> i32 {
@@ -43,6 +44,7 @@ fn init(id: i32) -> i32 {
         panic!("L2P_LRING WAS ALREADY INITIALIZED!");
     };
     mem_region.reserve(LRINGS[id as usize].get_lring().unwrap().alloc_mem as usize);
+    println!("{:?}", mem_region);
 
     ALLOC.set(LinkedListAllocator::new());
     ALLOC
@@ -52,9 +54,9 @@ fn init(id: i32) -> i32 {
 
     // #[cfg(feature = "benchmark")]
     // {
-    //     let n_requests = super::requester::WORKLOAD_GENERATOR.get().get_n_requests();
-    //     let l2p_map = L2P_MAPPER.get_mut();
-    //     l2p_map.prepare_for_benchmark(n_requests);
+    let n_requests = WORKLOAD_GENERATOR.get().get_n_requests();
+    let l2p_map = L2P_MAPS[id as usize].get_mut();
+    l2p_map.prepare_for_benchmark(n_requests);
     // }
 
     0
@@ -91,13 +93,10 @@ fn pipe_start3(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn pipe_start(id: usize, entry: *mut lring_entry) -> *mut pipeline {
-    let Ok(res) = LRINGS[id].dequeue_as_mut(entry) else {
+    let Ok(req): Result<&mut Request, LRingErr> = LRINGS[id].dequeue_as_mut_ctx(entry) else {
         return null_mut();
     };
 
-    let Some(req) = res.get_ctx_as_mut::<Request>() else {
-        return null_mut();
-    };
     match *req {
         Request {
             cmd: CommandType::READ,
@@ -105,6 +104,10 @@ fn pipe_start(id: usize, entry: *mut lring_entry) -> *mut pipeline {
             ..
         } => {
             req.physical_addr = L2P_MAPS[id].get_mut().lookup(logical_addr);
+            if req.physical_addr.is_none() {
+                println!("HERE: {:?}", req);
+            }
+
             return get_mmgr_conn(id);
         }
         Request {
@@ -126,9 +129,10 @@ fn pipe_start(id: usize, entry: *mut lring_entry) -> *mut pipeline {
             ..
         } => {
             L2P_MAPS[id].get_mut().unmap(logical_addr);
+            req.status = Status::DONE;
+            return get_mmgr_conn(id);
             // TODO: should free the physical address
             // maybe by going to GC?
-            return null_mut();
         }
         _ => todo!(),
     }

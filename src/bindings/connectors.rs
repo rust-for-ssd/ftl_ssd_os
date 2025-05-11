@@ -31,7 +31,7 @@ impl connector {
             exit_fn: Some(exit_fn),
             conn_fn: Some(conn_fn),
             ring_fn: Some(ring_fn),
-            nosched: noshed,
+            nosched: 0,
         }
     }
     pub const fn get_name(&self) -> &CStr {

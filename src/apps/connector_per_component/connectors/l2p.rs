@@ -1,5 +1,3 @@
-use core::ptr::null_mut;
-
 use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
@@ -14,19 +12,20 @@ use crate::{
     requester::requester::{CommandType, Request},
     shared::core_local_cell::CoreLocalCell,
 };
+use core::ptr::null_mut;
 
 make_connector_static!(l2p, init, exit, pipe_start, ring, 1);
 
-static lring: LRing<128> = LRing::new();
+static LRING: LRing<128> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
-static l2p_mapper: CoreLocalCell<L2pMapper<LinkedListAllocator>> = CoreLocalCell::new();
+static l2p_mapper: CoreLocalCell<L2pMapper<1024, LinkedListAllocator>> = CoreLocalCell::new();
 
 fn init() -> ::core::ffi::c_int {
     let mut mem_region = MemoryRegion::new_from_cpu(2);
-    let Ok(()) = lring.init(c"L2P_LRING", mem_region.free_start, 0) else {
+    let Ok(()) = LRING.init(c"L2P_LRING", mem_region.free_start, 0) else {
         panic!("L2P_LRING WAS ALREADY INITIALIZED!");
     };
-    mem_region.reserve(lring.get_lring().unwrap().alloc_mem as usize);
+    mem_region.reserve(LRING.get_lring().unwrap().alloc_mem as usize);
 
     ALLOC.set(LinkedListAllocator::new());
     ALLOC
@@ -49,11 +48,7 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    let Ok(res) = lring.dequeue_as_mut(entry) else {
-        return null_mut();
-    };
-
-    let Some(req) = res.get_ctx_as_mut::<Request>() else {
+    let Ok(req): Result<&mut Request, LRingErr> = LRING.dequeue_as_mut_ctx(entry) else {
         return null_mut();
     };
 
@@ -81,7 +76,7 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    match lring.enqueue(entry) {
+    match LRING.enqueue(entry) {
         Ok(()) => 0,
         Err(LRingErr::Enqueue(i)) => i,
         _ => {

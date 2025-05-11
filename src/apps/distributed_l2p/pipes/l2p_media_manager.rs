@@ -1,4 +1,4 @@
-use crate::shared::macros::println;
+use crate::{requester::requester::Request, shared::macros::println};
 use core::ffi::CStr;
 
 use crate::{

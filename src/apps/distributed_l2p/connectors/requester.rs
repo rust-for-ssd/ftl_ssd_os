@@ -15,11 +15,15 @@ use crate::{
     shared::core_local_cell::CoreLocalCell,
 };
 
-use crate::requester::requester::{CommandType, Request, Status};
+use crate::requester::requester::{
+    CommandType, Request, Status, WorkloadType, get_current_num_submissions, set_timer_interupt,
+};
 
 make_connector_static!(requester, init, exit, pipe_start, ring, 1);
 
-static LRING: LRing<128> = LRing::new();
+const RING_CAPACITY: usize = 128;
+
+static LRING: LRing<RING_CAPACITY> = LRing::new();
 static ALLOC: CoreLocalCell<LinkedListAllocator> = CoreLocalCell::new();
 pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedListAllocator>> =
     CoreLocalCell::new();
@@ -27,8 +31,6 @@ pub static WORKLOAD_GENERATOR: CoreLocalCell<RequestWorkloadGenerator<LinkedList
 pub const N_REQUESTS: usize = 1024;
 
 fn init() -> ::core::ffi::c_int {
-    crate::shared::macros::dbg_println!("REQUESTER_INIT");
-
     let mut mem_region = MemoryRegion::new_from_cpu(1);
     let Ok(()) = LRING.init(c"REQUESTER_LRING", mem_region.free_start, 0) else {
         panic!("REQUESTER_LRING WAS ALREADY INITIALIZED!");
@@ -43,12 +45,13 @@ fn init() -> ::core::ffi::c_int {
     #[cfg(feature = "benchmark")]
     {
         WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
-            crate::requester::requester::WorkloadType::WRITE,
+            WorkloadType::MIXED,
             N_REQUESTS,
             ALLOC.get(),
         ));
         let workload = WORKLOAD_GENERATOR.get_mut();
         workload.init_workload();
+        set_timer_interupt();
     }
 
     0
@@ -59,39 +62,33 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    let Some(entry) = lring_entry::new(entry) else {
-        return null_mut();
-    };
-
     match LRING.dequeue_as_mut(entry) {
-        Ok(entry) => {
+        Ok(_entry) => {
             return ssd_os_get_connection(c"requester", c"requester_l2p");
         }
         Err(_) => {
-            let workload = WORKLOAD_GENERATOR.get_mut();
-
-            let cur_req: Option<&mut Request> = workload.next_request();
-
-            match cur_req {
-                Some(req) => {
-                    let pipe = ssd_os_get_connection(c"requester", c"requester_l2p");
-                    req.start_timer();
-                    entry.set_ctx(req);
-                    return pipe;
-                }
-                None => {
+            // TODO: should check be removed???
+            if get_current_num_submissions() < RING_CAPACITY {
+                let Some(entry) = lring_entry::new(entry) else {
                     return null_mut();
-                }
+                };
+
+                let Some(req) = WORKLOAD_GENERATOR.get_mut().next_request() else {
+                    return null_mut();
+                };
+
+                entry.set_ctx(req);
+
+                return ssd_os_get_connection(c"requester", c"requester_l2p");
+            } else {
+                return null_mut();
             }
         }
     }
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    let Some(res) = lring_entry::new(entry) else {
-        return 0;
-    };
-    let Some(req) = res.get_ctx_as_mut::<Request>() else {
+    let Some(req) = lring_entry::get_mut_ctx_raw(entry) else {
         return 0;
     };
 
@@ -100,66 +97,32 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
             status: Status::DONE,
             ..
         } => {
-            req.end_timer();
-            let workload = WORKLOAD_GENERATOR.get_mut();
-            workload.request_returned += 1;
-
-            #[cfg(feature = "debug")]
-            {
-                if !req.data.is_null() {
-                    unsafe {
-                        println!("request {} data is: {:?}", req.id, req.data.as_ref());
-                    }
-                }
-                println!("REQUEST {} DONE!", req.id);
-                println!(
-                    "Round trip time {} DONE!",
-                    req.calc_round_trip_time_clock_cycles()
-                );
-            }
-
-            if workload.request_returned == workload.get_n_requests() {
-                workload.calculate_stats();
-            }
-
+            WORKLOAD_GENERATOR.get_mut().reset_request(req);
             return 0;
         }
         Request {
-            status: Status::MM_DONE | Status::BAD,
+            status: Status::MM_DONE,
             cmd: CommandType::WRITE,
             ..
+        } => match LRING.enqueue(entry) {
+            Ok(()) => return 0,
+            Err(LRingErr::Enqueue(i)) => return i,
+            _ => {
+                println!("DID NOT MATCH RES FROM ENQUEUE!");
+                return -1;
+            }
+        },
+        Request {
+            status: Status::BAD,
+            ..
         } => {
-            req.end_timer();
-            let workload = WORKLOAD_GENERATOR.get_mut();
-            workload.request_returned += 1;
-
-            #[cfg(feature = "debug")]
-            {
-                if !req.data.is_null() {
-                    unsafe {
-                        println!("request {} data is: {:?}", req.id, req.data.as_ref());
-                    }
-                }
-                println!("REQUEST {} DONE!", req.id);
-                println!(
-                    "Round trip time {} DONE!",
-                    req.calc_round_trip_time_clock_cycles()
-                );
-            }
-
-            if workload.request_returned == workload.get_n_requests() {
-                workload.calculate_stats();
-            }
-
-            match LRING.enqueue(entry) {
-                Ok(()) => return 0,
-                Err(LRingErr::Enqueue(i)) => i,
-                _ => {
-                    println!("DID NOT MATCH RES FROM ENQUEUE!");
-                    return -1;
-                }
-            }
+            println!("BAD RING: {:?}", req);
+            todo!()
         }
-        _ => todo!(),
+
+        _ => {
+            println!("NO MATCH RING: {:?}", req);
+            todo!()
+        }
     }
 }
