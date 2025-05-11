@@ -17,7 +17,7 @@ use crate::{
 };
 
 use super::l2p_dist_table::L2PDistributionTable;
-use super::l2p_tables::{self, N_TABLES};
+use super::l2p_tables::N_TABLES;
 
 make_connector_static!(l2p_dist, init, exit, pipe_start, ring, 1);
 
@@ -43,11 +43,14 @@ fn init() -> ::core::ffi::c_int {
     DIST_TABLE.set(L2PDistributionTable::new(ALLOC.get(), PIPE_TABLE));
 
     // #[cfg(feature = "benchmark")]
-    {
-        // let n_requests = super::requester::WORKLOAD_GENERATOR.get().get_n_requests();
-        // let l2p_map = L2P_MAPPER.get_mut();
-        // l2p_map.prepare_for_benchmark(n_requests);
-    }
+    // {
+    let n_requests = crate::apps::distributed_l2p::connectors::requester::WORKLOAD_GENERATOR
+        .get()
+        .get_n_requests();
+    DIST_TABLE.get_mut().prepare_for_benchmark(n_requests);
+    // let l2p_map = L2P_MAPPER.get_mut();
+    // l2p_map.prepare_for_benchmark(n_requests);
+    // }
 
     0
 }
@@ -57,11 +60,7 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
-    let Ok(res) = LRING.dequeue_as_mut(entry) else {
-        return null_mut();
-    };
-
-    let Some(req) = res.get_ctx_as_mut::<Request>() else {
+    let Ok(req): Result<&mut Request, LRingErr> = LRING.dequeue_as_mut_ctx(entry) else {
         return null_mut();
     };
 
@@ -80,7 +79,6 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
-    // TODO: should add 2 requests if comming from provisioner
     match LRING.enqueue(entry) {
         Ok(()) => 0,
         Err(LRingErr::Enqueue(i)) => i,
@@ -148,13 +146,14 @@ fn write_handler(req: &mut Request) -> *mut pipeline {
             } else {
                 req.md = META_DATA::L2P_OLD_NEW_ID((None, tbl_id));
             };
+
             return ssd_os_get_connection(
                 l2p_dist.get_name(),
                 DIST_TABLE.get().get_table_pipe_name(tbl_id),
             );
         }
         _ => {
-            println!("{:?}", req);
+            println!("L2P DIST NO MATCH: {:?}", req);
             todo!()
         }
     }

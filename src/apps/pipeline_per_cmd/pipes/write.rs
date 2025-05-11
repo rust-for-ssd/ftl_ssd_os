@@ -9,18 +9,17 @@ use crate::make_stage_static;
 use crate::media_manager::media_manager::MediaManager;
 use crate::provisioner::provisioner::Provisioner;
 use crate::shared::addresses::PhysicalBlockAddress;
-use crate::shared::macros::ensure_unique;
+use crate::shared::macros::{ensure_unique, println};
 use crate::shared::semaphore::Semaphore;
 
 use crate::requester::requester::Request;
-use crate::shared::macros::println;
 
 pub static PROV_ALLOC: SemaphoreAllocator = SemaphoreAllocator::new();
 pub static PROVISIONER: Semaphore<Provisioner<SemaphoreAllocator>> = Semaphore::new();
 pub static BBT: Semaphore<BadBlockTable<SemaphoreAllocator>> = Semaphore::new();
 
 pub static L2P_ALLOC: SemaphoreAllocator = SemaphoreAllocator::new();
-pub static L2P_MAPPER: Semaphore<L2pMapper<SemaphoreAllocator>> = Semaphore::new();
+pub static L2P_MAPPER: Semaphore<L2pMapper<1024, SemaphoreAllocator>> = Semaphore::new();
 
 pub static MM_ALLOC: SemaphoreAllocator = SemaphoreAllocator::new();
 pub static MM: Semaphore<MediaManager<SemaphoreAllocator>> = Semaphore::new();

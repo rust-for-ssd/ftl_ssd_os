@@ -1,36 +1,36 @@
-use alloc::vec::Vec;
+use alloc::collections::BTreeMap;
 use core::alloc::Allocator;
 
 pub type LogicalAddr = u32;
 pub type PhysicalAddr = u32;
 
 #[derive(Debug)]
-pub struct L2pMapper<const CAPACITY: usize, A: Allocator + 'static> {
-    entries: Vec<Option<PhysicalAddr>, &'static A>,
+pub struct L2pMapper<A: Allocator + 'static> {
+    entries: BTreeMap<LogicalAddr, PhysicalAddr, &'static A>,
     alloc: &'static A,
 }
 
-impl<const CAPACITY: usize, A: Allocator + 'static> L2pMapper<CAPACITY, A> {
+impl<A: Allocator + 'static> L2pMapper<A> {
     pub fn new(alloc: &'static A) -> Self {
-        let mut entries = Vec::with_capacity_in(CAPACITY, alloc);
-        for _ in 0..CAPACITY {
-            entries.push(None);
-        }
+        let entries = BTreeMap::new_in(alloc);
         L2pMapper { entries, alloc }
     }
 
+    // Map a logical address to a physical address
     pub fn map(&mut self, logical_addr: LogicalAddr, physical_addr: PhysicalAddr) {
-        self.entries[logical_addr as usize] = Some(physical_addr);
+        self.entries.insert(logical_addr, physical_addr);
     }
 
     pub fn lookup(&self, logical_addr: LogicalAddr) -> Option<PhysicalAddr> {
-        self.entries[logical_addr as usize].clone()
+        self.entries.get(&logical_addr).copied()
     }
 
     pub fn unmap(&mut self, logical_addr: LogicalAddr) -> Option<PhysicalAddr> {
-        let res = self.lookup(logical_addr);
-        self.entries[logical_addr as usize] = None;
-        return res;
+        self.entries.remove(&logical_addr)
+    }
+
+    pub fn is_mapped(&self, logical_addr: LogicalAddr) -> bool {
+        self.entries.contains_key(&logical_addr)
     }
 
     pub fn len(&self) -> usize {

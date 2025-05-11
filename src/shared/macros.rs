@@ -27,7 +27,9 @@ macro_rules! println {
         {
         use core::fmt::Write;
         let mut printer = $crate::bindings::safe::SSD_OS_Printer {};
+        $crate::bindings::safe::ssd_os_print_lock();
         let _ = writeln!(printer, "{}", $arg);
+        $crate::bindings::safe::ssd_os_print_unlock();
         }
     }};
     // Case where there are multiple arguments, including format string and parameters
@@ -40,7 +42,9 @@ macro_rules! println {
         {
         use core::fmt::Write;
         let mut printer = $crate::bindings::safe::SSD_OS_Printer {};
+        $crate::bindings::safe::ssd_os_print_lock();
         let _ = writeln!(printer, $fmt, $($args)+);
+        $crate::bindings::safe::ssd_os_print_unlock();
         }
     }};
 }

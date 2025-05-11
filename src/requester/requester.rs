@@ -2,8 +2,10 @@ use core::alloc::Allocator;
 use core::ffi::c_void;
 use core::u8;
 
+use alloc::collections::VecDeque;
 use alloc::vec::Vec;
 
+use crate::bindings::generated::{TICKS_SEC, ssd_os_timer_interrupt_on};
 use crate::shared::macros::println;
 use crate::{
     bindings::generated::ssd_os_sleep,
@@ -85,10 +87,21 @@ impl Request {
         }
     }
 
+    pub const fn empty() -> Self {
+        Self {
+            id: 0,
+            cmd: CommandType::READ,
+            logical_addr: 0,
+            physical_addr: None,
+            data: core::ptr::null_mut(),
+            start_time: 0,
+            end_time: 0,
+            status: Status::IN_PROCESS,
+            md: META_DATA::NONE,
+        }
+    }
+
     pub fn calc_round_trip_time_clock_cycles(&self) -> u32 {
-        // println!("Start time {:?}", self.start_time);
-        // println!("End time {:?}", self.end_time);
-        // println!(self.end_time)
         self.end_time - self.start_time
     }
     pub fn start_timer(&mut self) -> () {
@@ -126,6 +139,7 @@ pub enum WorkloadType {
 
 pub struct RequestWorkloadGenerator<A: Allocator + 'static> {
     requests: Vec<Request, &'static A>,
+    pending: VecDeque<usize, &'static A>,
     cur_request_idx: usize,
     pub request_returned: usize,
     workload_type: WorkloadType,
@@ -138,9 +152,10 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
     pub fn new(workload_type: WorkloadType, size: usize, alloc: &'static A) -> Self {
         RequestWorkloadGenerator {
             requests: Vec::with_capacity_in(size, alloc),
+            pending: VecDeque::with_capacity_in(size, alloc),
             cur_request_idx: 0,
             request_returned: 0,
-            workload_type: workload_type,
+            workload_type,
             start_time: 0,
             end_time: 0,
             write_data: [42, 42],
@@ -181,12 +196,31 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
                 }
             }
         }
+        for i in 0..self.requests.len() {
+            self.pending.push_back(i);
+        }
     }
 
-    pub fn next_request(&mut self) -> Option<&mut Request> {
-        let res = self.requests.get_mut(self.cur_request_idx);
-        self.cur_request_idx += 1;
-        res
+    pub fn next_request(&mut self) -> Option<&Request> {
+        let id = self.pending.pop_front()?;
+        let req = self.requests.get(id)?;
+        unsafe {
+            SUBMITTED += 1;
+            AMOUNT_IN_LRING += 1;
+        }
+        return Some(req);
+    }
+
+    pub fn reset_request(&mut self, req: &mut Request) {
+        req.status = Status::PENDING;
+        req.physical_addr = None;
+        req.md = META_DATA::NONE;
+        req.data = &self.write_data as *const mm_page as *mut mm_page;
+        unsafe {
+            COUNT += 1;
+            AMOUNT_IN_LRING -= 1
+        }
+        self.pending.push_back(req.id as usize)
     }
 
     pub fn calculate_stats(&mut self) {
@@ -208,7 +242,6 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
         let n_pages = n_of_ch * lun_per_ch * blk_per_lun * pg_per_blk;
         let total = self.requests.len();
         assert!(total <= n_pages);
-        println!("MAXIMUM NUMBER OF PAGES: {}", n_pages);
         Geometry {
             n_of_ch: n_of_ch as u8,
             n_of_planes,
@@ -222,4 +255,26 @@ impl<A: Allocator + 'static> RequestWorkloadGenerator<A> {
     pub fn get_n_requests(&self) -> usize {
         self.requests.capacity()
     }
+}
+
+static mut AMOUNT_IN_LRING: usize = 0;
+static mut COUNT: u32 = 0;
+static mut SUBMITTED: u32 = 0;
+static mut LAST_COUNT: u32 = 0;
+
+pub fn get_current_num_submissions() -> usize {
+    return unsafe { AMOUNT_IN_LRING };
+}
+
+pub extern "C" fn timer_fn() {
+    unsafe {
+        let cur = COUNT;
+        let diff = cur - LAST_COUNT;
+        LAST_COUNT = cur;
+        println!("{:?}", diff);
+    }
+}
+
+pub fn set_timer_interupt() {
+    unsafe { ssd_os_timer_interrupt_on(TICKS_SEC as i32, timer_fn as *mut c_void) };
 }
