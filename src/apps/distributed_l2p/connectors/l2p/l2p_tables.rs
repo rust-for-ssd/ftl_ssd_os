@@ -2,7 +2,7 @@ use core::ffi::CStr;
 use core::ptr::null_mut;
 
 use crate::apps::distributed_l2p::connectors::requester::WORKLOAD_GENERATOR;
-use crate::requester::requester::Status;
+use crate::requester::requester::{META_DATA, Status};
 use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
@@ -52,12 +52,12 @@ fn init(id: i32) -> i32 {
         .initialize(mem_region.free_start.cast(), mem_region.end.cast());
     L2P_MAPS[id as usize].set(L2pMapper::new(ALLOC.get()));
 
-    // #[cfg(feature = "benchmark")]
-    // {
-    let n_requests = WORKLOAD_GENERATOR.get().get_n_requests();
-    let l2p_map = L2P_MAPS[id as usize].get_mut();
-    l2p_map.prepare_for_benchmark(n_requests);
-    // }
+    #[cfg(feature = "benchmark")]
+    {
+        let n_requests = WORKLOAD_GENERATOR.get().get_n_requests();
+        let l2p_map = L2P_MAPS[id as usize].get_mut();
+        l2p_map.prepare_for_benchmark(n_requests);
+    }
 
     0
 }
@@ -118,21 +118,23 @@ fn pipe_start(id: usize, entry: *mut lring_entry) -> *mut pipeline {
             ..
         } => {
             // WARNING: ASSUMING that the physical addr is only set from the provisioner in the write path.
+            if let Some(old_ppa) = L2P_MAPS[id].get_mut().lookup(logical_addr) {
+                req.md = META_DATA::OLD_PPA(old_ppa);
+            };
             L2P_MAPS[id].get_mut().map(logical_addr, ppa);
 
             return get_mmgr_conn(id);
         }
         Request {
             cmd: CommandType::WRITE,
-            status: Status::BAD | Status::MM_DONE,
+            status: Status::BAD,
             logical_addr,
+            md: META_DATA::OLD_PPA(old_ppa),
             ..
         } => {
-            L2P_MAPS[id].get_mut().unmap(logical_addr);
+            L2P_MAPS[id].get_mut().map(logical_addr, old_ppa);
             req.status = Status::DONE;
-            return get_mmgr_conn(id);
-            // TODO: should free the physical address
-            // maybe by going to GC?
+            return null_mut();
         }
         _ => todo!(),
     }
@@ -173,7 +175,7 @@ fn ring(id: usize, entry: *mut lring_entry) -> ::core::ffi::c_int {
         panic!("null entry");
     };
 
-    let Some(req) = entry.get_ctx_as_mut::<Request>() else {
+    let Some(_req) = entry.get_ctx_as_mut::<Request>() else {
         panic!("null ctx");
     };
 

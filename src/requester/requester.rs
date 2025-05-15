@@ -26,7 +26,6 @@ pub enum Status {
     DONE,
     IN_PROCESS,
     PENDING,
-    MM_DONE,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -38,7 +37,7 @@ pub enum RequestError {
 #[derive(Debug, Clone, Copy)]
 pub enum META_DATA {
     NONE,
-    L2P_OLD_NEW_ID((Option<u8>, u8)),
+    OLD_PPA(u32),
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -126,7 +126,6 @@ unsafe impl Allocator for LinkedListAllocator {
 
                 let ptr: NonNull<[u8]> =
                     unsafe { from_raw_parts_mut(aligned_addr as *mut u8, size).into() };
-                // TODO: debug asserting
                 let lowest_addr = ssd_os_mem_get(0);
                 assert!(lowest_addr <= ptr.as_ptr().cast());
                 return Ok(ptr);

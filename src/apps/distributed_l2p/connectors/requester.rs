@@ -16,7 +16,7 @@ use crate::{
 };
 
 use crate::requester::requester::{
-    CommandType, Request, Status, WorkloadType, get_current_num_submissions, set_timer_interupt,
+    Request, Status, WorkloadType, get_current_num_submissions, set_timer_interupt,
 };
 
 make_connector_static!(requester, init, exit, pipe_start, ring, 1);
@@ -45,7 +45,7 @@ fn init() -> ::core::ffi::c_int {
     #[cfg(feature = "benchmark")]
     {
         WORKLOAD_GENERATOR.set(RequestWorkloadGenerator::new(
-            WorkloadType::MIXED,
+            WorkloadType::WRITE,
             N_REQUESTS,
             ALLOC.get(),
         ));
@@ -67,7 +67,6 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
             return ssd_os_get_connection(c"requester", c"requester_l2p");
         }
         Err(_) => {
-            // TODO: should check be removed???
             if get_current_num_submissions() < RING_CAPACITY {
                 let Some(entry) = lring_entry::new(entry) else {
                     return null_mut();
@@ -101,24 +100,16 @@ fn ring(entry: *mut lring_entry) -> ::core::ffi::c_int {
             return 0;
         }
         Request {
-            status: Status::MM_DONE,
-            cmd: CommandType::WRITE,
-            ..
-        } => match LRING.enqueue(entry) {
-            Ok(()) => return 0,
-            Err(LRingErr::Enqueue(i)) => return i,
-            _ => {
-                println!("DID NOT MATCH RES FROM ENQUEUE!");
-                return -1;
-            }
-        },
-        Request {
             status: Status::BAD,
             ..
-        } => {
-            println!("BAD RING: {:?}", req);
-            todo!()
-        }
+        } => match LRING.enqueue(entry) {
+            Ok(()) => 0,
+            Err(LRingErr::Enqueue(i)) => i,
+            _ => {
+                println!("DID NOT MATCH RES FROM ENQUEUE!");
+                -1
+            }
+        },
 
         _ => {
             println!("NO MATCH RING: {:?}", req);
