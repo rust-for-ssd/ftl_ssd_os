@@ -1,6 +1,6 @@
 use core::ptr::null_mut;
 
-use crate::requester::requester::{CommandType, META_DATA, Request, Status};
+use crate::requester::requester::{Request, Status};
 use crate::shared::macros::println;
 use crate::{
     allocator::linked_list_alloc::LinkedListAllocator,
@@ -48,27 +48,14 @@ fn pipe_start(entry: *mut lring_entry) -> *mut pipeline {
         println!("PHYSICAL IS NONE: {:?}", req);
     }
 
-    if req.status != Status::DONE {
-        let Ok(res) = MM.get_mut().execute_request(req) else {
-            println!("MMGR ERROR!: {:?}", MM.get_mut().execute_request(req));
-            req.status = Status::BAD;
-            return ssd_os_get_connection(c"mm", c"media_manager_bbt");
-        };
-        req.data = res;
-        if req.cmd == CommandType::WRITE {
-            match req.md {
-                META_DATA::L2P_OLD_NEW_ID((None, _)) => req.status = Status::DONE,
-                META_DATA::L2P_OLD_NEW_ID((Some(old), new)) if old != new => {
-                    req.status = Status::DONE
-                }
-                _ => req.status = Status::MM_DONE,
-            }
-        } else {
-            req.status = Status::DONE;
-        }
-    }
+    let Ok(res) = MM.get_mut().execute_request(req) else {
+        println!("MMGR ERROR!: {:?}", MM.get_mut().execute_request(req));
+        req.status = Status::BAD;
+        return ssd_os_get_connection(c"mm", c"media_manager_bbt");
+    };
+    req.data = res;
+    req.status = Status::DONE;
 
-    // println!("REQ: {:?}", req);
     return ssd_os_get_connection(c"mm", c"media_manager_requester");
 }
 
