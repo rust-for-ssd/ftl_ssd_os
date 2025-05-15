@@ -2,7 +2,6 @@ use core::mem::MaybeUninit;
 
 use crate::bindings::generated::nvm_ppa_addr;
 
-// TODO: why u64?
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct PhysicalBlockAddress {
     pub channel: u64,
@@ -24,7 +23,6 @@ impl From<nvm_ppa_addr> for PhysicalBlockAddress {
     }
 }
 
-// TODO: why u64?
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct PhysicalPageAddress {
     pub channel: u64,
@@ -52,7 +50,7 @@ impl From<PhysicalPageAddress> for nvm_ppa_addr {
     fn from(addr: PhysicalPageAddress) -> Self {
         // SAFETY: We zero the struct so that all padding and unused bits start at 0.
         // Then we explicitly set each field via the generated setter methods.
-        let mut ppa: MaybeUninit<nvm_ppa_addr> = MaybeUninit::zeroed();
+        let ppa: MaybeUninit<nvm_ppa_addr> = MaybeUninit::zeroed();
         let mut ppa = unsafe { ppa.assume_init() };
         unsafe {
             // these `set_*` methods come from bindgen for each bit-field

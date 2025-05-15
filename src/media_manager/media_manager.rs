@@ -2,17 +2,15 @@ use crate::{
     bindings::generated::nvm_mmgr_geometry,
     l2p::l2p::PhysicalAddr,
     requester::requester::{CommandType, Request},
-    shared::macros::println,
 };
 use alloc::collections::BTreeMap;
 use core::{alloc::Allocator, ptr::null_mut};
 
 pub type mm_page = [u8; 2];
 
-// TODO, change relevant to u64
 #[derive(Debug)]
 pub struct Geometry {
-    pub n_pages: u32, //TODO convert to u64 when possible
+    pub n_pages: u32,
     pub n_of_ch: u8,
     pub n_of_planes: u8,
     pub lun_per_ch: u8,
@@ -23,7 +21,7 @@ pub struct Geometry {
 impl Geometry {
     pub fn map_geometry(nvm_geo: &nvm_mmgr_geometry) -> Geometry {
         Geometry {
-            n_pages: nvm_geo.tot_pg as u32, //TODO convert to u64 when possible
+            n_pages: nvm_geo.tot_pg as u32,
             n_of_ch: nvm_geo.n_of_ch,
             n_of_planes: nvm_geo.n_of_planes,
             lun_per_ch: nvm_geo.lun_per_ch,

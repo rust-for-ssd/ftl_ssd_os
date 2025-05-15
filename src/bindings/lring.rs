@@ -17,7 +17,6 @@ pub struct LRing<const Capacity: usize> {
     lring_ptr: OnceCell<*mut lring>,
 }
 
-// TODO: Should this really be Sync???
 unsafe impl<const Capacity: usize> Sync for LRing<Capacity> {}
 
 impl<const Capacity: usize> LRing<Capacity> {
