@@ -1,7 +1,4 @@
-use core::{
-    ffi::{CStr, c_void},
-    fmt::Write,
-};
+use core::{ffi::CStr, fmt::Write};
 
 use super::generated;
 

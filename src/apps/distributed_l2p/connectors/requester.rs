@@ -16,7 +16,7 @@ use crate::{
 };
 
 use crate::requester::requester::{
-    CommandType, Request, Status, WorkloadType, get_current_num_submissions, set_timer_interupt,
+    Request, Status, WorkloadType, get_current_num_submissions, set_timer_interupt,
 };
 
 make_connector_static!(requester, init, exit, pipe_start, ring, 1);

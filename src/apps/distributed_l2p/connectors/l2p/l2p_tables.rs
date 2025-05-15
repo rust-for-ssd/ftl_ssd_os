@@ -135,8 +135,6 @@ fn pipe_start(id: usize, entry: *mut lring_entry) -> *mut pipeline {
             L2P_MAPS[id].get_mut().map(logical_addr, old_ppa);
             req.status = Status::DONE;
             return null_mut();
-            // TODO: should free the physical address
-            // maybe by going to GC?
         }
         _ => todo!(),
     }
@@ -177,7 +175,7 @@ fn ring(id: usize, entry: *mut lring_entry) -> ::core::ffi::c_int {
         panic!("null entry");
     };
 
-    let Some(req) = entry.get_ctx_as_mut::<Request>() else {
+    let Some(_req) = entry.get_ctx_as_mut::<Request>() else {
         panic!("null ctx");
     };
 

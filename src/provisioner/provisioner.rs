@@ -22,7 +22,6 @@ pub struct Channel<A: Allocator + 'static> {
 
 // ASSUMPTION: we assume the free list only contains block which are valid for writing,
 //  i.e. they are not reserved or bad
-// TODO: what about planes?
 #[derive(Debug)]
 pub struct Lun<A: Allocator + 'static> {
     pub free: VecDeque<Block, &'static A>,
@@ -56,8 +55,6 @@ pub enum ProvisionError {
     AlreadyInit,
     NoFreeBlock,
     NoFreePage,
-    // BlockErr(&'s str),
-    // FreeList(&'s str),
 }
 
 impl<A: Allocator + 'static> Provisioner<A> {
@@ -98,7 +95,6 @@ impl<A: Allocator + 'static> Provisioner<A> {
         for channel in 0..geo.n_of_ch {
             for lun in 0..geo.lun_per_ch {
                 for plane in 0..geo.n_of_planes {
-                    // TODO: Is the calculation of blk per lun / n of planes correct???
                     for block in 0..geo.blk_per_lun as u16 / geo.n_of_planes as u16 {
                         let pba = PhysicalBlockAddress {
                             channel: channel.into(),

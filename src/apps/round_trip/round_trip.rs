@@ -1,10 +1,39 @@
 use ::core::ffi::c_void;
-use core::{ffi::c_int, ptr::{null, null_mut}};
+use core::{
+    ffi::c_int,
+    ptr::{null, null_mut},
+};
 
-use crate::{bindings::{generated::{lring_entry, pipeline, ssd_os_lring_dequeue, ssd_os_sleep, ssd_os_timer_interrupt_on, ssd_os_usleep, TICKS_SEC}, lring::LRing, mem::MemoryRegion, safe::ssd_os_get_connection}, make_connector_static, make_stage_static, shared::macros::{ensure_unique, println}};
+use crate::{
+    bindings::{
+        generated::{
+            TICKS_SEC, lring_entry, pipeline, ssd_os_lring_dequeue, ssd_os_sleep,
+            ssd_os_timer_interrupt_on, ssd_os_usleep,
+        },
+        lring::LRing,
+        mem::MemoryRegion,
+        safe::ssd_os_get_connection,
+    },
+    make_connector_static, make_stage_static,
+    shared::macros::{ensure_unique, println},
+};
 
-make_connector_static!(round_trip_conn1, conn1_init, conn1_exit, conn1_fn, conn1_ring_fn, 0);
-make_connector_static!(round_trip_conn2, conn2_init, conn2_exit, conn2_fn, conn2_ring_fn, 0);
+make_connector_static!(
+    round_trip_conn1,
+    conn1_init,
+    conn1_exit,
+    conn1_fn,
+    conn1_ring_fn,
+    0
+);
+make_connector_static!(
+    round_trip_conn2,
+    conn2_init,
+    conn2_exit,
+    conn2_fn,
+    conn2_ring_fn,
+    0
+);
 
 make_stage_static!(stage1_1, stage_init_fn, stage_exit_fn, stage1_1_fn);
 make_stage_static!(stage1_2, stage_init_fn, stage_exit_fn, stage1_2_fn);
@@ -25,8 +54,6 @@ static POOL_SIZE: usize = 10000;
 static RING_SIZE: usize = 128;
 static LRING: LRing<RING_SIZE> = LRing::new();
 
-
-
 static mut MESSAGE_POOL: [Numbers; POOL_SIZE] = [Numbers::ZERO; POOL_SIZE];
 static mut MSG_USAGE_BITMAP: [bool; POOL_SIZE] = [false; POOL_SIZE];
 
@@ -44,7 +71,7 @@ impl Numbers {
         add: 0,
         id: 0,
     };
-    
+
     fn default() -> Numbers {
         Numbers {
             value: 0,
@@ -52,7 +79,7 @@ impl Numbers {
             id: 0,
         }
     }
-    
+
     fn reset(&mut self) {
         self.value = 0;
         self.add = 0;
@@ -60,7 +87,6 @@ impl Numbers {
     }
 }
 
-// TODO: this could be more efficient, but it's not a bottle neck atm
 fn get_free_message_index() -> Option<usize> {
     unsafe {
         for i in 0..POOL_SIZE {
@@ -97,11 +123,11 @@ fn get_index_from_ptr(ptr: *const Numbers) -> Option<usize> {
     if ptr.is_null() {
         return None;
     }
-    
+
     unsafe {
         let base_addr = &MESSAGE_POOL[0] as *const Numbers;
         let offset = (ptr as usize - base_addr as usize) / core::mem::size_of::<Numbers>();
-        
+
         if offset < POOL_SIZE {
             Some(offset)
         } else {
@@ -115,10 +141,10 @@ fn timer_fn() {
         let cur = COUNT;
         let diff = cur - LAST_COUNT;
         LAST_COUNT = cur;
-        
+
         println!("op/sec       : {:?}", diff);
-        println!("stages/sec   : {:?}", 6*diff); // we have 6 stages 
-        println!("{:?}", 6*diff); // for benchmark
+        println!("stages/sec   : {:?}", 6 * diff); // we have 6 stages 
+        println!("{:?}", 6 * diff); // for benchmark
         println!("in the rings : {:?}", AMOUNT);
         println!("total        : {:?}", COUNT);
         println!("submitted    : {:?}", SUBMITTED);
@@ -133,11 +159,9 @@ extern "C" fn timer_callback() {
 fn conn1_init() -> c_int {
     ensure_unique!();
     println!("Connector 1 initializing");
-    
-    unsafe { 
-        ssd_os_timer_interrupt_on(TICKS_SEC as i32, timer_callback as *mut c_void)
-    };
-    
+
+    unsafe { ssd_os_timer_interrupt_on(TICKS_SEC as i32, timer_callback as *mut c_void) };
+
     0
 }
 
@@ -148,7 +172,7 @@ fn conn2_init() -> c_int {
     };
     let ring = LRING.get_lring().unwrap();
     mem_region.reserve(ring.alloc_mem as usize);
-    
+
     0
 }
 
@@ -166,22 +190,22 @@ fn conn1_fn(entry: *mut lring_entry) -> *mut pipeline {
         if AMOUNT < RING_SIZE as u32 {
             if let Some(idx) = get_free_message_index() {
                 let msg_ptr = get_message_ptr(idx);
-                
+
                 (*msg_ptr).value = 1;
                 (*msg_ptr).add = 1;
                 (*msg_ptr).id = SUBMITTED as u16;
                 SUBMITTED += 1;
-                
+
                 (*entry).ctx = msg_ptr as *mut c_void;
-                
+
                 AMOUNT += 1;
             }
         }
-        
+
         if PIPE1.is_null() {
             PIPE1 = ssd_os_get_connection(c"round_trip_conn1", c"round_trip_pipe1");
         }
-        
+
         PIPE1
     }
 }
@@ -189,7 +213,7 @@ fn conn1_fn(entry: *mut lring_entry) -> *mut pipeline {
 fn conn2_fn(entry: *mut lring_entry) -> *mut pipeline {
     ensure_unique!();
     let _ = LRING.dequeue(entry);
-        
+
     unsafe {
         if PIPE2.is_null() {
             PIPE2 = ssd_os_get_connection(c"round_trip_conn2", c"round_trip_pipe2");
@@ -205,7 +229,7 @@ fn conn1_ring_fn(entry: *mut lring_entry) -> c_int {
         println!("NULL PTR!");
         return 1;
     };
-    
+
     let n = match entry_ref.get_ctx_as_mut::<Numbers>() {
         Some(existing) => existing,
         None => {
@@ -213,22 +237,22 @@ fn conn1_ring_fn(entry: *mut lring_entry) -> c_int {
             return 1;
         }
     };
-        
+
     unsafe {
         COUNT += 1;
         AMOUNT -= 1;
     }
-    
-    if n.value != 7 { 
+
+    if n.value != 7 {
         println!("conn1_ring: Value is wrong: {:?}", n.value);
         println!("ID: {:?}", n.id);
     }
-    
+
     // Release the message back to the pool
     if let Some(idx) = get_index_from_ptr(n) {
         release_message(idx);
     }
-    
+
     0
 }
 
@@ -239,14 +263,13 @@ fn conn2_ring_fn(entry: *mut lring_entry) -> c_int {
         Ok(()) => {
             println!("Successfully enqueued to LRING");
             0
-        },
+        }
         Err(_) => {
             println!("Failed to enqueue to LRING");
             1
         }
     }
 }
-
 
 // ------- Stage functions --------
 
@@ -273,17 +296,17 @@ fn add_fn(ctx: *mut c_void) -> *mut c_void {
 
 fn stage1_1_fn(context: *mut c_void) -> *mut c_void {
     ensure_unique!();
-    
+
     if context.is_null() {
         return context;
     }
-        
+
     add_fn(context)
 }
 
 fn stage1_2_fn(context: *mut c_void) -> *mut c_void {
     ensure_unique!();
-    
+
     if context.is_null() {
         return context;
     }
@@ -302,17 +325,17 @@ fn stage1_3_fn(context: *mut c_void) -> *mut c_void {
 
 fn stage2_1_fn(context: *mut c_void) -> *mut c_void {
     ensure_unique!();
-    
+
     if context.is_null() {
         return context;
     }
-    
+
     add_fn(context)
 }
 
 fn stage2_2_fn(context: *mut c_void) -> *mut c_void {
     ensure_unique!();
-    
+
     if context.is_null() {
         return context;
     }
@@ -321,7 +344,7 @@ fn stage2_2_fn(context: *mut c_void) -> *mut c_void {
 
 fn stage2_3_fn(context: *mut c_void) -> *mut c_void {
     ensure_unique!();
-    
+
     if context.is_null() {
         return context;
     }

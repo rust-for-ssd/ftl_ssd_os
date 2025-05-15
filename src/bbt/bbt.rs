@@ -7,7 +7,6 @@ use alloc::vec::Vec;
 
 use crate::media_manager::media_manager::Geometry;
 use crate::shared::addresses::PhysicalBlockAddress;
-use crate::shared::macros::println;
 
 pub struct BadBlockTable<A: Allocator + 'static> {
     pub channels: Vec<Channel<A>, &'static A>,
@@ -28,9 +27,6 @@ pub enum BadBlockStatus {
     Good,
     Reserved,
 }
-
-// TODO: shoudl this reallt b sync???
-unsafe impl<A: Allocator> Sync for BadBlockTable<A> {}
 
 impl<A: Allocator> BadBlockTable<A> {
     pub fn new(geometry: &Geometry, alloc: &'static A) -> Self {
