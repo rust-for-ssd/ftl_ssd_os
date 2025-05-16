@@ -1,4 +1,0 @@
-volt_spipe volt_submit_stage
-volt_cpipe volt_complete_stage
-pipe_1 stage_1
-pipe_2 stage_2
