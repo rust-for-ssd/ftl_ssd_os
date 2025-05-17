@@ -142,12 +142,12 @@ fn timer_fn() {
         let diff = cur - LAST_COUNT;
         LAST_COUNT = cur;
 
-        println!("op/sec       : {:?}", diff);
-        println!("stages/sec   : {:?}", 6 * diff); // we have 6 stages 
+        // println!("op/sec       : {:?}", diff);
+        // println!("stages/sec   : {:?}", 6 * diff); // we have 6 stages
         println!("{:?}", 6 * diff); // for benchmark
-        println!("in the rings : {:?}", AMOUNT);
-        println!("total        : {:?}", COUNT);
-        println!("submitted    : {:?}", SUBMITTED);
+        // println!("in the rings : {:?}", AMOUNT);
+        // println!("total        : {:?}", COUNT);
+        // println!("submitted    : {:?}", SUBMITTED);
     }
 }
 
@@ -157,9 +157,6 @@ extern "C" fn timer_callback() {
 
 // ------- Connection functions --------
 fn conn1_init() -> c_int {
-    ensure_unique!();
-    println!("Connector 1 initializing");
-
     unsafe { ssd_os_timer_interrupt_on(TICKS_SEC as i32, timer_callback as *mut c_void) };
 
     0
@@ -223,8 +220,6 @@ fn conn2_fn(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn conn1_ring_fn(entry: *mut lring_entry) -> c_int {
-    ensure_unique!();
-
     let Some(entry_ref) = lring_entry::new(entry) else {
         println!("NULL PTR!");
         return 1;
@@ -260,14 +255,8 @@ fn conn2_ring_fn(entry: *mut lring_entry) -> c_int {
     ensure_unique!();
 
     match LRING.enqueue(entry) {
-        Ok(()) => {
-            println!("Successfully enqueued to LRING");
-            0
-        }
-        Err(_) => {
-            println!("Failed to enqueue to LRING");
-            1
-        }
+        Ok(()) => 0,
+        Err(_) => 1,
     }
 }
 
