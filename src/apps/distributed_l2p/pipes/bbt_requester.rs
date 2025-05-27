@@ -1,4 +1,4 @@
-use crate::{make_stage_static, shared::macros::ensure_unique};
+use crate::make_stage_static;
 
 make_stage_static!(
     bbt_requester_stage,
@@ -18,6 +18,5 @@ fn exit() -> ::core::ffi::c_int {
 #[inline(never)]
 #[unsafe(no_mangle)]
 fn context_handler_bbt_requester(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ensure_unique!();
     context
 }

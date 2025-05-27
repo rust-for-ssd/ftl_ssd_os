@@ -1,10 +1,6 @@
-use crate::{requester::requester::Request, shared::macros::println};
 use core::ffi::CStr;
 
-use crate::{
-    apps::distributed_l2p::connectors::l2p::l2p_tables::N_TABLES, make_stage_static,
-    shared::macros::ensure_unique,
-};
+use crate::{apps::distributed_l2p::connectors::l2p::l2p_tables::N_TABLES, make_stage_static};
 
 const STAGE_NAMES: [&CStr; N_TABLES] = [
     l2p_media_manager_stage0.get_name(),
@@ -51,7 +47,6 @@ fn exit() -> ::core::ffi::c_int {
 fn context_handler_l2p_media_manager0(
     context: *mut ::core::ffi::c_void,
 ) -> *mut ::core::ffi::c_void {
-    ensure_unique!();
     context
 }
 #[inline(never)]
@@ -59,7 +54,6 @@ fn context_handler_l2p_media_manager0(
 fn context_handler_l2p_media_manager1(
     context: *mut ::core::ffi::c_void,
 ) -> *mut ::core::ffi::c_void {
-    ensure_unique!();
     context
 }
 #[inline(never)]
@@ -67,7 +61,6 @@ fn context_handler_l2p_media_manager1(
 fn context_handler_l2p_media_manager2(
     context: *mut ::core::ffi::c_void,
 ) -> *mut ::core::ffi::c_void {
-    ensure_unique!();
     context
 }
 #[inline(never)]
@@ -75,6 +68,5 @@ fn context_handler_l2p_media_manager2(
 fn context_handler_l2p_media_manager3(
     context: *mut ::core::ffi::c_void,
 ) -> *mut ::core::ffi::c_void {
-    ensure_unique!();
     context
 }

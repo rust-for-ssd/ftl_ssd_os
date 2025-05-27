@@ -1,6 +1,5 @@
 use crate::make_stage_static;
 use crate::shared::addresses::PhysicalBlockAddress;
-use crate::shared::macros::ensure_unique;
 use crate::shared::macros::println;
 
 use crate::requester::requester::Request;
@@ -23,8 +22,6 @@ fn exit() -> ::core::ffi::c_int {
 }
 
 fn l2p_read_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ensure_unique!();
-
     let request = Request::from_ctx_ptr(context);
     let physcial_add = L2P_MAPPER.lock().lookup(request.logical_addr);
     match physcial_add {
@@ -41,8 +38,6 @@ fn l2p_read_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::f
 }
 
 fn mm_context_handler(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ensure_unique!();
-
     let request = Request::from_ctx_ptr(context);
 
     let Ok(data) = MM.lock().execute_request(request) else {

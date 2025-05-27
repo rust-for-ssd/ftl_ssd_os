@@ -58,6 +58,16 @@ macro_rules! make_stage {
             unsafe extern "C" fn wrapped_stage(
                 context: *mut ::core::ffi::c_void,
             ) -> *mut ::core::ffi::c_void {
+                // TODO: replace this with a proc macro.
+                // For now, Rust optimizes the code to use the same function ptr
+                // if the stage_fn body is the same as another.
+                // ssd_os need unique fn ptrs for stages.
+                // The following is a trick to avoid sharing fn ptrs.
+                // It can be avoided by not wrapping the fn or
+                // by creating a proc macro which changes the type.
+                #[used]
+                static UNIQUE: [u8; 0] = [];
+                unsafe { core::ptr::read_volatile(&UNIQUE) };
                 $stage_fn(context)
             }
 

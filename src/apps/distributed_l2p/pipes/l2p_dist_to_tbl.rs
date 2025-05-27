@@ -1,9 +1,6 @@
 use core::ffi::CStr;
 
-use crate::{
-    apps::distributed_l2p::connectors::l2p::l2p_tables::N_TABLES, make_stage_static,
-    shared::macros::ensure_unique,
-};
+use crate::{apps::distributed_l2p::connectors::l2p::l2p_tables::N_TABLES, make_stage_static};
 
 const STAGE_NAMES: [&CStr; N_TABLES] = [
     dist_l2p_stage0.get_name(),
@@ -28,24 +25,20 @@ fn exit() -> ::core::ffi::c_int {
 #[inline(never)]
 #[unsafe(no_mangle)]
 fn context_handler_dist_l2p0(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ensure_unique!();
     context
 }
 #[inline(never)]
 #[unsafe(no_mangle)]
 fn context_handler_dist_l2p1(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ensure_unique!();
     context
 }
 #[inline(never)]
 #[unsafe(no_mangle)]
 fn context_handler_dist_l2p2(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ensure_unique!();
     context
 }
 #[inline(never)]
 #[unsafe(no_mangle)]
 fn context_handler_dist_l2p3(context: *mut ::core::ffi::c_void) -> *mut ::core::ffi::c_void {
-    ensure_unique!();
     context
 }

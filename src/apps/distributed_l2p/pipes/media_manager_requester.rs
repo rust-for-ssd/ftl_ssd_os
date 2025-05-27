@@ -1,6 +1,6 @@
 use core::ffi::c_void;
 
-use crate::{make_stage_static, shared::macros::ensure_unique};
+use crate::make_stage_static;
 
 make_stage_static!(
     media_manager_requester_stage,
@@ -20,6 +20,5 @@ fn exit() -> ::core::ffi::c_int {
 #[inline(never)]
 #[unsafe(no_mangle)]
 fn context_handler_mmr_req(context: *mut c_void) -> *mut c_void {
-    ensure_unique!();
     context
 }

@@ -8,13 +8,6 @@ macro_rules! cstr {
     };
 }
 
-macro_rules! ensure_unique {
-    () => {{
-        static DUMMY: u8 = 0;
-        unsafe { core::ptr::read_volatile(&DUMMY) };
-    }};
-}
-
 macro_rules! println {
     // Case where there's only one argument and it is a literal format string
         ($arg:expr) => {{
@@ -84,5 +77,4 @@ macro_rules! dbg {
 pub(crate) use cstr;
 pub(crate) use dbg;
 pub(crate) use dbg_println;
-pub(crate) use ensure_unique;
 pub(crate) use println;

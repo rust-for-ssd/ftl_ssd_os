@@ -1,6 +1,6 @@
-use core::{ffi::CStr, fmt::Write};
-
 use super::generated;
+use core::ffi::c_void;
+use core::{ffi::CStr, fmt::Write};
 
 pub fn ssd_os_get_connection(connector_name: &CStr, pipe_name: &CStr) -> *mut generated::pipeline {
     #[cfg(feature = "test")]

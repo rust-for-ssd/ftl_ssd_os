@@ -1,8 +1,5 @@
 use ::core::ffi::c_void;
-use core::{
-    ffi::c_int,
-    ptr::{null, null_mut},
-};
+use core::{ffi::c_int, ptr::null_mut};
 
 use crate::{
     bindings::{
@@ -15,7 +12,7 @@ use crate::{
         safe::ssd_os_get_connection,
     },
     make_connector_static, make_stage_static,
-    shared::macros::{ensure_unique, println},
+    shared::macros::println,
 };
 
 make_connector_static!(
@@ -208,7 +205,6 @@ fn conn1_fn(entry: *mut lring_entry) -> *mut pipeline {
 }
 
 fn conn2_fn(entry: *mut lring_entry) -> *mut pipeline {
-    ensure_unique!();
     let _ = LRING.dequeue(entry);
 
     unsafe {
@@ -252,8 +248,6 @@ fn conn1_ring_fn(entry: *mut lring_entry) -> c_int {
 }
 
 fn conn2_ring_fn(entry: *mut lring_entry) -> c_int {
-    ensure_unique!();
-
     match LRING.enqueue(entry) {
         Ok(()) => 0,
         Err(_) => 1,
@@ -263,12 +257,10 @@ fn conn2_ring_fn(entry: *mut lring_entry) -> c_int {
 // ------- Stage functions --------
 
 fn stage_init_fn() -> c_int {
-    ensure_unique!();
     0
 }
 
 fn stage_exit_fn() -> c_int {
-    ensure_unique!();
     0
 }
 
@@ -283,9 +275,9 @@ fn add_fn(ctx: *mut c_void) -> *mut c_void {
     ctx
 }
 
+#[inline(never)]
+#[unsafe(no_mangle)]
 fn stage1_1_fn(context: *mut c_void) -> *mut c_void {
-    ensure_unique!();
-
     if context.is_null() {
         return context;
     }
@@ -293,9 +285,9 @@ fn stage1_1_fn(context: *mut c_void) -> *mut c_void {
     add_fn(context)
 }
 
+#[inline(never)]
+#[unsafe(no_mangle)]
 fn stage1_2_fn(context: *mut c_void) -> *mut c_void {
-    ensure_unique!();
-
     if context.is_null() {
         return context;
     }
@@ -303,8 +295,9 @@ fn stage1_2_fn(context: *mut c_void) -> *mut c_void {
     add_fn(context)
 }
 
+#[inline(never)]
+#[unsafe(no_mangle)]
 fn stage1_3_fn(context: *mut c_void) -> *mut c_void {
-    ensure_unique!();
     if context.is_null() {
         return context;
     }
@@ -312,9 +305,9 @@ fn stage1_3_fn(context: *mut c_void) -> *mut c_void {
     add_fn(context)
 }
 
+#[inline(never)]
+#[unsafe(no_mangle)]
 fn stage2_1_fn(context: *mut c_void) -> *mut c_void {
-    ensure_unique!();
-
     if context.is_null() {
         return context;
     }
@@ -322,18 +315,18 @@ fn stage2_1_fn(context: *mut c_void) -> *mut c_void {
     add_fn(context)
 }
 
+#[inline(never)]
+#[unsafe(no_mangle)]
 fn stage2_2_fn(context: *mut c_void) -> *mut c_void {
-    ensure_unique!();
-
     if context.is_null() {
         return context;
     }
     add_fn(context)
 }
 
+#[inline(never)]
+#[unsafe(no_mangle)]
 fn stage2_3_fn(context: *mut c_void) -> *mut c_void {
-    ensure_unique!();
-
     if context.is_null() {
         return context;
     }
